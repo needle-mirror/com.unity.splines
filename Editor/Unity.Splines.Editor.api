@@ -1,0 +1,43 @@
+// This file is generated. Do not modify by hand.
+// XML documentation file not found. To check if public methods have XML comments,
+// make sure the XML doc file is present and located next to the scraped dll
+namespace UnityEditor.Splines
+{
+    public static class EditorSplineGizmos
+    {
+    }
+
+    public static class EditorSplineUtility
+    {
+        public static event System.Action<UnityEngine.Splines.Spline> afterSplineWasModified;
+        public static void RegisterSplineDataChanged<T>(System.Action<UnityEngine.Splines.SplineData<T>> action);
+        public static void UnregisterSplineDataChanged<T>(System.Action<UnityEngine.Splines.SplineData<T>> action);
+    }
+
+    public abstract class SplineDataDrawer<T>
+    {
+        public int[] controlIDs { get; set; }
+        protected SplineDataDrawer() {}
+        public virtual void DrawKeyframe(int controlID, UnityEngine.Vector3 position, UnityEngine.Vector3 direction, UnityEngine.Vector3 upDirection, UnityEngine.Splines.SplineData<T> splineData, int keyframeIndex);
+        public virtual void DrawSplineData(UnityEngine.Splines.SplineData<T> splineData, UnityEngine.Splines.Spline spline, UnityEngine.Matrix4x4 localToWorld, UnityEngine.Color color);
+    }
+
+    [System.AttributeUsage(256)] public class SplineDataDrawerAttribute : System.Attribute
+    {
+        public System.Type drawerType;
+        public SplineDataDrawerAttribute(System.Type type) {}
+    }
+
+    public static class SplineDataHandles
+    {
+    }
+
+    [UnityEditor.EditorTools.EditorToolContext(@"Spline", typeof(UnityEngine.Splines.ISplineProvider))] [UnityEngine.Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineContext.png")] public sealed class SplineToolContext : UnityEditor.EditorTools.EditorToolContext
+    {
+        public SplineToolContext() {}
+        protected virtual System.Type GetEditorToolType(UnityEditor.Tool tool);
+        public virtual void OnActivated();
+        public virtual void OnToolGUI(UnityEditor.EditorWindow window);
+        public virtual void OnWillBeDeactivated();
+    }
+}
