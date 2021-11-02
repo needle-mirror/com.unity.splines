@@ -4,7 +4,13 @@ namespace UnityEngine.Splines
     /// ISpline defines the interface from which Spline types inherit.
     /// </summary>
     public interface ISpline
-    {
+    {   
+        public struct DistanceToTime
+        {
+            public float distance;
+            public float time;
+        }
+        
         /// <summary>
         /// Return the number of knots.
         /// </summary>
@@ -41,9 +47,19 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Return the length of a curve.
         /// </summary>
-        /// <param name="index"></param>
+        /// <param name="index">The index of the curve for which the length needs to be retrieved</param>
         /// <seealso cref="GetLength"/>
-        /// <returns></returns>
+        /// <returns>
+        /// Returns the length of the curve of index 'index' in the spline.
+        /// </returns>
         public float GetCurveLength(int index);
+
+        /// <summary>
+        /// Return the normalized time corresponding to a distance on a <see cref="BezierCurve"/>.
+        /// </summary>
+        /// <param name="index"> The zero-based index of the curve.</param>
+        /// <param name="distance"> The distance to convert to time.</param>
+        /// <returns>  The normalized time associated to distance on the designated curve. </returns>
+        public float CurveDistanceToTime(int index, float distance);
     }
 }

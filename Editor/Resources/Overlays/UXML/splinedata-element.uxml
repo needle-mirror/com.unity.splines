@@ -11,7 +11,8 @@
                     <ui:DropdownField index="-1" name="DataLabelType" label="Data label" style="height: 20px; width: 210px; justify-content: flex-end; margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0; flex-direction: row;" />
                 </ui:VisualElement>
             </ui:Foldout>
-            <uie:ColorField choices="Index" index="0" text="Display data" value="false" name="SplineDataColor" style="min-width: 50px; justify-content: flex-end; height: 20px; width: 120px; max-width: 100px; -unity-text-align: middle-left; flex-direction: row; align-items: center; margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0;" />
+            <uie:ColorField choices="Index" index="0" text="Display data" value="false" name="SplineDataColor" style="min-width: 50px; justify-content: flex-end; height: 20px; width: 110px; max-width: 100px; -unity-text-align: middle-left; flex-direction: row; align-items: center; margin-left: 0; margin-right: 0; margin-top: 0; margin-bottom: 0;" />
+            <ui:Button text="R" display-tooltip-when-elided="true" tooltip="Reset Color" name="Reset" style="height: 20px; width: 20px; margin-left: 2px; margin-right: 0; margin-top: 0; margin-bottom: 0; padding-left: 0; padding-right: 0; padding-top: 0; padding-bottom: 0; -unity-text-align: middle-center;" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

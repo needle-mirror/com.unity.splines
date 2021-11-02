@@ -18,7 +18,7 @@ namespace UnityEditor.Splines
             public TestManagedSpline(UObject target, IEditableSpline spline)
             {
                 m_Target = target;
-                ((IEditableSplineConversionData)spline).conversionTarget = m_Target;
+                spline.conversionTarget = m_Target;
                 if (!s_Splines.TryGetValue(target, out TargetData data))
                 {
                     data = new TargetData();

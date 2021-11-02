@@ -16,9 +16,12 @@ namespace UnityEngine.Splines
     public struct NativeSpline : ISpline, IDisposable
     {
         NativeArray<BezierKnot> m_Knots;
-        NativeArray<float> m_SegmentLength;
+        // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
+        // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
+        NativeArray<ISpline.DistanceToTime> m_SegmentLengthsLookupTable;
         bool m_Closed;
         float m_Length;
+        const int k_SegmentResolution = 30; 
 
         /// <summary>
         /// A NativeArray of <see cref="BezierKnot"/> that form this Spline.
@@ -81,14 +84,20 @@ namespace UnityEngine.Splines
             m_Length = 0f;
 
             int curveCount = m_Closed ? kc : kc - 1;
-            m_SegmentLength = new NativeArray<float>(knots.Count, allocator);
+            
+            // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
+            // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
+            m_SegmentLengthsLookupTable = new NativeArray<ISpline.DistanceToTime>(knots.Count * k_SegmentResolution, allocator);
             m_Length = 0f;
 
+            List<ISpline.DistanceToTime> distanceToTimes = new List<ISpline.DistanceToTime>(k_SegmentResolution);
             for (int i = 0; i < curveCount; i++)
             {
-                float length = CurveUtility.CalculateLength(GetCurve(i));
-                m_Length += length;
-                m_SegmentLength[i] = length;
+                CurveUtility.CalculateCurveLengths(GetCurve(i), distanceToTimes);
+                m_Length += distanceToTimes.Count > 0 ? distanceToTimes[k_SegmentResolution - 1].distance : 0f;
+                
+                for(int distanceToTimeIndex = 0; distanceToTimeIndex < k_SegmentResolution; distanceToTimeIndex++)
+                    m_SegmentLengthsLookupTable[i * k_SegmentResolution + distanceToTimeIndex] = distanceToTimes[distanceToTimeIndex];
             }
         }
         
@@ -110,7 +119,7 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="curveIndex">The 0 based index of the curve to find length for.</param>
         /// <returns>The length of the bezier curve at index.</returns>
-        public float GetCurveLength(int curveIndex) => m_SegmentLength[curveIndex];
+        public float GetCurveLength(int curveIndex) => m_SegmentLengthsLookupTable[curveIndex * k_SegmentResolution + k_SegmentResolution - 1].distance;
 
         /// <summary>
         /// Release allocated resources.
@@ -118,7 +127,39 @@ namespace UnityEngine.Splines
         public void Dispose()
         {
             m_Knots.Dispose();
-            m_SegmentLength.Dispose();
+            m_SegmentLengthsLookupTable.Dispose();
+        }
+        
+        /// <summary>
+        /// Return the time normalized time t corresponding to a distance on a <see cref="BezierCurve"/>.
+        /// </summary>
+        /// <param name="index"> The zero-based index of the curve.</param>
+        /// <returns>  The normalized time associated to distance on the designated curve. </returns>
+        public float CurveDistanceToTime(int index, float dist)
+        {
+            if(index <0 || index >= m_SegmentLengthsLookupTable.Length || dist <= 0)
+                return 0;
+            
+            var curveLength = GetCurveLength(index);
+            if(dist >= curveLength)
+                return 1f;
+        
+            var t = 0f;
+            var startIndex = index * k_SegmentResolution;
+            var prev = m_SegmentLengthsLookupTable[startIndex];
+            for(int i = 1; i < k_SegmentResolution; i++)
+            {
+                var current = m_SegmentLengthsLookupTable[startIndex + i];
+                if(dist < current.distance)
+                {
+                    t = math.lerp(prev.time, current.time, (dist - prev.distance) / (current.distance - prev.distance));
+                    return t;
+                }
+        
+                prev = current;
+            }
+            
+            return 1f;
         }
     }
 }

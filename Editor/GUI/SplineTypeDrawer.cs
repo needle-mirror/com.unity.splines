@@ -23,9 +23,9 @@ namespace UnityEditor.Splines
                     foreach (var path in s_PathsBuffer)
                         path.SetDirty();
                     SplineConversionUtility.ApplyEditableSplinesIfDirty(property.serializedObject.targetObjects);
+                    SceneView.RepaintAll();
                 };
             }
         }
-
     }
 }

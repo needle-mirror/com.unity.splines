@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Mathematics;
 
@@ -25,7 +26,7 @@ namespace UnityEngine.Splines
     }
     
     /// <summary>
-    /// Describes the unit of measurement used by <see cref="Keyframe{T}"/>.
+    /// Describes the unit of measurement used by <see cref="DataPoint{T}"/>.
     /// </summary>
     public enum PathIndexUnit
     {
@@ -54,15 +55,15 @@ namespace UnityEngine.Splines
     /// The type of data to store.
     /// </typeparam>
     [Serializable]
-    public class SplineData<T>
+    public class SplineData<T> : IEnumerable<DataPoint<T>>
     {
-        static readonly KeyframeComparer<Keyframe<T>> m_KeyframeComparer = new KeyframeComparer<Keyframe<T>>();
+        static readonly DataPointComparer<DataPoint<T>> k_DataPointComparer = new DataPointComparer<DataPoint<T>>();
 
         [SerializeField]
-        PathIndexUnit m_IndexUnit;
+        PathIndexUnit m_IndexUnit = PathIndexUnit.Knot;
 
         [SerializeField]
-        List<Keyframe<T>> m_Keyframes = new List<Keyframe<T>>();
+        List<DataPoint<T>> m_DataPoints = new List<DataPoint<T>>();
 
         // When working with IMGUI it's necessary to keep keys array consistent while a hotcontrol is active. Most
         // accessors will keep the SplineData sorted, but sometimes it's not possible.
@@ -70,16 +71,16 @@ namespace UnityEngine.Splines
         bool m_NeedsSort;
 
         /// <summary>
-        /// Access a <see cref="Keyframe{T}"/> by index. Keyframes are sorted in ascending order by the
-        /// <see cref="Keyframe{T}.Time"/> value.
+        /// Access a <see cref="DataPoint{T}"/> by index. Keyframes are sorted in ascending order by the
+        /// <see cref="DataPoint{T}.Time"/> value.
         /// </summary>
         /// <param name="index">
         /// The index of the keyframe to access.
         /// </param>
-        public Keyframe<T> this[int index]
+        public DataPoint<T> this[int index]
         {
-            get => m_Keyframes[index];
-            set => SetKeyframe(index, value);
+            get => m_DataPoints[index];
+            set => SetDataPoint(index, value);
         }
         
         /// <summary>
@@ -93,9 +94,9 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// How many keyframes the SplineData collection contains.
+        /// How many data points the SplineData collection contains.
         /// </summary>
-        public int Count => m_Keyframes.Count;
+        public int Count => m_DataPoints.Count;
 
         /// <summary>
         /// Invoked any time a SplineData is modified.
@@ -109,9 +110,9 @@ namespace UnityEngine.Splines
 
 #if UNITY_EDITOR
         bool m_Dirty = false;
+        internal static Action<SplineData<T>> afterSplineDataWasModified;
 #endif
         
-        internal static Action<SplineData<T>> afterSplineDataWasModified;
         
         /// <summary>
         /// Create a new SplineData instance.
@@ -131,16 +132,16 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Create a new SplineData instance and initialize it with a collection of keys. Keys will be sorted and stored
-        /// in ascending order by <see cref="Keyframe{T}.Time"/>.
+        /// Create a new SplineData instance and initialize it with a collection of data points. DataPoints will be sorted and stored
+        /// in ascending order by <see cref="DataPoint{T}.Time"/>.
         /// </summary>
-        /// <param name="keys">
-        /// A collection of Keyframes to initialize SplineData.`
+        /// <param name="dataPoints">
+        /// A collection of DataPoints to initialize SplineData.`
         /// </param>
-        public SplineData(IEnumerable<Keyframe<T>> keys)
+        public SplineData(IEnumerable<DataPoint<T>> dataPoints)
         {
-            foreach(var key in keys)
-                Add(key);
+            foreach(var dataPoint in dataPoints)
+                Add(dataPoint);
 
             SetDirty();
         }
@@ -164,49 +165,49 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Append a <see cref="Keyframe{T}"/> to this collection.
+        /// Append a <see cref="DataPoint{T}"/> to this collection.
         /// </summary>
         /// <param name="t">
         /// The interpolant relative to Spline. How this value is interpreted is dependent on <see cref="get_PathIndexUnit"/>.
         /// </param>
         /// <param name="data">
-        /// The data to store in the created keyframe.
+        /// The data to store in the created data point.
         /// </param>
-        public void Add(float t, T data) => Add(new Keyframe<T>(t, data));
+        public void Add(float t, T data) => Add(new DataPoint<T>(t, data));
     
         /// <summary>
-        /// Append a <see cref="Keyframe{T}"/> to this collection.
+        /// Append a <see cref="DataPoint{T}"/> to this collection.
         /// </summary>
         /// <param name="key">
-        /// The keyframe to append to the SplineData collection.
+        /// The data point to append to the SplineData collection.
         /// </param>
-        public void Add(Keyframe<T> key)
+        public void Add(DataPoint<T> dataPoint)
         {
-            int index = m_Keyframes.BinarySearch(0, Count, key, m_KeyframeComparer);
-            m_Keyframes.Insert(index < 0 ? ~index : index, key);
+            int index = m_DataPoints.BinarySearch(0, Count, dataPoint, k_DataPointComparer);
+            m_DataPoints.Insert(index < 0 ? ~index : index, dataPoint);
 
             SetDirty();
         }
 
         /// <summary>
-        /// Remove a <see cref="Keyframe{T}"/> at index.
+        /// Remove a <see cref="DataPoint{T}"/> at index.
         /// </summary>
         /// <param name="index">The index to remove.</param>
         public void RemoveAt(int index)
         {
             if (index < 0 || index >= Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            m_Keyframes.RemoveAt(index);
+            m_DataPoints.RemoveAt(index);
 
             SetDirty();
         }
 
         /// <summary>
-        /// Remove all keyframes.
+        /// Remove all data points.
         /// </summary>
         public void Clear()
         {
-            m_Keyframes.Clear();
+            m_DataPoints.Clear();
             SetDirty();
         }
 
@@ -239,8 +240,8 @@ namespace UnityEngine.Splines
             else if(m_IndexUnit == PathIndexUnit.Knot)
                 splineLengthInIndexUnits = closed ? knotCount : knotCount - 1;
 
-            float maxKeyframeTime = m_Keyframes[m_Keyframes.Count - 1].Time;
-            float maxRevolutionLength = math.ceil(maxKeyframeTime / splineLengthInIndexUnits) * splineLengthInIndexUnits;
+            float maxDataPointTime = m_DataPoints[m_DataPoints.Count - 1].Time;
+            float maxRevolutionLength = math.ceil(maxDataPointTime / splineLengthInIndexUnits) * splineLengthInIndexUnits;
             float maxTime = closed ? math.max(maxRevolutionLength, splineLengthInIndexUnits) : splineLengthInIndexUnits;
 
             if(closed)
@@ -253,12 +254,12 @@ namespace UnityEngine.Splines
             else
                 time = math.clamp(time, 0f, maxTime);
 
-            int index = m_Keyframes.BinarySearch(0, Count, new Keyframe<T>(time, default), m_KeyframeComparer);
+            int index = m_DataPoints.BinarySearch(0, Count, new DataPoint<T>(time, default), k_DataPointComparer);
             int fromIndex = ResolveBinaryIndex(index, closed);
             int toIndex = closed ? ( fromIndex + 1 ) % Count : math.clamp(fromIndex + 1, 0, Count - 1);
 
-            float fromTime = m_Keyframes[fromIndex].Time;
-            float toTime = m_Keyframes[toIndex].Time;
+            float fromTime = m_DataPoints[fromIndex].Time;
+            float toTime = m_DataPoints[toIndex].Time;
 
             if(fromIndex > toIndex)
                 toTime += maxTime;
@@ -290,7 +291,7 @@ namespace UnityEngine.Splines
             if(indexUnit == m_IndexUnit)
                 return Evaluate(spline, t, interpolator);
             
-            return Evaluate(spline, SplineUtility.GetConvertedTime(spline, t, indexUnit, m_IndexUnit), interpolator);
+            return Evaluate(spline, SplineUtility.ConvertIndexUnit(spline, t, indexUnit, m_IndexUnit), interpolator);
         }
 
         /// <summary>
@@ -308,21 +309,29 @@ namespace UnityEngine.Splines
             where TInterpolator : IInterpolator<T>
         {
             var knotCount = spline.KnotCount;
-            if(knotCount < 1)
+            if(knotCount < 1 || m_DataPoints.Count == 0)
                 return default;
-
+            
             var indices = GetIndex(t, spline.GetLength(), knotCount, spline.Closed);
-            Keyframe<T> a = m_Keyframes[indices.Item1];
-            Keyframe<T> b = m_Keyframes[indices.Item2];
+            DataPoint<T> a = m_DataPoints[indices.Item1];
+            DataPoint<T> b = m_DataPoints[indices.Item2];
             return interpolator.Interpolate(a.Value, b.Value, indices.Item3);
         }
 
         /// <summary>
-        /// Set the data for a <see cref="Keyframe{T}"/> at an index.
+        /// Set the data for a <see cref="DataPoint{T}"/> at an index.
         /// </summary>
         /// <param name="index">The Keyframe index.</param>
         /// <param name="value">The value to set.</param>
-        public void SetKeyframe(int index, Keyframe<T> value)
+        /// <remarks>
+        /// Using this method will search the keyframe list and invoke the <see cref="changed"/>
+        /// callback every time. This may be inconvenient when setting multiple keyframes during the same frame.
+        /// In this case, consider calling <see cref="SetKeyframeNoSort"/> for each keyframe, followed by
+        /// a single call to <see cref="SortIfNecessary"/>. Note that the call to <see cref="SortIfNecessary"/> is
+        /// optional and can be omitted if keyframe sorting is not required and the <see cref="changed"/> callback
+        /// should not be invoked.
+        /// </remarks>
+        public void SetDataPoint(int index, DataPoint<T> value)
         {
             if(index < 0 || index >= Count)
                 throw new ArgumentOutOfRangeException("index");
@@ -331,22 +340,69 @@ namespace UnityEngine.Splines
             SetDirty();
         }
 
-        public void SetKeyframeNoSort(int index, Keyframe<T> value)
+        /// <summary>
+        /// Set the data for a <see cref="DataPoint{T}"/> at an index.
+        /// </summary>
+        /// <param name="index">The Keyframe index.</param>
+        /// <param name="value">The value to set.</param>
+        /// <remarks>
+        /// Use this method as an altenative to <see cref="SetDataPoint"/> when manual control
+        /// over keyframe sorting and the <see cref="changed"/> callback is required.
+        /// See also <see cref="SortIfNecessary"/>.
+        /// </remarks>
+        public void SetKeyframeNoSort(int index, DataPoint<T> value)
         {
             if(index < 0 || index >= Count)
                 throw new ArgumentOutOfRangeException("index");
 
             // could optimize this by storing affected range
             m_NeedsSort = true;
-            m_Keyframes[index] = value;
+            m_DataPoints[index] = value;
         }
 
+        /// <summary>
+        /// Triggers sorting of the <see cref="DataPoint{T}"/> list if the data is dirty.
+        /// </summary>
+        /// <remarks>
+        /// Call this after a single or series of calls to <see cref="SetKeyframeNoSort"/>.
+        /// This will trigger keyframe sort and invoke the <see cref="changed"/> callback.
+        /// This method has two main use cases: to prevent frequent <see cref="changed"/> callback
+        /// calls within the same frame and to reduce multiple keyframe list searches
+        /// to a single sort in performance critical paths.
+        /// </remarks>
         public void SortIfNecessary()
         {
             if(!m_NeedsSort)
                 return;
             m_NeedsSort = false;
-            m_Keyframes.Sort();
+            m_DataPoints.Sort();
+            SetDirty();
+        }
+        
+        internal void ForceSort()
+        {
+            m_NeedsSort = true;
+            SortIfNecessary();
+        }
+
+        /// <summary>
+        /// Given a spline and a target PathIndex Unit, convert the SplineData to a new PathIndexUnit without changing the final positions on the Spline.
+        /// </summary>
+        /// <param name="spline">The Spline to use for the conversion, this is necessary to compute most of PathIndexUnits.</param>
+        /// <param name="toUnit">The unit to convert SplineData to.</param>>
+        public void ConvertPathUnit<TS>(TS spline, PathIndexUnit toUnit)
+            where TS : ISpline
+        {
+            if(toUnit == m_IndexUnit)
+                return;
+            
+            for(int i = 0; i<m_DataPoints.Count; i++)
+            {
+                var dataPoint = m_DataPoints[i];
+                var newTime = spline.ConvertIndexUnit(dataPoint.Time, m_IndexUnit, toUnit);
+                m_DataPoints[i] = new DataPoint<T>(newTime, dataPoint.Value);
+            }
+            m_IndexUnit = toUnit;
             SetDirty();
         }
         
@@ -358,8 +414,20 @@ namespace UnityEngine.Splines
         /// <returns>The normalized time.</returns>
         public float GetNormalizedTime(NativeSpline spline, float time)
         {
-            return SplineUtility.GetNormalizedTime(spline, time, m_IndexUnit);
+            return SplineUtility.GetNormalizedT(spline, time, m_IndexUnit);
         }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         
+        /// <summary>
+        /// Returns an enumerator that iterates through the DataPoints collection.
+        /// </summary>
+        /// <returns>
+        /// An IEnumerator{DataPoint{T}} for this collection.</returns>
+        public IEnumerator<DataPoint<T>> GetEnumerator()
+        {
+            for (int i = 0, c = Count; i < c; ++i)
+                yield return m_DataPoints[i];
+        }
     }
 }

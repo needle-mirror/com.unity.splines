@@ -26,6 +26,12 @@ namespace UnityEditor.Splines
                 
             b = path.GetKnot(nextIndex);
         }
+        
+        public CurveData(EditableKnot firstKnot, EditableKnot lastKnot)
+        {
+            a = firstKnot;
+            b = lastKnot;
+        }
 
         public CurveData(IEditableSpline spline, int firstIndex) : this(spline.GetKnot(firstIndex)){}
 

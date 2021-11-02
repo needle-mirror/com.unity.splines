@@ -89,7 +89,7 @@ namespace Unity.Splines.Examples
 				float t = (float) i / (tieCount - 1);
 
 				var position = SplineUtility.EvaluatePosition(spline, t);
-				var forward = SplineUtility.EvaluateDirection(spline, t);
+				var forward = SplineUtility.EvaluateTangent(spline, t);
 				var tangent = (quaternion) Quaternion.LookRotation(forward);
 
 				int a = i * 4 + 0,

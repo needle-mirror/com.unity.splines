@@ -37,8 +37,10 @@ namespace UnityEditor.Splines
 
             return gameObject;
         }
+
+        const int k_MenuPriority = 200;
         
-        [MenuItem(k_MenuPath + "/Freeform")]
+        [MenuItem(k_MenuPath + "/Draw Spline Tool...", false, k_MenuPriority + 0)]
         static void CreateNewSpline(MenuCommand menuCommand)
         {
             var gameObject = CreateSplineGameObject(menuCommand);
@@ -52,13 +54,13 @@ namespace UnityEditor.Splines
             ToolManager.SetActiveTool<KnotPlacementTool>();
         }
         
-        [MenuItem(k_MenuPath + "/Square")]
+        [MenuItem(k_MenuPath + "/Square", false, k_MenuPriority + 11)]
         static void CreateSquare(MenuCommand command)
         {
             CreateSplineGameObject(command, SplineFactory.CreateSquare(1f));
         }
         
-        [MenuItem(k_MenuPath + "/Circle")]
+        [MenuItem(k_MenuPath + "/Circle", false, k_MenuPriority + 12)]
         static void CreateCircle(MenuCommand command)
         {
             // .36 is just an eye-balled approximation

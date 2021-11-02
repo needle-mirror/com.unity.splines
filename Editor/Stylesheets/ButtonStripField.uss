@@ -1,0 +1,39 @@
+.button-strip {
+	flex-direction: row;
+}
+
+.button-strip-button {
+	margin: 0;
+	flex-grow: 1;
+	justify-content: center;
+	align-content: center;
+}
+
+.button-strip .button-strip-button.button-strip-button--checked {
+	background-color: var(--unity-overlay-buttons-on-color);
+} 
+
+.button-strip-button--left,
+.button-strip-button--middle {
+	margin-right: 2px;
+}
+
+.button-strip-button--middle {
+	border-radius: 0;
+}
+
+.button-strip-button--left {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.button-strip-button--right {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+}
+
+.button-strip-button__icon {
+	width: 16px;
+	height: 16px;
+	align-self: center;
+}

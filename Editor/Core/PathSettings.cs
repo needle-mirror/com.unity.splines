@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.SettingsManagement;
+﻿using UnityEditor.SettingsManagement;
 using UnityEngine;
 
 namespace UnityEditor.Splines

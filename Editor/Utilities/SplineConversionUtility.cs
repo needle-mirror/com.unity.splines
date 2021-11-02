@@ -9,6 +9,8 @@ namespace UnityEditor.Splines
     static class SplineConversionUtility
     {
         internal static Action splinesUpdated;
+        internal static Action splineTypeChanged;
+
         static readonly List<UObject> s_TargetsBuffer = new List<UObject>();
         static readonly List<BezierKnot> s_KnotBuffer = new List<BezierKnot>();
 
@@ -54,21 +56,22 @@ namespace UnityEditor.Splines
             //Ensure same number of editable splines than spline contained on the target
             Array.Resize(ref data.EditableSplines, data.RawSplines.Count);
 
+            bool typeChanged = false;
             for (var i = 0; i < data.RawSplines.Count; ++i)
             {
                 var spline = data.RawSplines[i];
                 var editableSpline = data.EditableSplines[i];
-                var conversionData = editableSpline as IEditableSplineConversionData;
 
                 if (editableSpline == null || EditableSplineUtility.GetSplineType(editableSpline) != spline.EditType)
                 {
                     var newPath = EditableSplineUtility.CreatePathOfType(spline.EditType);
-                    conversionData = (IEditableSplineConversionData)newPath;
-                    conversionData.conversionIndex = i;
-                    conversionData.conversionTarget = target;
+                    newPath.conversionIndex = i;
+                    newPath.conversionTarget = target;
 
                     data.EditableSplines[i] = newPath;
                     editableSpline = newPath;
+
+                    typeChanged = true;
                 }
                 
                 editableSpline.closed = spline.Closed;
@@ -81,9 +84,12 @@ namespace UnityEditor.Splines
                 editableSpline.FromBezier(s_KnotBuffer);
 
                 //Remove dirty flags to not reapply back to target 
-                conversionData.isDirty = false;
-                conversionData.ValidateData();
+                editableSpline.isDirty = false;
+                editableSpline.ValidateData();
             }
+
+            if (typeChanged)
+                splineTypeChanged?.Invoke();
 
             if (!silent)
                 splinesUpdated?.Invoke();
@@ -123,12 +129,11 @@ namespace UnityEditor.Splines
             for (var i = 0; i < data.EditableSplines.Length; ++i)
             {
                 var editablePath = data.EditableSplines[i];
-                var editablePathInternal = (IEditableSplineConversionData) editablePath;
                 var targetSpline = data.RawSplines[i];
-                if (editablePathInternal.isDirty)
+                
+                if (editablePath.isDirty)
                 {
-                    editablePathInternal.isDirty = false;
-
+                    editablePath.isDirty = false;
                     targetSpline.Closed = editablePath.closed;
                     s_KnotBuffer.Clear();
                     editablePath.ToBezier(s_KnotBuffer);
@@ -146,7 +151,7 @@ namespace UnityEditor.Splines
 
         static bool IsAnyEditableSplineDirty(IEnumerable<IEditableSpline> paths)
         {
-            foreach (IEditableSplineConversionData path in paths)
+            foreach (var path in paths)
             {
                 if (path.isDirty)
                     return true;

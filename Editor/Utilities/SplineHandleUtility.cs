@@ -47,8 +47,13 @@ namespace UnityEditor.Splines
         
         const float k_DottedLineLength = 0.2f;
         const float k_DottedLineSpace = 0.15f;
+
+        internal static Ray TransformRay(Ray ray, Matrix4x4 matrix)
+        {
+            return new Ray(matrix.MultiplyPoint3x4(ray.origin), matrix.MultiplyVector(ray.direction));
+        }
         
-        internal static bool GetPointOnSurfaces(Vector2 mousePosition, float distanceAboveSurface, out Vector3 point, out Vector3 normal)
+        internal static bool GetPointOnSurfaces(Vector2 mousePosition, out Vector3 point, out Vector3 normal)
         {
 #if UNITY_2020_1_OR_NEWER
             if (HandleUtility.PlaceObject(mousePosition, out point, out normal))
@@ -71,7 +76,7 @@ namespace UnityEditor.Splines
             if (constraint.Raycast(ray, out float distance))
             {
                 normal = constraint.normal;
-                point = ray.origin + ray.direction * distance + normal.normalized * distanceAboveSurface;
+                point = ray.origin + ray.direction * distance;
                 return true;
             }
 

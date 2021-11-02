@@ -1,9 +1,13 @@
 using UnityEngine;
 using UnityEditor.EditorTools;
+using UnityEditor.Overlays;
 using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    [CustomEditor(typeof(SplineRotateTool))]
+    class SplineRotateToolSettings : SplineToolSettings { }
+    
 #if UNITY_2021_2_OR_NEWER
     [EditorTool("Spline Rotate", typeof(ISplineProvider), typeof(SplineToolContext))]
 #else
@@ -21,7 +25,7 @@ namespace UnityEditor.Splines
         {
             if (Event.current.type == EventType.MouseDrag)
             {
-                if (SplineTool.k_LocalIsElementSpace)
+                if (SplineTool.handleOrientation == HandleOrientation.Element || SplineTool.handleOrientation == HandleOrientation.Parent)
                     TransformOperation.pivotFreeze |= TransformOperation.PivotFreeze.Rotation;
             }
 

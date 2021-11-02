@@ -97,17 +97,17 @@ namespace UnityEditor.Splines
             return knot;
         }
 
-        public static void AddPointToEnd(IEditableSpline spline, Vector3 position, Vector3 normal)
+        public static void AddPointToEnd(IEditableSpline spline, Vector3 worldPosition, Vector3 normal, Vector3 tangentOut)
         {
             if (spline.closed)
                 throw new ArgumentException("Cannot add a point to the end of a closed spline", nameof(spline));
             
             EditableKnot knot = spline.AddKnot();
-            knot.position = position;
-            knot.OnKnotAddedToPathEnd(position, normal);
+            knot.position = worldPosition;
+            spline.OnKnotAddedAtEnd(knot, normal, tangentOut);
         }
 
-        public static void ClosePath(IEditableSpline spline)
+        public static void CloseSpline(IEditableSpline spline)
         {
             if (spline.knotCount <= 1 && !spline.canBeClosed)
                 return;

@@ -45,9 +45,9 @@ namespace UnityEditor.Splines
             m_LocalPosition = localPosition;
         }
 
-        public int tangentIndex { get; }
+        public int tangentIndex { get; private set; }
 
-        public EditableKnot owner { get; }
+        public EditableKnot owner { get; private set; }
 
         /// <summary> Matrix that transforms a point from local (tangent) into world space. </summary>
         public Matrix4x4 localToWorldMatrix => owner.localToWorldMatrix * 
@@ -55,10 +55,18 @@ namespace UnityEditor.Splines
         /// <summary> Matrix that transforms a point from world space into local (tangent) space. </summary>
         public Matrix4x4 worldToLocalMatrix => localToWorldMatrix.inverse;
 
-        internal EditableTangent(EditableKnot owner, int tangentIndex)
+        public EditableTangent() : this(null, -1) {}
+
+        public EditableTangent(EditableKnot owner, int tangentIndex)
         {
             this.owner = owner;
             this.tangentIndex = tangentIndex;
+        }
+        
+        public void Copy(EditableTangent other)
+        {
+            tangentIndex = other.tangentIndex;
+            m_LocalPosition = other.localPosition;
         }
     }
 }

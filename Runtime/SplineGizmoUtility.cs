@@ -1,11 +1,7 @@
 using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Splines;
-#if !UNITY_2020_2_OR_NEWER
-using ToolManager = UnityEditor.EditorTools.EditorTools;
-#endif
 
-namespace UnityEditor.Splines
+namespace UnityEngine.Splines
 {
     /// <summary>
     /// SplineGizmoUtility provides methods for drawing in-scene representations of Splines.
@@ -19,7 +15,7 @@ namespace UnityEditor.Splines
         public static void DrawGizmos(ISplineProvider provider)
         {
             var splines = provider.Splines;
-            
+
             if (splines == null)
                 return;
 
@@ -38,7 +34,7 @@ namespace UnityEditor.Splines
         {
             float inv = 1f / (segments - 1);
             float3 p0 = localToWorld.MultiplyPoint(CurveUtility.EvaluatePosition(curve, 0f));
-            
+
             for (int n = 1; n < segments; n++)
             {
                 // todo Replace this with a Handles.BeginLineDrawing and handwritten GL.Vertex

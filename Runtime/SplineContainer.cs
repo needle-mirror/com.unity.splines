@@ -27,6 +27,8 @@ namespace UnityEngine.Splines
             }
         }
 
+        bool IsScaled => transform.lossyScale != Vector3.one;
+
         /// <summary>
         /// The instantiated <see cref="Spline"/> object attached to this component.
         /// </summary>
@@ -37,19 +39,40 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Evaluate the position on a curve at a specific t in world space.
-        /// Use <see cref="SplineUtility.SplineToCurveInterpolation{T}"/> to convert a time value from
-        /// spline to curve space.
+        /// Compute interpolated position, direction and upDirection at ratio t. Calling this method to get the
+        /// 3 vectors is faster than calling independently EvaluateSplinePosition, EvaluateSplineTangent and EvaluateSplineUpVector
+        /// for the same time t as it reduces some redundant computation.
         /// </summary>
-        /// <param name="curveIndex">The index of the <see cref="BezierCurve"/> to evaluate.</param>
-        /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
-        /// <returns>A position in world space.</returns>
-        public float3 EvaluateCurvePosition(int curveIndex, float t)
+        /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
+        /// <param name="position">Output variable for the float3 position at t.</param>
+        /// <param name="tangent">Output variable for the float3 tangent at t.</param>
+        /// <param name="upVector">Output variable for the float3 up direction at t.</param>
+        /// <returns>Boolean value, true if a valid set of output variables as been computed.</returns>
+        public bool Evaluate(float t, out float3 position,  out float3 tangent,  out float3 upVector)
         {
             if (Spline == null)
-                return float.PositiveInfinity;
+            {
+                position = float3.zero;
+                tangent = new float3(0, 0, 1);
+                upVector = new float3(0, 1, 0);
+                return false;
+            }
 
-            return transform.TransformPoint(CurveUtility.EvaluatePosition(Spline.GetCurve(curveIndex), t));
+            if (IsScaled)
+            {
+                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                return SplineUtility.Evaluate(nativeSpline, t, out position, out tangent, out upVector);
+            }
+
+            var evaluationStatus = SplineUtility.Evaluate(Spline, t, out position, out tangent, out upVector);
+            if (evaluationStatus)
+            {
+                position = transform.TransformPoint(position);
+                tangent = transform.TransformVector(tangent);
+                upVector = transform.TransformDirection(upVector);
+            }
+
+            return evaluationStatus;
         }
 
         /// <summary>
@@ -57,28 +80,17 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
         /// <returns>A tangent vector.</returns>
-        public float3 EvaluateSplinePosition(float t)
+        public float3 EvaluatePosition(float t)
         {
-            if (Spline == null)
+            if(Spline == null)
                 return float.PositiveInfinity;
 
+            if(IsScaled)
+            {
+                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                return SplineUtility.EvaluatePosition(nativeSpline, t);
+            }
             return transform.TransformPoint(SplineUtility.EvaluatePosition(Spline, t));
-        }
-
-        /// <summary>
-        /// Evaluate a tangent vector on a curve at a specific t in world space.
-        /// Use <see cref="SplineUtility.SplineToCurveInterpolation{T}"/> to convert a time value from
-        /// spline to curve space.
-        /// </summary>
-        /// <param name="curveIndex">The index of the <see cref="BezierCurve"/> to evaluate.</param>
-        /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
-        /// <returns>A tangent vector in world space.</returns>
-        public float3 EvaluateCurveTangent(int curveIndex, float t)
-        {
-            if (Spline == null)
-                return float.PositiveInfinity;
-
-            return transform.TransformDirection(CurveUtility.EvaluateTangent(Spline.GetCurve(curveIndex), t));
         }
 
         /// <summary>
@@ -86,46 +98,62 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline</param>
         /// <returns>A tangent vector</returns>
-        public float3 EvaluateSplineTangent(float t)
+        public float3 EvaluateTangent(float t)
         {
             if (Spline == null)
                 return 0;
 
-            return transform.TransformDirection(SplineUtility.EvaluateDirection(Spline, t));
+            if(IsScaled)
+            {
+                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                return SplineUtility.EvaluateTangent(nativeSpline, t);
+            }
+            return transform.TransformVector(SplineUtility.EvaluateTangent(Spline, t));
         }
-        
+
         /// <summary>
-        /// Evaluate an up vector at a specific t
+        /// Evaluate an up vector direction at a specific t
         /// </summary>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline</param>
-        /// <returns>An up vector</returns>
-        public float3 EvaluateSplineUpVector(float t)
+        /// <returns>An up direction.</returns>
+        public float3 EvaluateUpVector(float t)
         {
             if (Spline == null)
                 return float.PositiveInfinity;
 
+            if(IsScaled)
+            {
+                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                return SplineUtility.EvaluateUpVector(nativeSpline, t);
+            }
+
+            //Using TransformDirection as up direction is Not sensible to scale
             return transform.TransformDirection(SplineUtility.EvaluateUpVector(Spline, t));
         }
 
         /// <summary>
-        /// Calculate the length of a <see cref="BezierCurve"/> in world space.
+        /// Evaluate an acceleration vector at a specific t
         /// </summary>
-        /// <param name="curveIndex">The index of the curve to fetch length for.</param>
-        /// <returns>The length of a <see cref="BezierCurve"/> in world space.</returns>
-        public float CalculateCurveLength(int curveIndex)
+        /// <param name="t">A value between 0 and 1 representing a percentage of entire spline</param>
+        /// <returns>An acceleration vector.</returns>
+        public float3 EvaluateAcceleration(float t)
         {
             if (Spline == null)
-                return 0;
+                return float.PositiveInfinity;
 
-            using var spline = Spline.ToNativeSpline(transform.localToWorldMatrix);
-            return spline.GetCurveLength(curveIndex);
+            if(IsScaled)
+            {
+                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                return SplineUtility.EvaluateAcceleration(nativeSpline, t);
+            }
+            return transform.TransformVector(SplineUtility.EvaluateAcceleration(Spline, t));
         }
 
         /// <summary>
         /// Calculate the length of <see cref="Spline"/> in world space.
         /// </summary>
         /// <returns>The length of <see cref="Spline"/> in world space</returns>
-        public float CalculateSplineLength()
+        public float CalculateLength()
         {
             if(Spline == null)
                 return 0;

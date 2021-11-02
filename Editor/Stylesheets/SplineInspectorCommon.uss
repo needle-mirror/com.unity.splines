@@ -1,0 +1,32 @@
+.unity-icon {
+    width: 16px;
+    height: 16px;
+}
+
+ElementInspector {
+    width: 330px;
+}
+
+Vector3Field FloatInput {
+	max-width: 64px;
+}
+
+#TangentIn FloatInput, #TangentOut FloatInput {
+	max-width: 58px;
+}
+
+.unity-base-field__label {
+    min-width: 80px;
+}
+
+.unity-composite-field__field > .unity-base-field__label {
+    min-width: 14px;
+}
+
+.show-bezier-tangents .bezier-tangent-control {
+    display: flex;
+}
+
+.unity-composite-field__field {
+    width: 33%;
+} 

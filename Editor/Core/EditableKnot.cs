@@ -7,6 +7,8 @@ namespace UnityEditor.Splines
     [Serializable]
     class EditableKnot : ISplineElement
     {
+        internal static event Action<EditableKnot> knotModified; 
+
         [SerializeField]
         float3 m_LocalPosition;
 
@@ -14,7 +16,6 @@ namespace UnityEditor.Splines
         quaternion m_LocalRotation = quaternion.identity;
         
         public IEditableSpline spline { get; internal set; }
-        internal IEditableSplineConversionData splineConversionData { get; set; }
         public int index { get; internal set; }
 
         public bool IsValid()
@@ -58,7 +59,7 @@ namespace UnityEditor.Splines
                     return;
 
                 m_LocalPosition = value;
-                spline.SetDirty();
+                SetDirty();
             }
         }
 
@@ -83,15 +84,37 @@ namespace UnityEditor.Splines
                     return;
 
                 m_LocalRotation = math.normalize(value);
-                spline.SetDirty();
+                SetDirty();
             }
         }
+        
+        /// <summary>
+        /// How many editable tangents a knot contains. Cubic bezier splines contain 2 tangents, except at the ends of
+        /// a Spline that is not closed, in which case the knot contains a single tangent. Other spline type representations
+        /// may contain more or fewer tangents (ex, a Catmull-Rom spline does not expose any editable tangents). 
+        /// </summary>
+        public int tangentCount => spline.tangentsPerKnot;
 
-        public virtual int tangentCount => 0;
+        public virtual void Copy(EditableKnot other)
+        {
+            spline = other.spline;
+            index = other.index;
+            m_LocalPosition = other.localPosition;
+            m_LocalRotation = other.localRotation;
+            for (int i = 0, count = math.min(tangentCount, other.tangentCount); i < count; ++i)
+                GetTangent(i).Copy(other.GetTangent(i));
+        }
+
+        public void SetDirty()
+        {
+            knotModified?.Invoke(this);
+            spline?.SetDirty();
+        }
+        
         internal virtual EditableTangent GetTangent(int index) { return null; }
+
         public virtual void ValidateData() {}
         public virtual void OnPathUpdatedFromTarget() {}
         public virtual void OnKnotInsertedOnCurve(EditableKnot previous, EditableKnot next, float t) {}
-        public virtual void OnKnotAddedToPathEnd(float3 position, float3 normal) {}
     }
 }

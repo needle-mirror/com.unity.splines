@@ -1,36 +1,38 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "0.1.0-preview.1",
+  "version": "1.0.0-pre.5",
   "unity": "2022.1",
-  "description": "This package contains a framework and tools for working with curves and splines.",
+  "description": "Framework and tools for working with curves and splines.",
   "dependencies": {
-    "com.unity.test-framework.performance": "1.3.3-preview",
     "com.unity.settings-manager": "1.0.3",
     "com.unity.mathematics": "1.2.1",
-    "com.unity.burst": "1.6.0-pre.2",
-    "com.unity.coding": "0.1.0-preview.20"
+    "com.unity.burst": "1.6.0-pre.2"
   },
   "samples": [
     {
       "displayName": "Spline Examples",
-      "description": "Example code showing how to use Splines.",
+      "description": "Example code and scenes files showing how to use Splines.",
       "path": "Samples~/"
     }
   ],
   "keywords": [
     "spline",
+    "curve",
     "path"
   ],
   "testables": [
     "com.unity.test-framework.performance"
   ],
+  "relatedPackages": {
+    "com.unity.splines.tests": "1.0.0-pre.5"
+  },
   "upmCi": {
-    "footprint": "704a08699b67a144f0f74261d9e2ded750ae29e8"
+    "footprint": "4d854bddbb726ba7b165a91eb60fb670641b5f1b"
   },
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.splines.git",
     "type": "git",
-    "revision": "cb37d33d8979816110402dfc6577ac70f6a61dd3"
+    "revision": "f067755eafdda6cce48c8a0ce586e8f5d0144093"
   }
 }

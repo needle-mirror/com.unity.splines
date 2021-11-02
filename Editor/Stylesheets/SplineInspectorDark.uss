@@ -1,0 +1,15 @@
+#Linear {
+	background-image: url("../Resources/Icons/d_Tangent_Linear.png");
+}
+
+#Continuous {
+	background-image: url("../Resources/Icons/d_Tangent_Continuous.png");
+}
+
+#Mirrored {
+	background-image: url("../Resources/Icons/d_Tangent_Mirrored.png");
+}
+
+#Broken {
+	background-image: url("../Resources/Icons/d_Tangent_Broken.png");
+}

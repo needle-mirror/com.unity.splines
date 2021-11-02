@@ -27,10 +27,10 @@ namespace UnityEditor.Splines
             else
             {
                 localTangentIn = previousKnot != null
-                    ? SplineUtility.GetLinearTangent(knot.position, previousKnot.localPosition)
+                    ? SplineUtility.GetLinearTangent(knot.localPosition, previousKnot.localPosition)
                     : float3.zero;
                 localTangentOut = nextKnot != null
-                    ? SplineUtility.GetLinearTangent(knot.position, nextKnot.localPosition)
+                    ? SplineUtility.GetLinearTangent(knot.localPosition, nextKnot.localPosition)
                     : float3.zero;
             }
 
@@ -42,6 +42,20 @@ namespace UnityEditor.Splines
                     localTangentOut = -localTangentIn;
             }
         }
+        
+        public override CurveData GetPreviewCurveForEndKnot(float3 point, float3 normal, float3 tangentOut)
+        {
+            CreatePreviewKnotsIfNeeded();
+            
+            m_PreviewKnotB.position = point;
+            if (knotCount > 0)
+            {
+                var lastKnot = GetKnot(knotCount - 1);
+                m_PreviewKnotA.Copy(lastKnot);
+            }
+
+            return new CurveData(m_PreviewKnotA, m_PreviewKnotB);
+        }
 
         public override void ToBezier(List<BezierKnot> results)
         {
@@ -50,8 +64,9 @@ namespace UnityEditor.Splines
                 var editKnot = GetKnot(i);
                 var position = editKnot.localPosition;
                 GetLocalTangents(editKnot, out var tangentIn, out var tangentOut);
+                var knotRotationInv = math.inverse(editKnot.localRotation);
 
-                var knot = new BezierKnot(position, tangentIn, tangentOut, editKnot.localRotation);
+                var knot = new BezierKnot(position, math.rotate(knotRotationInv, tangentIn), math.rotate(knotRotationInv, tangentOut), editKnot.localRotation);
                 results.Add(knot);
             }
         }

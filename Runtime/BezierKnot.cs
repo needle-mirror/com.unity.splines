@@ -10,7 +10,7 @@ namespace UnityEngine.Splines
     /// closed, the first and last knots will contain an extraneous tangent (in and out, respectively).
     /// </summary>
     [Serializable]
-    public struct BezierKnot
+    public struct BezierKnot: ISerializationCallbackReceiver
     {
         /// <summary>
         /// The position of the knot. On a cubic bezier curve, this is equivalent to <see cref="BezierCurve.P0"/> or
@@ -58,11 +58,15 @@ namespace UnityEngine.Splines
         /// <returns>A new BezierKnot multiplied by matrix.</returns>
         public BezierKnot Transform(float4x4 matrix)
         {
+            var rotation = math.mul(new quaternion(matrix), Rotation);
+            var invRotation = math.inverse(rotation);
+            // Tangents need to be scaled, so rotation should be applied to them.
+            // No need however to use the translation as this is only a direction. 
             return new BezierKnot(
                 math.transform(matrix, Position),
-                TangentIn,
-                TangentOut,
-                math.mul(new quaternion(matrix), Rotation));
+                math.rotate(invRotation, math.rotate(matrix, math.rotate(Rotation,TangentIn))),
+                math.rotate(invRotation, math.rotate(matrix, math.rotate(Rotation,TangentOut))),
+                rotation);
         }
         
         /// <summary>

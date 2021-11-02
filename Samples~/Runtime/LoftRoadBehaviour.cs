@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-using System.IO;
 using UnityEditor;
 #endif
 
@@ -18,8 +17,6 @@ namespace Unity.Splines.Examples
     [RequireComponent(typeof(SplineContainer), typeof(MeshRenderer), typeof(MeshFilter))]
     public class LoftRoadBehaviour : MonoBehaviour
     {
-        const string k_GeneratedMeshDirectory = "Assets/Generated/Roads";
-
         [SerializeField]
         SplineContainer m_Spline;
 
@@ -32,9 +29,10 @@ namespace Unity.Splines.Examples
         [SerializeField]
         float m_TextureScale = 1f;
 
+        public float m_DefaultWidth = 1f;
         [SerializeField]
-        [SplineDataDrawer(typeof(CustomWidthHandle))]
-        SplineData<float> m_Width = new SplineData<float>(new [] { new Keyframe<float>(0f, .5f) });
+        [WidthHandle]
+        SplineData<float> m_Width;
 
         public Spline spline
         {
@@ -42,6 +40,11 @@ namespace Unity.Splines.Examples
             {
                 if (m_Spline == null)
                     m_Spline = GetComponent<SplineContainer>();
+                if (m_Spline == null)
+                {
+                    Debug.LogError("Cannot loft road mesh because Spline reference is null");
+                    return null;
+                }
                 return m_Spline.Spline;
             }
         }
@@ -54,13 +57,7 @@ namespace Unity.Splines.Examples
                     return m_Mesh;
 
                 m_Mesh = new Mesh();
-
-#if UNITY_EDITOR
-                Directory.CreateDirectory(k_GeneratedMeshDirectory);
-                var path = AssetDatabase.GenerateUniqueAssetPath($"{k_GeneratedMeshDirectory}/{name}.asset");
-                AssetDatabase.CreateAsset(m_Mesh, path);
-                AssetDatabase.ImportAsset(path);
-#endif
+                GetComponent<MeshRenderer>().sharedMaterial = Resources.Load<Material>("Road");
                 return m_Mesh;
             }
         }
@@ -80,20 +77,51 @@ namespace Unity.Splines.Examples
 
         public void OnEnable()
         {
+            //Avoid to point to an existing instance when duplicating the GameObject
+            if(m_Mesh != null)
+                m_Mesh = null;
+
             Loft();
+#if UNITY_EDITOR            
+            EditorSplineUtility.afterSplineWasModified += OnAfterSplineWasModified;
+            EditorSplineUtility.RegisterSplineDataChanged<float>(OnAfterSplineDataWasModified);
+            Undo.undoRedoPerformed += Loft;
+#endif
+        }
+        
+        public void OnDisable()
+        {
+#if UNITY_EDITOR
+            EditorSplineUtility.afterSplineWasModified -= OnAfterSplineWasModified;
+            EditorSplineUtility.UnregisterSplineDataChanged<float>(OnAfterSplineDataWasModified);
+            Undo.undoRedoPerformed -= Loft;
+#endif
+            
+            if(m_Mesh != null)
+#if  UNITY_EDITOR
+                DestroyImmediate(m_Mesh);
+#else
+                Destroy(m_Mesh);
+#endif
         }
 
+        void OnAfterSplineWasModified(Spline s)
+        {
+            if(s == spline)
+                Loft();
+        }
+        
+        void OnAfterSplineDataWasModified(SplineData<float> splineData)
+        {
+            if (splineData == width)
+                Loft();
+        }
+        
         public void Loft()
         {
-            if (m_Spline == null || m_Spline.Spline == null)
-            {
-                Debug.LogError("Cannot loft road mesh because Spline reference is null");
+            if (spline == null || spline.KnotCount < 2)
                 return;
-            }
-
-            if (m_Spline.Spline == null || m_Spline.Spline.KnotCount < 2)
-                return;
-
+            
             mesh.Clear();
 
             float length = spline.GetLength();
@@ -118,13 +146,19 @@ namespace Unity.Splines.Examples
             {
                 var index = i / (segments - 1f);
                 var control = SplineUtility.EvaluatePosition(spline, index);
-                var dir = SplineUtility.EvaluateDirection(spline, index);
+                var dir = SplineUtility.EvaluateTangent(spline, index);
                 var up = SplineUtility.EvaluateUpVector(spline, index);
-                
-                var tangent = math.normalize(math.cross(up, dir));
-                var convertedTime = SplineUtility.GetConvertedTime(spline, index, PathIndexUnit.Normalized, m_Width.PathIndexUnit);
-                var w = m_Width.Evaluate(spline, convertedTime, new Interpolators.LerpFloat());
-                w = math.clamp(w, .001f, 10000f);
+
+                var scale = transform.lossyScale;
+                //var tangent = math.normalize((float3)math.mul(math.cross(up, dir), new float3(1f / scale.x, 1f / scale.y, 1f / scale.z)));
+                var tangent = math.normalize(math.cross(up, dir)) * new float3(1f / scale.x, 1f / scale.y, 1f / scale.z);
+
+                var w = m_DefaultWidth;
+                if(width != null && width.Count > 0)
+                {
+                    w = m_Width.Evaluate(spline, index, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
+                    w = math.clamp(w, .001f, 10000f);
+                }
 
                 m_Positions.Add(control - (tangent * w));
                 m_Positions.Add(control + (tangent * w));

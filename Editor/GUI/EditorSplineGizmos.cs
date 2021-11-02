@@ -5,19 +5,22 @@ using UObject = UnityEngine.Object;
 
 namespace UnityEditor.Splines
 {
-	public static class EditorSplineGizmos
+	static class EditorSplineGizmos
 	{
-		[DrawGizmo(GizmoType.Active | GizmoType.NonSelected | GizmoType.Selected)]
-		static void DrawSplineContainerGizmos(ISplineProvider provider, GizmoType gizmoType)
+		[DrawGizmo(GizmoType.Active | GizmoType.NonSelected | GizmoType.Selected | GizmoType.Pickable)]
+		static void DrawUnselectedSplineGizmos(ISplineProvider provider, GizmoType gizmoType)
 		{
 			//Skip if tool engaged is a spline tool
 			if (typeof(SplineTool).IsAssignableFrom(ToolManager.activeToolType) &&
 			    (provider is UObject objectProvider) && EditableSplineManager.TryGetTargetData(objectProvider, out _))
 				return;
 
-			Gizmos.color = Color.blue;
+			var prev = Gizmos.color;
+			Gizmos.color = (gizmoType & (GizmoType.Selected | GizmoType.Active)) > 0 
+				? Handles.selectedColor 
+				: Color.blue;
 			SplineGizmoUtility.DrawGizmos(provider);
-			Gizmos.color = Color.white;
+			Gizmos.color = prev;
 		}
 	}
 }

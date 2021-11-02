@@ -15,8 +15,8 @@ namespace UnityEditor.Splines
 
         public SelectableSplineElement(EditableKnot knot)
         {
-            target = knot.splineConversionData.conversionTarget;
-            pathIndex = knot.splineConversionData.conversionIndex;
+            target = knot.spline.conversionTarget;
+            pathIndex = knot.spline.conversionIndex;
             knotIndex = knot.index;
             tangentIndex = -1;
         }
@@ -41,7 +41,7 @@ namespace UnityEditor.Splines
 
         public bool IsFromPath(IEditableSpline spline)
         {
-            var pathInternal = (IEditableSplineConversionData)spline;
+            var pathInternal = spline;
             return pathInternal.conversionTarget == target && pathInternal.conversionIndex == pathIndex;
         }
 
@@ -51,8 +51,8 @@ namespace UnityEditor.Splines
                 return false;
 
             return knotIndex == knot.index
-                   && pathIndex == knot.splineConversionData.conversionIndex
-                   && target == knot.splineConversionData.conversionTarget;
+                   && pathIndex == knot.spline.conversionIndex
+                   && target == knot.spline.conversionTarget;
         }
 
         public bool Equals(SelectableSplineElement other)
@@ -84,6 +84,7 @@ namespace UnityEditor.Splines
         static SelectionContext s_Instance;
         
         public List<SelectableSplineElement> selection = new List<SelectableSplineElement>();
+        public int version;
 
         public static SelectionContext instance
         {

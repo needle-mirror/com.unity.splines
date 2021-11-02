@@ -3,23 +3,33 @@ using System.Linq;
 using UnityEditor.SettingsManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Splines;
+using Unity.Mathematics;
 
 namespace UnityEditor.Splines
 {
     static class SplineHandles
     {
-        [UserSetting("Handles", "Curve Normal Color")]
-        internal static readonly UserSetting<Color> k_LineNormalFrontColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalInFrontColor", Color.white, SettingsScope.User);
+        [UserSetting]
+        internal static UserSetting<Color> s_LineNormalFrontColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalInFrontColor", Color.white, SettingsScope.User);
 
-        [UserSetting("Handles", "Curve Normal Color Behind Surface")]
-        internal static readonly UserSetting<Color> k_LineNormalBehindColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalBehindColor", new Color(0.98f, 0.62f, 0.62f, 0.4f), SettingsScope.User);
+        [UserSetting]
+        internal static UserSetting<Color> s_LineNormalBehindColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalBehindColor", new Color(0.98f, 0.62f, 0.62f, 0.4f), SettingsScope.User);
+        
+        [UserSetting]
+        internal static UserSetting<Color> s_KnotColor = new UserSetting<Color>(PathSettings.instance, "Handles.KnotDefaultColor", Color.white, SettingsScope.User);
 
-        [UserSetting("Handles", "Knot Default Color")]
-        internal static readonly UserSetting<Color> k_KnotColor = new UserSetting<Color>(PathSettings.instance, "Handles.KnotDefaultColor", Color.white, SettingsScope.User);
+        [UserSetting]
+        internal static UserSetting<Color> s_TangentColor = new UserSetting<Color>(PathSettings.instance, "Handles.TangentDefaultColor", new Color(0.15f, 0.55f, 1f, 1), SettingsScope.User);
 
-        [UserSetting("Handles", "Tangent Default Color")]
-        internal static readonly UserSetting<Color> k_TangentColor = new UserSetting<Color>(PathSettings.instance, "Handles.TangentDefaultColor", new Color(0.15f, 0.55f, 1f, 1), SettingsScope.User);
-
+        [UserSettingBlock("Handles")]
+        static void HandleColorPreferences(string searchContext)
+        {
+            s_LineNormalFrontColor.value = SettingsGUILayout.SettingsColorField("Curve Color", s_LineNormalFrontColor, searchContext);
+            s_LineNormalBehindColor.value = SettingsGUILayout.SettingsColorField("Curve Color Behind Surface", s_LineNormalBehindColor, searchContext);
+            s_KnotColor.value = SettingsGUILayout.SettingsColorField("Knot Color", s_KnotColor, searchContext);
+            s_TangentColor.value = SettingsGUILayout.SettingsColorField("Tangent Color", s_TangentColor, searchContext);
+        }
 
         const float k_KnotPickingDistance = 18f;
         const float k_TangentPickingDistance = 8f;
@@ -27,9 +37,8 @@ namespace UnityEditor.Splines
         const float k_CurvePickingDistance = 8f;
         const int k_SegmentCount = 30;
         const float k_CurveLineWidth = 5f;
-        const float k_CurveGuideLineWidth = 3f;
-        static readonly Color k_GuideLinesColor = new Color(.7f, .7f, .7f, 1);
-        
+        const float k_PreviewCurveOpacity = 0.5f;
+
         static readonly Vector3[] s_CurveSegmentsBuffer = new Vector3[k_SegmentCount + 1];
 
         internal static void DrawSplineHandles(IReadOnlyList<IEditableSpline> paths, SplineHandlesOptions options)
@@ -40,7 +49,7 @@ namespace UnityEditor.Splines
             }
         }
 
-        internal static void DrawSplineHandles(IEditableSpline spline, SplineHandlesOptions options, bool activeSpline = true)
+        internal static bool DrawSplineHandles(IEditableSpline spline, SplineHandlesOptions options, bool activeSpline = true)
         {
             int lastIndex = spline.closed ? spline.knotCount - 1 : spline.knotCount - 2; //If the spline isn't closed, skip the last index of the spline
             var isInsertingKnots = HasOption(options, SplineHandlesOptions.KnotInsert);
@@ -52,12 +61,13 @@ namespace UnityEditor.Splines
                 for (int idIndex = 0; idIndex < lastIndex+1; ++idIndex)
                     curveIDs[idIndex] = GUIUtility.GetControlID(FocusType.Passive);
             }
-            
+
+            activeSpline = curveIDs.Contains(HandleUtility.nearestControl) || activeSpline;
             for (int knotIndex = 0; knotIndex <= lastIndex; ++knotIndex)
             {
                 var curve = new CurveData(spline, knotIndex);
                 if (isInsertingKnots)
-                    CurveHandleWithKnotInsert(curve, curveIDs[knotIndex], curveIDs.Contains(HandleUtility.nearestControl) || activeSpline);
+                    CurveHandleWithKnotInsert(curve, curveIDs[knotIndex], activeSpline);
                 else
                     DrawCurve(curve);
             }
@@ -72,7 +82,7 @@ namespace UnityEditor.Splines
                     {
                         //Not drawing unused tangents
                         if (!spline.closed && ((knotIndex == 0 && tangentIndex == 0) ||
-                                               (knotIndex + 1 == spline.knotCount && tangentIndex + 1 == knot.tangentCount)))
+                                               (knotIndex != 0 && knotIndex + 1 == spline.knotCount && tangentIndex + 1 == knot.tangentCount)))
                             continue;
 
                         var tangent = knot.GetTangent(tangentIndex);
@@ -88,6 +98,8 @@ namespace UnityEditor.Splines
                 else
                     DrawKnotHandle(knot, curveIDs.Contains(HandleUtility.nearestControl) || activeSpline);
             }
+
+            return activeSpline;
         }
 
         static bool HasOption(SplineHandlesOptions options, SplineHandlesOptions target)
@@ -169,11 +181,10 @@ namespace UnityEditor.Splines
             }
         }
         
-        internal static bool ButtonHandle(EditableKnot knot)
+        internal static bool ButtonHandle(int controlID, EditableKnot knot, bool active)
         {
-            int id = GUIUtility.GetControlID(FocusType.Passive);
             Event evt = Event.current;
-            EventType eventType = evt.GetTypeForControl(id);
+            EventType eventType = evt.GetTypeForControl(controlID);
 
             var position = knot.position;
 
@@ -182,28 +193,28 @@ namespace UnityEditor.Splines
                 case EventType.Layout:
                 {
                     if(!Tools.viewToolActive)
-                        HandleUtility.AddControl(id, SplineHandleUtility.DistanceToKnot(position));
+                        HandleUtility.AddControl(controlID, SplineHandleUtility.DistanceToKnot(position));
                     break;
                 }
                 
                 case EventType.Repaint:
-                    DrawKnotHandle(knot, id);
+                    DrawKnotHandle(knot, controlID, active);
                     break;
                 
                 case EventType.MouseDown:
-                    if (HandleUtility.nearestControl == id)
+                    if (HandleUtility.nearestControl == controlID)
                     {
                         //Clicking a knot selects it
                         if (evt.button != 0)
                             break;
 
-                        GUIUtility.hotControl = id;
+                        GUIUtility.hotControl = controlID;
                         evt.Use();
                     }
                     break;
 
                 case EventType.MouseUp:
-                    if (GUIUtility.hotControl == id)
+                    if (GUIUtility.hotControl == controlID)
                     {
                         GUIUtility.hotControl = 0;
                         evt.Use();
@@ -213,7 +224,7 @@ namespace UnityEditor.Splines
                     break;
 
                 case EventType.MouseMove:
-                    if (id == HandleUtility.nearestControl)
+                    if (HandleUtility.nearestControl == controlID)
                         HandleUtility.Repaint();
                     break;
             }
@@ -236,7 +247,7 @@ namespace UnityEditor.Splines
             Event evt = Event.current;
             EventType eventType = evt.GetTypeForControl(controlID);
             
-            CurveHandleCap(curve, controlID, eventType, activeSpline);
+            CurveHandleCap(curve, controlID, eventType, false, activeSpline);
             switch (eventType)
             {
                 case EventType.Repaint:
@@ -248,7 +259,18 @@ namespace UnityEditor.Splines
                             var mouseRect = new Rect(evt.mousePosition - new Vector2(500, 500), new Vector2(1000, 1000));
                             EditorGUIUtility.AddCursorRect(mouseRect, MouseCursor.ArrowPlus);
 
-                            DrawKnotHandle(position, Quaternion.identity, false, controlID, false, activeSpline);
+                            var previewKnotRotation = quaternion.identity;
+                            if (curve.a.spline is BezierEditableSpline)
+                            {
+                                var bezierCurve = BezierCurve.FromTangent(curve.a.position, curve.a.GetTangent((int)BezierTangent.Out).direction, 
+                                    curve.b.position, curve.b.GetTangent((int)BezierTangent.In).direction);
+
+                                var up = CurveUtility.EvaluateUpVector(bezierCurve, t, math.rotate(curve.a.rotation, math.up()), math.rotate(curve.b.rotation, math.up()));
+                                var tangentOut = CurveUtility.EvaluateTangent(bezierCurve, t);
+                                previewKnotRotation = quaternion.LookRotation(math.normalize(tangentOut), up);
+                            }
+
+                            DrawKnotHandle(position, previewKnotRotation, false, controlID, false, activeSpline);
                         }
                     }
                     break;
@@ -259,17 +281,6 @@ namespace UnityEditor.Splines
                         if (evt.button != 0)
                             break;
 
-                        GUIUtility.hotControl = controlID;
-                        evt.Use();
-                    }
-                    break;
-
-                case EventType.MouseUp:
-                    if (GUIUtility.hotControl == controlID)
-                    {
-                        GUIUtility.hotControl = 0;
-                        evt.Use();
-
                         SplineHandleUtility.GetNearestPointOnCurve(curve, out Vector3 position, out float t);
                         
                         //Do not place a new knot on an existing one to prevent creation of singularity points with bad tangents
@@ -277,17 +288,20 @@ namespace UnityEditor.Splines
                         {
                             EditableKnot knot = EditableSplineUtility.InsertKnotOnCurve(curve, position, t);
 
-                            if(!evt.control)
+                            if(!(evt.control || evt.shift))
                                 SplineSelection.Clear();
 
                             SplineSelection.Add(knot);
                         }
+                        
+                        evt.Use();
                     }
                     break;
 
                 case EventType.MouseMove:
-                    if (HandleUtility.nearestControl == controlID)
+                    if(HandleUtility.nearestControl == controlID)
                         HandleUtility.Repaint();
+                    
                     break;
             }
         }
@@ -313,7 +327,7 @@ namespace UnityEditor.Splines
             if(Event.current.GetTypeForControl(controlId) != EventType.Repaint)
                 return;
             
-            var knotColor = k_KnotColor.value;
+            var knotColor = s_KnotColor.value;
             if(preview)
                 knotColor = Color.Lerp(Color.gray, Color.white, 0.5f);
             else if(selected)
@@ -346,7 +360,7 @@ namespace UnityEditor.Splines
 
             var size = HandleUtility.GetHandleSize(tangentPos) * 0.1f;
             
-            var tangentColor = k_TangentColor.value;
+            var tangentColor = s_TangentColor.value;
             if(SplineSelection.Contains(tangent))
                 tangentColor = Handles.selectedColor;
             else if(HandleUtility.nearestControl == controlId)
@@ -354,7 +368,7 @@ namespace UnityEditor.Splines
             
             var tangentArmColor = tangentColor;
             var useDottedLine = false;
-            if(tangentArmColor == k_TangentColor && IsOppositeTangentSelected(tangent))
+            if(tangentArmColor == s_TangentColor && IsOppositeTangentSelected(tangent))
             {
                 tangentArmColor = Handles.selectedColor;
                 useDottedLine = ( tangent.owner is BezierEditableKnot bezierKnot ) &&
@@ -382,7 +396,7 @@ namespace UnityEditor.Splines
                 CurveHandleCap(curve, -1, EventType.Repaint);
         }
 
-        internal static void CurveHandleCap(CurveData curve, int controlID, EventType eventType, bool activeSpline = true)
+        internal static void CurveHandleCap(CurveData curve, int controlID, EventType eventType, bool previewCurve = false, bool activeSpline = true)
         {
             switch (eventType)
             {
@@ -408,13 +422,15 @@ namespace UnityEditor.Splines
                         SplineHandleUtility.GetCurveSegments(curve, s_CurveSegmentsBuffer);
                         //We attenuate the spline display if a spline can be controlled (id != -1) and
                         //if it's not the current active spline
-                        var attenuate = controlID != -1  && !activeSpline;
+                        var attenuate = controlID != -1 && !activeSpline;
                         
                         var prevColor = Handles.color;
                         
-                        var color = k_LineNormalFrontColor.value;
+                        var color = s_LineNormalFrontColor.value;
                         if (attenuate)
                             color = Handles.secondaryColor;
+                        if (previewCurve)
+                            color.a *= k_PreviewCurveOpacity;
                         
                         Handles.color = color;
 
@@ -423,9 +439,11 @@ namespace UnityEditor.Splines
                             Handles.DrawAAPolyLine(k_CurveLineWidth, s_CurveSegmentsBuffer);
                         }
 
-                        color = k_LineNormalBehindColor.value;
+                        color = s_LineNormalBehindColor.value;
                         if (attenuate)
                             color = Handles.secondaryColor;
+                        if (previewCurve)
+                            color.a *= k_PreviewCurveOpacity;
                         
                         Handles.color = color;
 
@@ -435,93 +453,9 @@ namespace UnityEditor.Splines
                         }
 
                         Handles.color = prevColor;
-
-                        using (new ColorScope(k_GuideLinesColor))
-                        {
-                            //For better readability, in the case that the curve doesn't go through the point, we add a line between the start of the curve and the point
-                            Vector3 firstPoint = curve.a.position;
-                            Vector3 firstSegmentPoint = s_CurveSegmentsBuffer[0];
-                            if (firstPoint != firstSegmentPoint)
-                                Handles.DrawDottedLine(firstPoint, firstSegmentPoint, k_CurveGuideLineWidth);
-
-                            //Only do this for last curve to not get line overlap
-                            bool lastCurve = !curve.a.spline.closed && curve.a.index == curve.a.spline.knotCount - 1;
-                            if (lastCurve)
-                            {
-                                Vector3 lastPoint = curve.b.position;
-                                Vector3 lastSegmentPoint = s_CurveSegmentsBuffer[k_SegmentCount];
-                                if (lastPoint != lastSegmentPoint)
-                                    Handles.DrawDottedLine(lastPoint, lastSegmentPoint, k_CurveGuideLineWidth);
-                            }
-                        }
-
                         break;
                     }
             }
-        }
-        
-        internal static int KnotSurfaceAddHandle(IEditableSpline spline, float distanceAboveSurface = 0)
-        {
-            if (spline == null)
-                return -1;
-
-            Event evt = Event.current;
-            int id = GUIUtility.GetControlID(FocusType.Passive);
-
-            switch (evt.GetTypeForControl(id))
-            {
-                case EventType.Layout:
-                    if (!Tools.viewToolActive)
-                        HandleUtility.AddDefaultControl(id);
-                    break;
-
-                case EventType.Repaint:
-                    if (HandleUtility.nearestControl == id && !Tools.viewToolActive)
-                    {
-                        if (SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, distanceAboveSurface, out Vector3 point, out Vector3 normal))
-                        {
-                            if (spline.knotCount > 0)
-                            {
-                                Vector3 lastPoint = spline.GetKnot(spline.knotCount - 1).position;
-                                Handles.DrawDottedLine(lastPoint, point, 3f);
-                            }
-                            DrawKnotHandle(point, Quaternion.identity,  false, id);
-                        }
-                    }
-                    break;
-
-                case EventType.MouseDown:
-                    if (HandleUtility.nearestControl == id)
-                    {
-                        if (evt.button != 0)
-                            break;
-
-                        GUIUtility.hotControl = id;
-                        evt.Use();
-                    } 
-                    break;
-
-                case EventType.MouseUp:
-                    if (GUIUtility.hotControl == id)
-                    {
-                        GUIUtility.hotControl = 0;
-                        evt.Use();
-
-                        if (SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, distanceAboveSurface, out Vector3 point, out Vector3 normal))
-                        {
-                            point = SplineHandleUtility.RoundBasedOnMinimumDifference(point);
-                            EditableSplineUtility.AddPointToEnd(spline, point, normal);
-                        }
-                    }
-                    break;
-
-                case EventType.MouseMove:
-                    if (id == HandleUtility.nearestControl)
-                        HandleUtility.Repaint();
-                    break;
-            }
-
-            return id;
         }
     }
 }

@@ -22,13 +22,31 @@ namespace UnityEditor.Splines
 
         static SelectionContext context => SelectionContext.instance;
         static List<SelectableSplineElement> selection => context.selection;
-        
+
+        static int s_SelectionVersion;
+
+        static SplineSelection()
+        {
+            context.version = 0; 
+
+            Undo.undoRedoPerformed += OnUndoRedoPerformed;
+        }
+
+        static void OnUndoRedoPerformed()
+        {
+            if (context.version != s_SelectionVersion)
+            {
+                s_SelectionVersion = context.version;
+                NotifySelectionChanged();
+            }
+        }
+
         public static void Clear()
         {
             if (selection.Count == 0)
                 return;
 
-            Undo.RecordObject(context, "Clear Spline Selection");
+            IncrementVersion();
             ClearNoUndo(true);
         }
 
@@ -36,7 +54,7 @@ namespace UnityEditor.Splines
         {
             selection.Clear();
             if (notify)
-                changed?.Invoke();
+                NotifySelectionChanged();
         }
 
         static bool GetKnotFromElement(SelectableSplineElement element, out EditableKnot knot)
@@ -105,23 +123,58 @@ namespace UnityEditor.Splines
                 if (element.isTangent && GetTangentFromElement(element, out EditableTangent tangent))
                     tangents.Add(tangent);
         }
-        
+
+        public static int count => selection.Count;
+
+        static ISplineElement ToSplineElement(SelectableSplineElement rawElement)
+        {
+            if (rawElement.isKnot)
+            {
+                if (GetKnotFromElement(rawElement, out EditableKnot knot))
+                    return knot;
+            }
+            else if (rawElement.isTangent)
+            {
+                if (GetTangentFromElement(rawElement, out EditableTangent tangent))
+                    return tangent;
+            }
+
+            return null;
+        }
+
+        public static ISplineElement GetActiveElement()
+        {
+            //Get first valid element
+            foreach (var rawElement in selection)
+            {
+                var element = ToSplineElement(rawElement);
+                if (element != null)
+                    return element;
+            }
+
+            return null;
+        }
+
+        public static void GetSelectedElements(List<ISplineElement> elements)
+        {
+            elements.Clear();
+            foreach (var rawElement in selection)
+            {
+                var element = ToSplineElement(rawElement);
+                if (element != null)
+                    elements.Add(element);
+            }
+        }
+
         public static void GetSelectedElements(IEnumerable<Object> targets, List<ISplineElement> elements)
         {
             elements.Clear();
             GetSelectedElementsInternal(targets, s_ElementBuffer);
             foreach (var rawElement in s_ElementBuffer)
             {
-                if (rawElement.isKnot)
-                {
-                    if (GetKnotFromElement(rawElement, out EditableKnot knot))
-                        elements.Add(knot);
-                }
-                else if (rawElement.isTangent)
-                {
-                    if (GetTangentFromElement(rawElement, out EditableTangent tangent))
-                        elements.Add(tangent);
-                }
+                var element = ToSplineElement(rawElement);
+                if (element != null)
+                    elements.Add(element);
             }
         }
 
@@ -193,7 +246,7 @@ namespace UnityEditor.Splines
             if (index == 0)
                 return;
 
-            Undo.RecordObject(context, "Change Active Spline Selection");
+            IncrementVersion();
 
             if (index > 0)
                 selection.RemoveAt(index);
@@ -234,7 +287,7 @@ namespace UnityEditor.Splines
 
         public static void Add(EditableKnot knot)
         {
-            Undo.RecordObject(context, "Add Knot to Selection");
+            IncrementVersion();
 
             if (AddElement(new SelectableSplineElement(knot)))
                 NotifySelectionChanged();
@@ -242,7 +295,7 @@ namespace UnityEditor.Splines
 
         public static void Add(IEnumerable<EditableKnot> knots)
         {
-            Undo.RecordObject(context, "Add Knots to Selection");
+            IncrementVersion();
 
             bool changed = false;
             foreach (var knot in knots)
@@ -254,7 +307,7 @@ namespace UnityEditor.Splines
 
         public static void Add(EditableTangent tangent)
         {
-            Undo.RecordObject(context, "Add Tangent to Selection");
+            IncrementVersion();
 
             if (AddElement(new SelectableSplineElement(tangent)))
                 NotifySelectionChanged();
@@ -262,7 +315,7 @@ namespace UnityEditor.Splines
 
         public static void Add(IEnumerable<EditableTangent> tangents)
         {
-            Undo.RecordObject(context, "Add Tangents to Selection");
+            IncrementVersion();
 
             bool changed = false;
             foreach (var tangent in tangents)
@@ -295,14 +348,14 @@ namespace UnityEditor.Splines
 
         public static bool Remove(EditableKnot knot)
         {
-            Undo.RecordObject(context, "Remove Knot from Selection");
+            IncrementVersion();
 
             return RemoveElement(new SelectableSplineElement(knot));
         }
 
         public static bool Remove(EditableTangent tangent)
         {
-            Undo.RecordObject(context, "Remove Tangent from Selection");
+            IncrementVersion();
 
             return RemoveElement(new SelectableSplineElement(tangent));
         }
@@ -350,7 +403,7 @@ namespace UnityEditor.Splines
                 if (target != null)
                     s_ObjectBuffer.Add(target);
             
-
+            IncrementVersion();
             if (selection.RemoveAll(ObjectRemovePredicate) > 0)
                 NotifySelectionChanged();
         }
@@ -393,6 +446,14 @@ namespace UnityEditor.Splines
                     }
                 }
             }
+        }
+
+        static void IncrementVersion()
+        {
+            Undo.RecordObject(context, "Spline Selection Changed");
+
+            ++s_SelectionVersion;
+            ++context.version;
         }
 
         static void NotifySelectionChanged()

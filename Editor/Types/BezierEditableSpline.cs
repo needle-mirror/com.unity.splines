@@ -50,10 +50,17 @@ namespace UnityEditor.Splines
         public enum Mode
         {
             /// <summary>
-            /// Tangents are manipulated in isolation. Modifying one tangent on a knot does not affect the other.
+            /// Tangents are not used. A linear spline is a series of connected points with no curve applied when
+            /// interpolating between knots.
             /// </summary>
-            Broken,
-            
+            Linear,
+
+            /// <summary>
+            /// Tangents are kept parallel and with matching length. Modifying one tangent will update the opposite
+            /// tangent to the inverse direction and equivalent length.
+            /// </summary>
+            Mirrored,
+
             /// <summary>
             /// Tangents are kept in parallel. Modifying one tangent will change the direction of the opposite tangent,
             /// but does not affect the length.
@@ -61,16 +68,9 @@ namespace UnityEditor.Splines
             Continuous,
     
             /// <summary>
-            /// Tangents are kept parallel and with matching length. Modifying one tangent will update the opposite
-            /// tangent to the inverse direction and equivalent length.
+            /// Tangents are manipulated in isolation. Modifying one tangent on a knot does not affect the other.
             /// </summary>
-            Mirrored,
-            
-            /// <summary>
-            /// Tangents are not used. A linear spline is a series of connected points with no curve applied when
-            /// interpolating between knots.
-            /// </summary>
-            Linear
+            Broken,
         }
 
         [SerializeField] EditableTangent m_TangentIn;
@@ -81,13 +81,6 @@ namespace UnityEditor.Splines
         /// Defines how tangents behave when manipulated.
         /// </summary>
         public Mode mode => m_Mode;
-
-        /// <summary>
-        /// How many editable tangents a knot contains. Cubic bezier splines contain 2 tangents, except at the ends of
-        /// a Spline that is not closed, in which case the knot contains a single tangent. Other spline type representations
-        /// may contain more or fewer tangents (ex, a Catmull-Rom spline does not expose any editable tangents). 
-        /// </summary>
-        public override int tangentCount => 2;
 
         /// <summary>
         /// The tangent preceding this knot.
@@ -136,7 +129,7 @@ namespace UnityEditor.Splines
                     break;
             }
 
-            spline.SetDirty();
+            SetDirty();
         }
 
         internal override EditableTangent GetTangent(int index)
@@ -178,6 +171,9 @@ namespace UnityEditor.Splines
                 m_TangentIn.localPosition = localTangentIn;
                 m_TangentOut.localPosition = localTangentOut;
             }
+
+            if (spline is LinearEditableSpline)
+                UpdateAdjacentLinearTangents();
         }
 
         /// <summary>
@@ -185,7 +181,7 @@ namespace UnityEditor.Splines
         /// </summary>
         /// <param name="tangentIn"> World space in tangent.</param>
         /// <param name="tangentOut"> World space out tangent.</param>
-        void SetTangents(float3 tangentIn, float3 tangentOut)
+        public void SetTangents(float3 tangentIn, float3 tangentOut)
         {
             var splineSpaceTangentIn = spline.worldToLocalMatrix.MultiplyVector(tangentIn);
             var splineSpaceTangentOut = spline.worldToLocalMatrix.MultiplyVector(tangentOut);
@@ -219,21 +215,29 @@ namespace UnityEditor.Splines
                 return;
 
             m_Mode = mode;
+            ForceUpdateTangentsFromMode();
+            SetDirty();
+        }
+
+        public void ForceUpdateTangentsFromMode()
+        {
             switch (mode)
             {
                 case Mode.Continuous:
-                    m_TangentOut.localPosition = SplineUtility.GetContinuousTangent(m_TangentIn.localPosition, m_TangentOut.localPosition);
+                    m_TangentOut.SetLocalPositionNoNotify(SplineUtility.GetContinuousTangent(m_TangentIn.localPosition, m_TangentOut.localPosition));
+                    break;
+
+                case Mode.Mirrored:
+                    m_TangentOut.SetLocalPositionNoNotify(-m_TangentIn.localPosition);
                     break;
 
                 case Mode.Linear:
                     UpdateLinearTangents();
                     break;
             }
-
-            spline.SetDirty();
         }
 
-        void UpdateLinearTangentsForThisAndAdjacents()
+        void UpdateAdjacentLinearTangents()
         {
             if (GetPrevious() is BezierEditableKnot previous)
             {
@@ -262,7 +266,7 @@ namespace UnityEditor.Splines
             if (mode != Mode.Linear)
                 return;
             
-            tangent.localPosition = this.ToKnotSpaceTangent((target.localPosition - localPosition) / 3.0f);
+            tangent.SetLocalPositionNoNotify(this.ToKnotSpaceTangent((target.localPosition - localPosition) / 3.0f));
         }
 
         public static bool AreTangentsContinuous(float3 tangentIn, float3 tangentOut)
@@ -342,60 +346,6 @@ namespace UnityEditor.Splines
             return Mode.Broken;
         }
 
-        public override void OnKnotAddedToPathEnd(float3 position, float3 normal)
-        {
-            float3 tangentOut = tangentOut = math.forward();
-            float3 tangentIn = -tangentOut;
-            rotation = quaternion.identity;
-
-            if (spline.knotCount > 1)
-            {
-                if (GetPrevious() is BezierEditableKnot previous)
-                {
-                    float3 prevPos = previous.position;
-                    float3 prevTangentOut = previous.tangentOut.direction;
-                    float3 prevTangentIn = previous.tangentIn.direction;
-
-                    //For second point, we need to move the out tangent
-                    if (spline.knotCount == 2)
-                    {
-                        float3 prevNormal = math.cross(prevTangentOut, prevTangentIn);
-                        float3 prevTangentDir = SplineUtility.GetLinearTangent(prevPos, position);
-                        prevTangentOut = Vector3.ProjectOnPlane(prevTangentDir, prevNormal);
-
-                        previous.rotation *= Quaternion.FromToRotation(previous.tangentOut.direction, prevTangentOut);
-                        var scaledTangent = math.normalize(previous.tangentOut.direction) * math.length(prevTangentOut);
-                        previous.SetTangents(-scaledTangent, scaledTangent);
-                    }
-                    else
-                    {
-                        //Get inverse of in tangent with a modified length based on next position distance
-                        float3 direction = -prevTangentIn;
-                        prevTangentOut = math.normalize(direction) * (math.distance(prevPos, position) / 3.0f);
-                        previous.rotation *= Quaternion.FromToRotation(previous.tangentOut.direction, prevTangentOut);
-                        previous.tangentOut.direction = math.normalize(previous.tangentOut.direction) * math.length(prevTangentOut);
-                    }
-
-                    //Get reflected tangent
-                    float3 prevToCurrent = prevPos - position;
-                    float3 cross = math.cross(prevTangentOut, prevToCurrent);
-                    float3 reflectionNormal = float3.zero;
-                    if (math.length(cross) > 0f)
-                        reflectionNormal = math.normalize(math.cross(cross, prevToCurrent));
-                    float3 reflectedDir = Vector3.Reflect(-prevTangentOut, reflectionNormal);
-
-                    var worldTangentOut = -Vector3.ProjectOnPlane(reflectedDir, normal);
-                    rotation = quaternion.LookRotation(worldTangentOut, normal);
-
-                    tangentOut = worldTangentOut;
-                    tangentIn = -tangentOut;
-                }
-            }
-
-            SetTangents(tangentIn, tangentOut);
-            UpdateLinearTangentsForThisAndAdjacents();
-        }
-
         public override void OnKnotInsertedOnCurve(EditableKnot previous, EditableKnot next, float t)
         {
             if (!(previous is BezierEditableKnot prevKnot && next is BezierEditableKnot nextKnot))
@@ -418,17 +368,106 @@ namespace UnityEditor.Splines
 
             nextKnot.tangentIn.localPosition = nextKnot.ToKnotSpaceTangent(rightCurve.Tangent1);
 
-            var up = math.rotate(math.nlerp(previous.localRotation, next.localRotation, t), math.up());
-            localRotation = quaternion.LookRotation(rightCurve.Tangent0, up);
+            var up = CurveUtility.EvaluateUpVector(curveToSplit, t, math.rotate(previous.localRotation, math.up()), math.rotate(next.localRotation, math.up()));
+            localRotation = quaternion.LookRotation(math.normalize(rightCurve.Tangent0), up);
 
             SetLocalTangents(this.ToKnotSpaceTangent(leftCurve.Tangent1), this.ToKnotSpaceTangent(rightCurve.Tangent0));
-            UpdateLinearTangentsForThisAndAdjacents();
         }
     }
 
     [Serializable]
     sealed class BezierEditableSpline : EditableSpline<BezierEditableKnot>
     {
+        public override int tangentsPerKnot => 2;
+
+        public override void OnKnotAddedAtEnd(EditableKnot knot, float3 normal, float3 tangentOut)
+        {
+            if (knot is BezierEditableKnot bezierKnot)
+            {
+                var previousKnot = knot.GetPrevious();
+                
+                GetRotationsForNewCurve(knot.position, normal, tangentOut, knotCount, previousKnot as BezierEditableKnot, out var endKnotRotation, out var prevKnotRotation);
+                knot.rotation = endKnotRotation;
+
+                if (knotCount > 1) 
+                    previousKnot.rotation = prevKnotRotation;
+
+                bezierKnot.SetTangents( -tangentOut, tangentOut);
+            }
+        }
+        
+        public override CurveData GetPreviewCurveForEndKnot(float3 point, float3 normal, float3 tangentOut)
+        {
+            CreatePreviewKnotsIfNeeded();
+
+            if (knotCount > 0)
+            {
+                var lastKnot = GetKnot(knotCount - 1);
+                m_PreviewKnotA.Copy(lastKnot);
+            }
+
+            m_PreviewKnotB.Copy(m_PreviewKnotA);
+            m_PreviewKnotB.position = point;
+            
+            GetRotationsForNewCurve(point, normal, tangentOut, knotCount + 1, m_PreviewKnotA as BezierEditableKnot, out var endKnotRotation, out var _);
+            m_PreviewKnotB.rotation = endKnotRotation;
+
+            for (int i = 0; i < m_PreviewKnotB.tangentCount; ++i)
+            {
+                var previewTangent = m_PreviewKnotB.GetTangent(i);
+                previewTangent.direction = i == 0 ? -tangentOut : tangentOut;
+            }
+            
+            return new CurveData(m_PreviewKnotA, m_PreviewKnotB);
+        }
+        
+        void GetRotationsForNewCurve(float3 point, float3 normal, float3 tangentOut, int newKnotCount, BezierEditableKnot previousKnot, out quaternion endKnotRotation, out quaternion prevKnotRotation)
+        {
+            var tangentOutLen = math.length(tangentOut);
+            prevKnotRotation = quaternion.identity;
+
+            if (newKnotCount == 1 && tangentOutLen == 0f)
+                endKnotRotation = Quaternion.FromToRotation(math.up(), normal);
+            else
+            {
+                if (previousKnot != null)
+                {
+                    prevKnotRotation = previousKnot.rotation;
+                    var toPrevious = previousKnot.position - point;
+                    if (tangentOutLen == 0f)
+                    {
+                        
+                        var toPreviousProj = Vector3.ProjectOnPlane(math.normalize(toPrevious), normal);
+                        if (toPreviousProj.magnitude > 0f)
+                            endKnotRotation = quaternion.LookRotation(-math.normalize(toPreviousProj), normal);
+                        else
+                            endKnotRotation = Quaternion.FromToRotation(math.up(), normal);
+                    }
+                    else
+                        endKnotRotation = quaternion.LookRotation(math.normalize(tangentOut), normal);
+
+                    // When placing 2nd knot and if the first knot was placed without specifying a custom world tangent out,
+                    // adjust 1st knot's rotation and point it in the direction of the 2nd knot
+                    if (newKnotCount == 2)
+                    {
+                        var previousUp = math.rotate(previousKnot.rotation, math.up());
+                        var toEndKnotProj = Vector3.ProjectOnPlane(math.normalize(toPrevious), previousUp);
+                        var previousTangentOutLen = math.length(previousKnot.tangentOut.localPosition);
+
+                        if (previousTangentOutLen == 0 && toEndKnotProj.magnitude > 0f)
+                            prevKnotRotation = quaternion.LookRotation(math.normalize(toEndKnotProj), previousUp);
+                    }
+                }
+                else
+                {
+                    if (tangentOutLen > 0f)
+                        endKnotRotation = quaternion.LookRotation(math.normalize(tangentOut), normal);
+                    else
+                        endKnotRotation = quaternion.LookRotation(Quaternion.FromToRotation(math.up(), normal) * math.forward(), normal);
+                }
+            }
+        }
+
         public override float3 GetPointOnCurve(CurveData curve, float t)
         {
             var a = (BezierEditableKnot) curve.a;

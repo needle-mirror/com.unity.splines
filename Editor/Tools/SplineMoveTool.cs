@@ -1,10 +1,14 @@
 using System.Collections.Generic;
 using UnityEditor.EditorTools;
+using UnityEditor.Overlays;
 using UnityEngine;
 using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    [CustomEditor(typeof(SplineMoveTool))]
+    class SplineMoveToolSettings : SplineToolSettings { }
+    
 #if UNITY_2021_2_OR_NEWER
     [EditorTool("Spline Move Tool", typeof(ISplineProvider), typeof(SplineToolContext))]
 #else
@@ -18,17 +22,15 @@ namespace UnityEditor.Splines
         
         public override void OnToolGUI(EditorWindow window)
         {
-            var rotationSyncCenterMode = !SplineTool.k_FreeTangentsMode && Tools.pivotMode == PivotMode.Center;
-
             if (Event.current.type == EventType.MouseDrag)
             {
-                if (SplineTool.k_LocalIsElementSpace)
+                if (SplineTool.handleOrientation == HandleOrientation.Element || SplineTool.handleOrientation == HandleOrientation.Parent)
                     TransformOperation.pivotFreeze |= TransformOperation.PivotFreeze.Rotation;
 
                 // In rotation sync center mode, pivot has to be allowed to move away
                 // from the selection center. Therefore we freeze pivot's position 
                 // and force the position later on based on handle's translation delta.
-                if (rotationSyncCenterMode)
+                if (Tools.pivotMode == PivotMode.Center)
                     TransformOperation.pivotFreeze |= TransformOperation.PivotFreeze.Position;
             }
 
@@ -51,7 +53,7 @@ namespace UnityEditor.Splines
                 {
                     TransformOperation.ApplyTranslation(newPos - TransformOperation.pivotPosition);
                     
-                    if (rotationSyncCenterMode)
+                    if (Tools.pivotMode == PivotMode.Center)
                         TransformOperation.ForcePivotPosition(newPos);
                 }
             }

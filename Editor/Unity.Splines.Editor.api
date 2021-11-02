@@ -3,8 +3,9 @@
 // make sure the XML doc file is present and located next to the scraped dll
 namespace UnityEditor.Splines
 {
-    public static class EditorSplineGizmos
+    [System.AttributeUsage(4, Inherited = false)] public class CustomSplineDataHandle : System.Attribute
     {
+        public CustomSplineDataHandle(System.Type type) {}
     }
 
     public static class EditorSplineUtility
@@ -14,22 +15,20 @@ namespace UnityEditor.Splines
         public static void UnregisterSplineDataChanged<T>(System.Action<UnityEngine.Splines.SplineData<T>> action);
     }
 
-    public abstract class SplineDataDrawer<T>
+    public abstract class SplineDataHandle<T> : UnityEditor.Splines.ISplineDataHandle
     {
-        public int[] controlIDs { get; set; }
-        protected SplineDataDrawer() {}
-        public virtual void DrawKeyframe(int controlID, UnityEngine.Vector3 position, UnityEngine.Vector3 direction, UnityEngine.Vector3 upDirection, UnityEngine.Splines.SplineData<T> splineData, int keyframeIndex);
+        public virtual UnityEngine.Splines.SplineDataHandleAttribute attribute { get; }
+        public int[] controlIDs { get; }
+        protected SplineDataHandle() {}
+        public virtual void DrawDataPoint(int controlID, UnityEngine.Vector3 position, UnityEngine.Vector3 direction, UnityEngine.Vector3 upDirection, UnityEngine.Splines.SplineData<T> splineData, int dataPointIndex);
         public virtual void DrawSplineData(UnityEngine.Splines.SplineData<T> splineData, UnityEngine.Splines.Spline spline, UnityEngine.Matrix4x4 localToWorld, UnityEngine.Color color);
     }
 
-    [System.AttributeUsage(256)] public class SplineDataDrawerAttribute : System.Attribute
+    [UnityEditor.CustomPropertyDrawer(typeof(UnityEngine.Splines.SplineData<>))] public class SplineDataPropertyDrawer : UnityEditor.PropertyDrawer
     {
-        public System.Type drawerType;
-        public SplineDataDrawerAttribute(System.Type type) {}
-    }
-
-    public static class SplineDataHandles
-    {
+        public SplineDataPropertyDrawer() {}
+        public virtual float GetPropertyHeight(UnityEditor.SerializedProperty property, UnityEngine.GUIContent label);
+        public virtual void OnGUI(UnityEngine.Rect position, UnityEditor.SerializedProperty property, UnityEngine.GUIContent label);
     }
 
     [UnityEditor.EditorTools.EditorToolContext(@"Spline", typeof(UnityEngine.Splines.ISplineProvider))] [UnityEngine.Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineContext.png")] public sealed class SplineToolContext : UnityEditor.EditorTools.EditorToolContext

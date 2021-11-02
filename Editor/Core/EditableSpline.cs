@@ -7,21 +7,17 @@ using UObject = UnityEngine.Object;
 
 namespace UnityEditor.Splines
 {
-    interface IEditableSplineConversionData
-    {
-        bool isDirty { get; set; }
-        UObject conversionTarget { get; set; }
-        int conversionIndex { get; set; }
-
-        void ValidateData();
-        void CopyConversionDataFrom(IEditableSplineConversionData spline);
-    }
-
     interface IEditableSpline
     {
         bool canBeClosed { get; set; }
         bool closed { get; set; }
         int knotCount { get; }
+        /// <summary>
+        /// How many editable tangents a knot contains. Cubic bezier splines contain 2 tangents, except at the ends of
+        /// a Spline that is not closed, in which case the knot contains a single tangent. Other spline type representations
+        /// may contain more or fewer tangents (ex, a Catmull-Rom spline does not expose any editable tangents). 
+        /// </summary>
+        int tangentsPerKnot { get; }
         /// <summary> Matrix that transforms a point from local (spline) into world space. </summary>
         Matrix4x4 localToWorldMatrix { get; }
         /// <summary> Matrix that transforms a point from world space into local (spline) space. </summary>
@@ -34,6 +30,8 @@ namespace UnityEditor.Splines
         EditableKnot AddKnot();
         void RemoveKnotAt(int index);
         EditableKnot InsertKnot(int index);
+        CurveData GetPreviewCurveForEndKnot(float3 point, float3 normal, float3 tangentOut);
+        void OnKnotAddedAtEnd(EditableKnot knot, float3 normal, float3 tangentOut);
         float3 GetPointOnCurve(CurveData curve, float t);
         /// <summary>
         /// Given an editable knot, returns its in and out tangents in local (spline) space.
@@ -45,10 +43,17 @@ namespace UnityEditor.Splines
         void SetDirty();
         void ToBezier(List<BezierKnot> results);
         void FromBezier(IReadOnlyList<BezierKnot> knots);
+        
+        bool isDirty { get; set; }
+        UObject conversionTarget { get; set; }
+        int conversionIndex { get; set; }
+        
+        void ValidateData();
+        void CopyConversionDataFrom(IEditableSpline spline);
     }
 
     [Serializable]
-    abstract class EditableSpline<T> : IEditableSpline, IEditableSplineConversionData
+    abstract class EditableSpline<T> : IEditableSpline
         where T : EditableKnot, new()
     {
         const int k_MinimumKnotCountToBeClosed = 3;
@@ -67,6 +72,9 @@ namespace UnityEditor.Splines
 
         bool m_CanBeClosed = true;
 
+        protected EditableKnot m_PreviewKnotA;
+        protected EditableKnot m_PreviewKnotB;
+
         public Matrix4x4 localToWorldMatrix => 
             m_ConversionTarget != null && m_ConversionTarget is Component component
             ? component.transform.localToWorldMatrix
@@ -74,32 +82,31 @@ namespace UnityEditor.Splines
 
         public Matrix4x4 worldToLocalMatrix => localToWorldMatrix.inverse;
 
-        UObject IEditableSplineConversionData.conversionTarget
+        UObject IEditableSpline.conversionTarget
         {
             get => m_ConversionTarget;
             set => m_ConversionTarget = value;
         }
 
         //the index in the target array created at conversion
-        int IEditableSplineConversionData.conversionIndex
+        int IEditableSpline.conversionIndex
         {
             get => m_ConversionIndex;
             set => m_ConversionIndex = value;
         }
 
-        void IEditableSplineConversionData.CopyConversionDataFrom(IEditableSplineConversionData spline)
+        void IEditableSpline.CopyConversionDataFrom(IEditableSpline spline)
         {
             m_ConversionTarget = spline.conversionTarget;
             m_ConversionIndex = spline.conversionIndex;
         }
 
-        void IEditableSplineConversionData.ValidateData()
+        void IEditableSpline.ValidateData()
         {
             UpdateKnotIndices();
             foreach (var knot in m_Knots)
             {
                 knot.spline = this;
-                knot.splineConversionData = this;
                 knot.ValidateData();
             }
         }
@@ -131,13 +138,15 @@ namespace UnityEditor.Splines
             }
         }
 
-        bool IEditableSplineConversionData.isDirty
+        bool IEditableSpline.isDirty
         {
             get => m_IsDirty;
             set => m_IsDirty = value;
         }
 
         public int knotCount => m_Knots.Count;
+        
+        public virtual int tangentsPerKnot => 0;
 
         EditableKnot IEditableSpline.GetKnot(int index)
         {
@@ -250,6 +259,15 @@ namespace UnityEditor.Splines
             return knot;
         }
 
+        protected void CreatePreviewKnotsIfNeeded()
+        {
+            if (m_PreviewKnotA == null)
+                m_PreviewKnotA = CreateKnot();
+
+            if (m_PreviewKnotB == null)
+                m_PreviewKnotB = CreateKnot();
+        }
+
         void UpdateKnotIndices()
         {
             for (int i = 0; i < m_Knots.Count; ++i)
@@ -260,7 +278,7 @@ namespace UnityEditor.Splines
 
         T CreateKnot()
         {
-            return new T { spline = this, splineConversionData = this};
+            return new T { spline = this };
         }
 
         public void SetDirty()
@@ -268,8 +286,10 @@ namespace UnityEditor.Splines
             m_IsDirty = true;
         }
 
+        public virtual void OnKnotAddedAtEnd(EditableKnot knot, float3 normal, float3 tangentOut) {}
         public abstract float3 GetPointOnCurve(CurveData curve, float t);
         public abstract void GetLocalTangents(EditableKnot knot, out float3 localTangentIn, out float3 localTangentOut);
+        public abstract CurveData GetPreviewCurveForEndKnot(float3 point, float3 normal, float3 tangentOut);
         public abstract void ToBezier(List<BezierKnot> results);
         public abstract void FromBezier(IReadOnlyList<BezierKnot> knots);
     }

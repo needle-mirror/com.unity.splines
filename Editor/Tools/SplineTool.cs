@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.EditorTools;
@@ -5,10 +6,45 @@ using UnityEngine;
 using UnityEditor.SettingsManagement;
 using UnityEditor.ShortcutManagement;
 using UnityEngine.Splines;
-using Unity.Mathematics;
+using UnityEditor.Overlays;
 
 namespace UnityEditor.Splines
 {
+    /// <summary>
+    /// Describes how the handles are oriented.
+    /// </summary>
+    enum HandleOrientation
+    {
+        /// <summary>
+        /// Tool handles are in the active object's rotation.
+        /// </summary>
+        Local = 0,
+        /// <summary>
+        /// Tool handles are in global rotation.
+        /// </summary>
+        Global = 1,
+        /// <summary>
+        /// Tool handles are in active element's parent's rotation.
+        /// </summary>
+        Parent = 2,
+        /// <summary>
+        /// Tool handles are in active element's rotation.
+        /// </summary>
+        Element = 3
+    }
+
+    abstract class SplineToolSettings : UnityEditor.Editor, ICreateToolbar
+    {
+        public virtual IEnumerable<string> toolbarElements
+        {
+            get
+            {
+                yield return "Tool Settings/Pivot Mode";
+                yield return "Spline Tool Settings/Handle Rotation";
+            }
+        }
+    }
+
     /// <summary>
     /// Base class from which all Spline tools inherit.
     /// Inherit SplineTool to author tools that behave like native spline tools. This class implements some common
@@ -16,31 +52,30 @@ namespace UnityEditor.Splines
     /// </summary>
     abstract class SplineTool : EditorTool
     {
-        // TODO: These are temporary, to be removed when spline inspector is complete or when Tool Settings overlay can be extended
-        [UserSetting("Manipulation", "Local is element space")]
-        internal static readonly UserSetting<bool> k_LocalIsElementSpace = new UserSetting<bool>(PathSettings.instance,"Manipulation.LocalIsElementSpace", false, SettingsScope.User);
-        [UserSetting("Manipulation", "Free tangents mode", "When enabled, manipulating tangents does not affect owner knot's rotation.")]
-        internal static readonly UserSetting<bool> k_FreeTangentsMode = new UserSetting<bool>(PathSettings.instance, "Manipulation.FreeTangentsMode", false, SettingsScope.User);
-        
-        internal static InternalEditorBridge.ShortcutContext m_ShortcutContext;
-
         internal virtual SplineHandlesOptions handlesOptions => SplineHandlesOptions.None;
-        
-        void RegisterShortcuts()
+
+        static UserSetting<HandleOrientation> m_HandleOrientation = new UserSetting<HandleOrientation>(PathSettings.instance, "SplineTool.HandleOrientation", HandleOrientation.Global, SettingsScope.User);
+
+        public static HandleOrientation handleOrientation
         {
-            m_ShortcutContext = new InternalEditorBridge.ShortcutContext()
+            get => m_HandleOrientation;
+            set
             {
-                isActive = () => { return true; },
-                context = this
-            };
-            
-            InternalEditorBridge.RegisterShortcutContext(m_ShortcutContext);
+                if (m_HandleOrientation != value)
+                {
+                    m_HandleOrientation.SetValue(value, true);
+                    if (m_HandleOrientation == HandleOrientation.Local || m_HandleOrientation == HandleOrientation.Global)
+                       Tools.pivotRotation = (PivotRotation)m_HandleOrientation.value;
+
+                    handleOrientationChanged?.Invoke();
+                }
+            }
         }
 
-        void UnregisterShortcuts()
-        {
-            InternalEditorBridge.UnregisterShortcutContext(m_ShortcutContext);
-        }
+        internal static event Action handleOrientationChanged;
+
+        // Workaround for lack of access to ShortcutContext. Use this to pass shortcut actions to tool instances.
+        protected static SplineTool m_ActiveTool;
 
         /// <summary>
         /// Invoked after this EditorTool becomes the active tool.
@@ -54,7 +89,8 @@ namespace UnityEditor.Splines
             Tools.pivotRotationChanged += OnPivotRotationChanged;
             Tools.pivotModeChanged += OnPivotModeChanged;
             TransformOperation.UpdateSelection(targets);
-            RegisterShortcuts();
+            handleOrientationChanged += OnHandleOrientationChanged;
+            m_ActiveTool = this;
         }
 
         /// <summary>
@@ -68,12 +104,18 @@ namespace UnityEditor.Splines
             Undo.undoRedoPerformed -= UndoRedoPerformed;
             Tools.pivotRotationChanged -= OnPivotRotationChanged;
             Tools.pivotModeChanged -= OnPivotModeChanged;
-            UnregisterShortcuts();
+            handleOrientationChanged -= OnHandleOrientationChanged;
+            m_ActiveTool = null;
         }
-        
-        protected virtual void OnPivotRotationChanged()
+
+        protected virtual void OnHandleOrientationChanged()
         {
             TransformOperation.UpdateHandleRotation();
+        }
+
+        protected virtual void OnPivotRotationChanged()
+        {
+            handleOrientation = (HandleOrientation)Tools.pivotRotation;
         }
 
         protected virtual void OnPivotModeChanged()
@@ -81,7 +123,7 @@ namespace UnityEditor.Splines
             TransformOperation.UpdatePivotPosition();
             TransformOperation.UpdateHandleRotation();
         }
-        
+
         void AfterSplineWasModified(Spline spline) => UpdateSelection();
         void UndoRedoPerformed() => UpdateSelection();
 
@@ -90,7 +132,7 @@ namespace UnityEditor.Splines
             TransformOperation.pivotFreeze = TransformOperation.PivotFreeze.None;
             TransformOperation.UpdateHandleRotation();
             TransformOperation.UpdatePivotPosition();
-            
+
             UpdateSelection();
         }
 
@@ -118,25 +160,11 @@ namespace UnityEditor.Splines
                             if (elementSelection.Contains(oppositeTangent))
                                 oppositeTangentSelected = true;
                         }
-                        
+
                         if (!oppositeTangentSelected)
                         {
                             if (owner.mode == BezierEditableKnot.Mode.Broken)
-                            {
-                                // To prevent mirroring tangent out against tangent in (which would desync the former from knot's rotation)
-                                // the mirroring is done by first rotating the knot, switching to mirrored mode and then scaling tangent out 
-                                // which then implicitly mirrors tangent in against scaled tangent out.
-                                if (!k_FreeTangentsMode && tangent == owner.tangentIn)
-                                {
-                                    var tangentInLen = math.length(tangent.localPosition);
-                                    var tangentOut = owner.tangentOut;
-                                    owner.rotation = Quaternion.FromToRotation(-tangentOut.direction, tangent.direction) * owner.rotation;
-                                    owner.SetMode(BezierEditableKnot.Mode.Mirrored);
-                                    tangentOut.localPosition = math.normalize(tangentOut.localPosition) * tangentInLen;
-                                }
-                                else
-                                    owner.SetMode(BezierEditableKnot.Mode.Mirrored);
-                            }
+                                owner.SetMode(BezierEditableKnot.Mode.Mirrored);
                             else if (owner.mode == BezierEditableKnot.Mode.Mirrored)
                                 owner.SetMode(BezierEditableKnot.Mode.Continuous);
                             else if (owner.mode == BezierEditableKnot.Mode.Continuous)
@@ -152,7 +180,7 @@ namespace UnityEditor.Splines
                 }
             }
         }
-        
+
         /// <summary>
         /// Get the currently selected active spline.
         /// </summary>
@@ -166,11 +194,11 @@ namespace UnityEditor.Splines
             return paths[0];
         }
 
-        [Shortcut("Splines/Cycle Tangent Mode", typeof(InternalEditorBridge.ShortcutContext), KeyCode.C)]
+        [Shortcut("Splines/Cycle Tangent Mode", typeof(SceneView), KeyCode.C)]
         static void ShortcutCycleTangentMode(ShortcutArguments args)
         {
-            if (args.context == m_ShortcutContext)
-                (m_ShortcutContext.context as SplineTool).CycleTangentMode();
+            if(m_ActiveTool != null)
+                m_ActiveTool.CycleTangentMode();
         }
     }
 }

@@ -17,7 +17,7 @@ namespace UnityEditor.Splines
 
             height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("m_EditModeType"));
 
-            var proxy = SplineUIUtility.GetProxyFromProperty(property);
+            var proxy = SplineUIManager.instance.GetProxyFromProperty(property);
             
             var it = proxy.SerializedObject.FindProperty("Spline").Copy();
             it.NextVisible(true);
@@ -37,14 +37,14 @@ namespace UnityEditor.Splines
                 return;
             }
 
-            property.isExpanded = EditorGUI.Foldout(ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), property.isExpanded, label);
+            property.isExpanded = EditorGUI.Foldout(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), property.isExpanded, label);
             if (property.isExpanded)
             {
                 EditorGUI.indentLevel++;
-                var proxy = SplineUIUtility.GetProxyFromProperty(property);
+                var proxy = SplineUIManager.instance.GetProxyFromProperty(property);
 
                 var editTypeProperty = property.FindPropertyRelative("m_EditModeType"); 
-                EditorGUI.PropertyField(ReserveSpace(EditorGUI.GetPropertyHeight(editTypeProperty), ref position), editTypeProperty);
+                EditorGUI.PropertyField(SplineUIManager.ReserveSpace(EditorGUI.GetPropertyHeight(editTypeProperty), ref position), editTypeProperty);
 
                 var pathProperty = proxy.SerializedObject.FindProperty("Spline");
 
@@ -58,26 +58,17 @@ namespace UnityEditor.Splines
                 it.NextVisible(true);
                 do
                 {
-                    EditorGUI.PropertyField(ReserveSpace(EditorGUI.GetPropertyHeight(it), ref position), it, true);
+                    EditorGUI.PropertyField(SplineUIManager.ReserveSpace(EditorGUI.GetPropertyHeight(it), ref position), it, true);
                 } while(it.NextVisible(false));
 
 
                 if(EditorGUI.EndChangeCheck() || arraySize != knotsProperty.arraySize)
                 {
-                    SplineUIUtility.ApplyProxyToProperty(proxy, property);
+                    SplineUIManager.instance.ApplyProxyToProperty(proxy, property);
                 }
-
-                SplineUIUtility.ReleaseProxyForSplineProperty(property);
+                
                 EditorGUI.indentLevel--;
             }
-        }
-
-        Rect ReserveSpace(float height, ref Rect total)
-        {
-            Rect current = total;
-            current.height = height;
-            total.y += height;
-            return current;
         }
     }
 }

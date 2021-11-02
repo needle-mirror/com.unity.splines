@@ -11,7 +11,7 @@ namespace UnityEngine.Splines
     /// </summary>
     [Serializable]
     public class Spline : ISpline
-    {
+    {  
         [SerializeField]
         SplineType m_EditModeType = SplineType.Bezier;
 
@@ -19,7 +19,7 @@ namespace UnityEngine.Splines
         List<BezierKnot> m_Knots = new List<BezierKnot>();
 
         [SerializeField]
-        List<float> m_Lengths = new List<float>();
+        List<List<ISpline.DistanceToTime>> m_LengthsLookupTable = new List<List<ISpline.DistanceToTime>>();
 
         [SerializeField]
         float m_Length = -1f;
@@ -44,6 +44,7 @@ namespace UnityEngine.Splines
 
 #if UNITY_EDITOR
         internal static Action<Spline> afterSplineWasModified;
+        [NonSerialized] //In the editor, this seemed to be surviving domain reloads
         bool m_Dirty;
 #endif
 
@@ -82,12 +83,12 @@ namespace UnityEngine.Splines
         // todo Remove this and refactor m_Knots to store a struct with knot+cached data
         void EnsureCurveLengthCacheValid()
         {
-            if (m_Lengths.Count != m_Knots.Count)
+            if (m_LengthsLookupTable.Count != m_Knots.Count)
             {
-                m_Lengths.Clear();
-                m_Lengths.Capacity = m_Knots.Count;
-                for (int i = 0, c = m_Knots.Count; i < c; i++)
-                    m_Lengths.Add(-1f);
+                m_LengthsLookupTable.Clear();
+                m_LengthsLookupTable.Capacity = m_Knots.Count;
+                for (int i = 0; i < m_Knots.Count; i++)
+                    m_LengthsLookupTable.Add(null);
             }
         }
 
@@ -99,8 +100,8 @@ namespace UnityEngine.Splines
         {
             EnsureCurveLengthCacheValid();
             m_Length = -1f;
-            for (int i = 0, c = m_Knots.Count; i < c; i++)
-                m_Lengths[i] = -1f;
+            for (int i = 0; i < m_Knots.Count; i++)
+                m_LengthsLookupTable[i] = null;
         }
 
         /// <summary>
@@ -203,7 +204,7 @@ namespace UnityEngine.Splines
         public void InsertKnot(int index, BezierKnot knot)
         {
             m_Knots.Insert(index, knot);
-            m_Lengths.Insert(index, -1f);
+            m_LengthsLookupTable.Insert(index, null);
             SetDirty();
         }
     
@@ -230,9 +231,14 @@ namespace UnityEngine.Splines
         public float GetCurveLength(int index)
         {
             EnsureCurveLengthCacheValid();
-            if (m_Lengths[index] < 0f)
-                m_Lengths[index] = CurveUtility.CalculateLength(((ISpline)this).GetCurve(index));
-            return m_Lengths[index];
+            if(m_LengthsLookupTable[index] == null)
+            {
+                m_LengthsLookupTable[index] = new List<ISpline.DistanceToTime>(30);
+                CurveUtility.CalculateCurveLengths(( (ISpline)this ).GetCurve(index), m_LengthsLookupTable[index]);
+            }
+
+            var cumulativeCurveLengths = m_LengthsLookupTable[index]; 
+            return cumulativeCurveLengths.Count > 0 ? cumulativeCurveLengths[cumulativeCurveLengths.Count - 1].distance : 0f;
         }
 
         /// <summary>
@@ -262,6 +268,42 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
+        /// Return the time normalized time t corresponding to a distance on a <see cref="BezierCurve"/>.
+        /// </summary>
+        /// <param name="index"> The zero-based index of the curve.</param>
+        /// <returns>  The normalized time associated to distance on the designated curve. </returns>
+        public float CurveDistanceToTime(int index, float dist)
+        {
+            if(index <0 || index >= m_LengthsLookupTable.Count)
+                return 0;
+            
+            var lut = m_LengthsLookupTable[index]; 
+            if(lut == null || lut.Count == 0 || dist <= 0)
+                return 0f;
+
+            var resolution = lut.Count;
+            var curveLength = lut[resolution-1].distance;
+            if(dist >= curveLength)
+                return 1f;
+
+            var t = 0f;
+            var prev = lut[0];
+            for(int i = 1; i < resolution; i++)
+            {
+                var current = lut[i];
+                if(dist < current.distance)
+                {
+                    t = math.lerp(prev.time, current.time, (dist - prev.distance) / (current.distance - prev.distance));
+                    return t;
+                }
+
+                prev = current;
+            }
+            
+            return 1f;
+        }
+
+        /// <summary>
         /// Ensure that all caches contain valid data. Call this to avoid unexpected performance costs when accessing
         /// spline data. Caches remain valid until any part of the spline state is modified.
         /// </summary>
@@ -285,13 +327,13 @@ namespace UnityEngine.Splines
                 while (m_Knots.Count < newSize)
                 {
                     m_Knots.Add(new BezierKnot { Rotation = quaternion.identity });
-                    m_Lengths.Add(-1f);
+                    m_LengthsLookupTable.Add(null);
                 }
             }
             else if (newSize < count)
             {
                 m_Knots.RemoveRange(newSize, m_Knots.Count - newSize);
-                m_Lengths.RemoveRange(newSize, m_Knots.Count - newSize);
+                m_LengthsLookupTable.RemoveRange(newSize, m_Knots.Count - newSize);
             }
 
             SetDirty();
@@ -352,7 +394,7 @@ namespace UnityEngine.Splines
             m_Closed = toCopy.Closed;
             m_Knots.Clear();
             m_Knots.AddRange(toCopy.m_Knots);
-            m_Lengths.AddRange(toCopy.m_Lengths);
+            m_LengthsLookupTable.AddRange(toCopy.m_LengthsLookupTable);
             SetDirty();
         }
     }

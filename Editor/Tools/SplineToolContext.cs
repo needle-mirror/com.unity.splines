@@ -39,6 +39,8 @@ namespace UnityEditor.Splines
         readonly List<IEditableSpline> m_Splines = new List<IEditableSpline>();
 	    readonly List<EditableKnot> m_KnotBuffer = new List<EditableKnot>();
 
+	    bool m_WasActiveAfterDeserialize;
+
 	    internal static void SetHandlesOptions(SplineHandlesOptions options)
 	    {
 		    s_SplineHandlesOptions = options;
@@ -64,8 +66,8 @@ namespace UnityEditor.Splines
 				return typeof(SplineScaleTool);
 			return null;
 		}
-
-        /// <summary>
+	    
+	    /// <summary>
         /// Invoked for each window where this context is active. The spline context uses this method to implement
         /// common functionality for working with splines, ex gizmo drawing and selection.
         /// </summary>
@@ -81,19 +83,31 @@ namespace UnityEditor.Splines
             HandleDeleteSelectedKnots();
         }
 
-        /// <summary>
+	    void OnEnable()
+	    {
+		    AssemblyReloadEvents.afterAssemblyReload += OnAfterDomainReload;
+	    }
+
+	    /// <summary>
         /// Invoked after this EditorToolContext becomes the active tool context.
         /// </summary>
 	    public override void OnActivated()
-	    {
+        {
+	        // Sync handleOrientation to Tools.pivotRotation only if we're switching from a different context.
+	        // This ensures that Parent/Element handleOrientation is retained after domain reload.
+	        if (!m_WasActiveAfterDeserialize)
+		        SplineTool.handleOrientation = (HandleOrientation)Tools.pivotRotation;
+	        else
+		        m_WasActiveAfterDeserialize = false;
+
 	        OnSelectionChanged();
 	        Selection.selectionChanged += OnSelectionChanged;
 	        Spline.afterSplineWasModified += OnSplineWasModified;
 	        Undo.undoRedoPerformed += UndoRedoPerformed;
-
+	        SplineConversionUtility.splinesUpdated += OnSelectionChanged;
 	        SplineConversionUtility.UpdateEditableSplinesForTargets(targets);
         }
-
+        
         /// <summary>
         /// Invoked before this EditorToolContext stops being the active tool context.
         /// </summary>
@@ -102,7 +116,8 @@ namespace UnityEditor.Splines
 	        Selection.selectionChanged -= OnSelectionChanged;
 	        Spline.afterSplineWasModified -= OnSplineWasModified;
 	        Undo.undoRedoPerformed -= UndoRedoPerformed;
-
+	        SplineConversionUtility.splinesUpdated -= OnSelectionChanged;
+            
 	        EditableSplineManager.FreeEntireCache();
             SplineSelection.ClearNoUndo(false);
         }
@@ -116,6 +131,7 @@ namespace UnityEditor.Splines
 		    EditableSplineUtility.GetSelectedSplines(targets, m_Splines);
 		    EditableSplineManager.UpdateSelection(targets);
 		    SplineSelection.UpdateObjectSelection(targets);
+		    SceneView.RepaintAll();
 	    }
 
 	    void HandleDeleteSelectedKnots()
@@ -168,6 +184,12 @@ namespace UnityEditor.Splines
 	                }
 	            }
 	        }
+	    }
+	    
+	    void OnAfterDomainReload()
+	    {
+		    m_WasActiveAfterDeserialize = ToolManager.activeContextType == typeof(SplineToolContext);
+		    AssemblyReloadEvents.afterAssemblyReload -= OnAfterDomainReload;
 	    }
     }
 }
