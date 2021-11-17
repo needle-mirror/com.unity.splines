@@ -91,7 +91,7 @@ namespace UnityEditor.Splines.Editor.GUI
 
             convertMethod?.Invoke(targetObject, new object[]
             {
-                m_TargetSpline.Spline.ToNativeSpline(m_TargetSpline.transform.localToWorldMatrix),
+                new NativeSpline(m_TargetSpline.Spline, m_TargetSpline.transform.localToWorldMatrix),
                 (PathIndexUnit)m_NewValue
             });
             m_SplineDataProperty.serializedObject.ApplyModifiedProperties();

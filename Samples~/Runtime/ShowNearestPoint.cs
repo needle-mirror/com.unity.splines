@@ -39,7 +39,7 @@ namespace Unity.Splines.Examples
 
 			foreach (var container in m_SplineContainer)
 			{
-				using var native = container.Spline.ToNativeSpline(container.transform.localToWorldMatrix);
+				using var native = new NativeSpline(container.Spline, container.transform.localToWorldMatrix);
 				float d = SplineUtility.GetNearestPoint(native, transform.position, out float3 p, out float t);
 				if (d < nearest.w)
 					nearest = new float4(p, d);

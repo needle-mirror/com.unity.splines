@@ -1,3 +1,5 @@
+using System;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace UnityEngine.Splines
@@ -9,10 +11,10 @@ namespace UnityEngine.Splines
     {
         const int k_ResolutionSegmentCountMin = 6;
         const int k_ResolutionSegmentCountMax = 1024;
-        
+
         /// <summary>
         /// The minimum resolution allowable when unrolling a curve to hit test while picking (selecting a spline with a cursor).
-        /// 
+        ///
         /// Pick resolution is used when determining how many segments are required to unroll a curve. Unrolling is the
         /// process of calculating a series of line segments to approximate a curve. Some functions in SplineUtility
         /// allow you to specify a resolution. Lower resolution means fewer segments, while higher resolutions result
@@ -20,10 +22,10 @@ namespace UnityEngine.Splines
         /// higher resolution where a fine degree of accuracy is necessary and performance is less important.
         /// </summary>
         public const int PickResolutionMin = 2;
-        
+
         /// <summary>
         /// The default resolution used when unrolling a curve to hit test while picking (selecting a spline with a cursor).
-        /// 
+        ///
         /// Pick resolution is used when determining how many segments are required to unroll a curve. Unrolling is the
         /// process of calculating a series of line segments to approximate a curve. Some functions in SplineUtility
         /// allow you to specify a resolution. Lower resolution means fewer segments, while higher resolutions result
@@ -34,7 +36,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// The maximum resolution allowed when unrolling a curve to hit test while picking (selecting a spline with a cursor).
-        /// 
+        ///
         /// Pick resolution is used when determining how many segments are required to unroll a curve. Unrolling is the
         /// process of calculating a series of line segments to approximate a curve. Some functions in SplineUtility
         /// allow you to specify a resolution. Lower resolution means fewer segments, while higher resolutions result
@@ -45,7 +47,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// The default resolution used when unrolling a curve to draw a preview in the Scene View.
-        /// 
+        ///
         /// Pick resolution is used when determining how many segments are required to unroll a curve. Unrolling is the
         /// process of calculating a series of line segments to approximate a curve. Some functions in SplineUtility
         /// allow you to specify a resolution. Lower resolution means fewer segments, while higher resolutions result
@@ -53,26 +55,28 @@ namespace UnityEngine.Splines
         /// higher resolution where a fine degree of accuracy is necessary and performance is less important.
         /// </summary>
         public const int DrawResolutionDefault = 10;
+
         
         /// <summary>
         /// Compute interpolated position, direction and upDirection at ratio t. Calling this method to get the
         /// 3 vectors is faster than calling independently EvaluatePosition, EvaluateDirection and EvaluateUpVector
-        /// for the same time t as it reduces some redundant computation. 
+        /// for the same time t as it reduces some redundant computation.
         /// </summary>
         /// <param name="spline">The spline to interpolate.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <param name="position">Output variable for the float3 position at t.</param>
         /// <param name="tangent">Output variable for the float3 tangent at t.</param>
         /// <param name="upVector">Output variable for the float3 up direction at t.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>Boolean value, true if a valid set of output variables as been computed.</returns>
-        public static bool Evaluate<T>(this T spline, 
-                float t, 
-                out float3 position, 
-                out float3 tangent, 
+        public static bool Evaluate<T>(this T spline,
+                float t,
+                out float3 position,
+                out float3 tangent,
                 out float3 upVector
             ) where T : ISpline
         {
-            if(spline.KnotCount < 1)
+            if(spline.Count < 1)
             {
                 position = float3.zero;
                 tangent = new float3(0, 0, 1);
@@ -82,14 +86,14 @@ namespace UnityEngine.Splines
 
             var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
             var curve = spline.GetCurve(curveIndex);
-            
+
             position = CurveUtility.EvaluatePosition(curve, curveT);
             tangent = CurveUtility.EvaluateTangent(curve, curveT);
             upVector = spline.EvaluateUpVector(curveIndex, curveT);
 
             return true;
         }
-        
+
         /// <summary>
         /// Return an interpolated position at ratio t.
         /// </summary>
@@ -99,7 +103,7 @@ namespace UnityEngine.Splines
         /// <returns>A position on the spline.</returns>
         public static float3 EvaluatePosition<T>(this T spline, float t) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return float.PositiveInfinity;
             var curve = spline.GetCurve(SplineToCurveInterpolation(spline, t, out var curveT));
             return CurveUtility.EvaluatePosition(curve, curveT);
@@ -114,7 +118,7 @@ namespace UnityEngine.Splines
         /// <returns>A direction on the spline.</returns>
         public static float3 EvaluateTangent<T>(this T spline, float t) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return float.PositiveInfinity;
             var curve = spline.GetCurve(SplineToCurveInterpolation(spline, t, out var curveT));
             return CurveUtility.EvaluateTangent(curve, curveT);
@@ -122,13 +126,13 @@ namespace UnityEngine.Splines
 
         static float3 EvaluateUpVector<T>(this T spline, int knotIndex, float curveT) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return float3.zero;
 
             var rotationT = math.nlerp(spline[knotIndex].Rotation, spline[spline.NextIndex(knotIndex)].Rotation, curveT);
             return math.rotate(rotationT, math.up());
         }
-        
+
         /// <summary>
         /// Evaluate an up vector of a spline at a specific t
         /// </summary>
@@ -138,7 +142,7 @@ namespace UnityEngine.Splines
         /// <returns>An up vector</returns>
         public static float3 EvaluateUpVector<T>(this T spline, float t) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return 0;
 
             var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
@@ -154,33 +158,35 @@ namespace UnityEngine.Splines
             var curveEndUp = math.rotate(curveEndRotation, math.up());
             if (curveT == 1f)
                 return curveEndUp;
-            
+
             return CurveUtility.EvaluateUpVector(curve, curveT, curveStartUp, curveEndUp);
         }
-        
+
         /// <summary>
         /// Return an interpolated acceleration at ratio t.
         /// </summary>
         /// <param name="spline">The spline to interpolate.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>An acceleration on the spline.</returns>
         public static float3 EvaluateAcceleration<T>(this T spline, float t) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return float3.zero;
             var curve = spline.GetCurve(SplineToCurveInterpolation(spline, t, out var curveT));
             return CurveUtility.EvaluateAcceleration(curve, curveT);
         }
-        
+
         /// <summary>
         /// Return an interpolated curvature at ratio t.
         /// </summary>
         /// <param name="spline">The spline to interpolate.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>A curvature on the spline.</returns>
         public static float EvaluateCurvature<T>(this T spline, float t) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return 0f;
 
             var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
@@ -188,25 +194,26 @@ namespace UnityEngine.Splines
 
             return CurveUtility.EvaluateCurvature(curve, curveT);
         }
-        
+
         /// <summary>
         /// Return the curvature center at ratio t. The curvature center represents the center of the circle
         /// that is tangent to the curve at t. This circle is in the plane defined by the curve velocity (tangent)
-        /// and the curve acceleration at that point. 
+        /// and the curve acceleration at that point.
         /// </summary>
         /// <param name="spline">The spline to interpolate.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>A point representing the curvature center associated to the position at t on the spline.</returns>
         public static float3 EvaluateCurvatureCenter<T>(this T spline, float t) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return 0f;
 
             var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
             var curve = spline.GetCurve(curveIndex);
 
             var curvature = CurveUtility.EvaluateCurvature(curve, curveT);
-            
+
             if(curvature != 0)
             {
                 var radius = 1f / curvature;
@@ -239,6 +246,7 @@ namespace UnityEngine.Splines
         /// <param name="spline">The target spline.</param>
         /// <param name="splineT">A normalized spline interpolation value to be converted into curve space.</param>
         /// <param name="curveT">A normalized curve interpolation value.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>The curve index.</returns>
         public static int SplineToCurveInterpolation<T>(this T spline, float splineT, out float curveT) where T : ISpline
         {
@@ -247,7 +255,7 @@ namespace UnityEngine.Splines
             var start = 0f;
 
             var closed = spline.Closed;
-            var knotCount = spline.KnotCount;
+            var knotCount = spline.Count;
 
             for (int i = 0, c = closed ? knotCount : knotCount - 1; i < c; i++)
             {
@@ -256,7 +264,7 @@ namespace UnityEngine.Splines
 
                 if (tLength <= (start + curveLength))
                 {
-                    curveT = spline.CurveDistanceToTime(index, tLength - start);
+                    curveT = spline.GetCurveInterpolation(index, tLength - start);
                     return index;
                 }
 
@@ -280,16 +288,16 @@ namespace UnityEngine.Splines
         /// <seealso cref="SplineToCurveInterpolation{T}"/>
         public static float CurveToSplineInterpolation<T>(this T spline, float curve) where T : ISpline
         {
-            if(spline.KnotCount == 0 || curve < 0f)
+            if(spline.Count == 0 || curve < 0f)
                 return 0f;
 
-            if(curve >= ( spline.Closed ? spline.KnotCount : spline.KnotCount - 1 ))
+            if(curve >= ( spline.Closed ? spline.Count : spline.Count - 1 ))
                 return 1f;
-            
+
             var curveIndex = (int) math.floor(curve);
 
             float t = 0f;
-            
+
             for (int i = 0; i < curveIndex; i++)
                 t += spline.GetCurveLength(i);
 
@@ -297,7 +305,7 @@ namespace UnityEngine.Splines
 
             return t / spline.GetLength();
         }
-        
+
         /// <summary>
         /// Calculate the length of a spline when transformed by a matrix.
         /// </summary>
@@ -306,7 +314,7 @@ namespace UnityEngine.Splines
         /// <returns></returns>
         public static float CalculateLength(this Spline spline, float4x4 transform)
         {
-            using var nativeSpline = spline.ToNativeSpline(transform);
+            using var nativeSpline = new NativeSpline(spline, transform);
             return nativeSpline.GetLength();
         }
 
@@ -318,13 +326,13 @@ namespace UnityEngine.Splines
         /// <returns>The bounds of a spline.</returns>
         public static Bounds GetBounds<T>(this T spline) where T : ISpline
         {
-            if (spline.KnotCount < 1)
+            if (spline.Count < 1)
                 return default;
-            
+
             var knot = spline[0];
             Bounds bounds = new Bounds(knot.Position, Vector3.zero);
-            
-            for (int i = 1, c = spline.KnotCount; i < c; ++i)
+
+            for (int i = 1, c = spline.Count; i < c; ++i)
             {
                 knot = spline[i];
                 bounds.Encapsulate(knot.Position);
@@ -493,7 +501,8 @@ namespace UnityEngine.Splines
         /// <param name="ray">The input ray to search against.</param>
         /// <param name="nearest">The point on a spline nearest to the input ray. The accuracy of this value is
         /// affected by the <paramref name="resolution"/>.</param>
-        /// <param name="time">The normalized time value to the nearest point.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <param name="t">The normalized time value to the nearest point.</param>
         /// <param name="resolution">Affects how many segments to split a spline into when calculating the nearest point.
         /// Higher values mean smaller and more segments, which increases accuracy at the cost of processing time.
         /// The minimum resolution is defined by <seealso cref="PickResolutionMin"/>, and the maximum is defined by
@@ -512,7 +521,7 @@ namespace UnityEngine.Splines
         public static float GetNearestPoint<T>(T spline,
             Ray ray,
             out float3 nearest,
-            out float time,
+            out float t,
             int resolution = PickResolutionDefault,
             int iterations = 2) where T : ISpline
         {
@@ -520,13 +529,13 @@ namespace UnityEngine.Splines
             nearest = float.PositiveInfinity;
             float3 ro = ray.origin, rd = ray.direction;
             Segment segment = new Segment(0f, 1f);
-            time = 0f;
+            t = 0f;
             int res = math.min(math.max(PickResolutionMin, resolution), PickResolutionMax);
 
             for (int i = 0, c = math.min(10, iterations); i < c; i++)
             {
                 int segments = GetSegmentCount(spline.GetLength() * segment.length, res);
-                segment = GetNearestPoint(spline, ro, rd, segment, out distance, out nearest, out time, segments);
+                segment = GetNearestPoint(spline, ro, rd, segment, out distance, out nearest, out t, segments);
             }
 
             return distance;
@@ -539,7 +548,7 @@ namespace UnityEngine.Splines
         /// <param name="point">The input point to compare.</param>
         /// <param name="nearest">The point on a spline nearest to the input point. The accuracy of this value is
         /// affected by the <paramref name="resolution"/>.</param>
-        /// <param name="time">The normalized time value to the nearest point.</param>
+        /// <param name="t">The normalized interpolation ratio corresponding to the nearest point.</param>
         /// <param name="resolution">Affects how many segments to split a spline into when calculating the nearest point.
         /// Higher values mean smaller and more segments, which increases accuracy at the cost of processing time.
         /// The minimum resolution is defined by <seealso cref="PickResolutionMin"/>, and the maximum is defined by
@@ -559,20 +568,20 @@ namespace UnityEngine.Splines
         public static float GetNearestPoint<T>(T spline,
             float3 point,
             out float3 nearest,
-            out float time,
+            out float t,
             int resolution = PickResolutionDefault,
             int iterations = 2) where T : ISpline
         {
             float distance = float.PositiveInfinity;
             nearest = float.PositiveInfinity;
             Segment segment = new Segment(0f, 1f);
-            time = 0f;
+            t = 0f;
             int res = math.min(math.max(PickResolutionMin, resolution), PickResolutionMax);
 
             for (int i = 0, c = math.min(10, iterations); i < c; i++)
             {
                 int segments = GetSegmentCount(spline.GetLength() * segment.length, res);
-                segment = GetNearestPoint(spline, point, segment, out distance, out nearest, out time, segments);
+                segment = GetNearestPoint(spline, point, segment, out distance, out nearest, out t, segments);
             }
 
             return distance;
@@ -583,66 +592,67 @@ namespace UnityEngine.Splines
         /// Returns the corresponding time associated to this 3d position on the Spline.
         /// </summary>
         /// <param name="spline">The Spline on which to compute the point.</param>
-        /// <param name="fromTime">The Spline time from which the next position need to be computed.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <param name="fromT">The Spline interpolation ratio 't' (normalized) from which the next position need to be computed.</param>
         /// <param name="relativeDistance">
         /// The relative distance at which the new point should be placed. A negative value will compute a point at a
-        /// 'resultPointTime' previous to 'fromTime' (backward search).
+        /// 'resultPointTime' previous to 'fromT' (backward search).
         /// </param>
-        /// <param name="resultPointTime">The time of the resulting point.</param>
+        /// <param name="resultPointT">The normalized interpolation ratio of the resulting point.</param>
         /// <returns>The 3d point from the spline located at a linear distance from the point at t.</returns>
-        public static float3 GetPointAtLinearDistance<T>(this T spline, 
-            float fromTime, 
-            float relativeDistance, 
-            out float resultPointTime) where T : ISpline
+        public static float3 GetPointAtLinearDistance<T>(this T spline,
+            float fromT,
+            float relativeDistance,
+            out float resultPointT) where T : ISpline
         {
             const float epsilon = 0.001f;
-            if(fromTime <0)
+            if(fromT <0)
             {
-                resultPointTime = 0f;
+                resultPointT = 0f;
                 return spline.EvaluatePosition(0f);
             }
-            
+
             var length = spline.GetLength();
-            var lengthAtT = fromTime * length;
+            var lengthAtT = fromT * length;
             float currentLength = lengthAtT;
             if(currentLength + relativeDistance >= length) //relativeDistance >= 0 -> Forward search
             {
-                resultPointTime = 1f;
+                resultPointT = 1f;
                 return spline.EvaluatePosition(1f);
             }
             else if(currentLength + relativeDistance <= 0) //relativeDistance < 0 -> Forward search
             {
-                resultPointTime = 0f;
+                resultPointT = 0f;
                 return spline.EvaluatePosition(0f);
             }
 
-            var currentPos = spline.EvaluatePosition(fromTime);
-            resultPointTime = fromTime;
+            var currentPos = spline.EvaluatePosition(fromT);
+            resultPointT = fromT;
 
             var forwardSearch = relativeDistance >= 0;
             var residual = math.abs(relativeDistance);
             float linearDistance = 0;
-            float3 point = spline.EvaluatePosition(fromTime);
-            while(residual > epsilon && (forwardSearch ? resultPointTime < 1f : resultPointTime > 0))
+            float3 point = spline.EvaluatePosition(fromT);
+            while(residual > epsilon && (forwardSearch ? resultPointT < 1f : resultPointT > 0))
             {
                 currentLength += forwardSearch ? residual : -residual;
-                resultPointTime = currentLength / length;
-                
-                if(resultPointTime > 1f) //forward search
+                resultPointT = currentLength / length;
+
+                if(resultPointT > 1f) //forward search
                 {
-                    resultPointTime = 1f;
+                    resultPointT = 1f;
                     point = spline.EvaluatePosition(1f);
-                }else if(resultPointTime < 0f) //backward search
+                }else if(resultPointT < 0f) //backward search
                 {
-                    resultPointTime = 0f;
+                    resultPointT = 0f;
                     point = spline.EvaluatePosition(0f);
                 }
 
-                point = spline.EvaluatePosition(resultPointTime);
+                point = spline.EvaluatePosition(resultPointT);
                 linearDistance = math.distance(currentPos, point);
                 residual = math.abs(relativeDistance) - linearDistance;
             }
-        
+
             return point;
         }
 
@@ -651,59 +661,60 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
         /// <param name="t">Interpolation in the original PathIndexUnit.</param>
-        /// <param name="originalTimeUnit">The PathIndexUnit from the original interpolation.</param>
-        /// <param name="targetPathUnit">The PathIndexUnit in which time should be converted.</param>
+        /// <param name="fromPathUnit">The PathIndexUnit for the original interpolation value.</param>
+        /// <param name="targetPathUnit">The PathIndexUnit to which 't' should be converted.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        /// <returns>The time converted in the targetPathUnit.</returns>
-        public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit originalTimeUnit, PathIndexUnit targetPathUnit)
+        /// <returns>The interpolation value converted to targetPathUnit.</returns>
+        public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit fromPathUnit, PathIndexUnit targetPathUnit)
             where T : ISpline
         {
-            if(originalTimeUnit == targetPathUnit)
+            if(fromPathUnit == targetPathUnit)
                 return t;
-            return ConvertIndexUnit(spline, GetNormalizedT(spline, t, originalTimeUnit), targetPathUnit);
+            return ConvertIndexUnit(spline, GetNormalizedInterpolation(spline, t, fromPathUnit), targetPathUnit);
         }
-        
-        static float ConvertIndexUnit<T>(T spline, float normalizedTime, PathIndexUnit targetPathUnit) where T : ISpline
+
+        static float ConvertIndexUnit<T>(T spline, float t, PathIndexUnit targetPathUnit) where T : ISpline
         {
             switch(targetPathUnit)
             {
                 case PathIndexUnit.Knot:
-                    int splineIndex = SplineToCurveInterpolation(spline, normalizedTime, out float curveTime);
+                    int splineIndex = SplineToCurveInterpolation(spline, t, out float curveTime);
                     return splineIndex + curveTime;
                 case PathIndexUnit.Distance:
-                    return normalizedTime * spline.GetLength();
+                    return t * spline.GetLength();
                 default:
-                    return normalizedTime;
+                    return t;
             }
         }
-        
+
         /// <summary>
-        /// Given a time value using a certain PathIndexUnit type, calculate the normalized time value regarding a specific spline.
+        /// Given an interpolation value in any PathIndexUnit type, calculate the normalized interpolation ratio value
+        /// relative to a <see cref="Spline"/>.
         /// </summary>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
-        /// <param name="time">The time to normalize in the original PathIndexUnit.</param>
-        /// <param name="originalTimeUnit">The PathIndexUnit from the original time.</param>
+        /// <param name="t">The 't' value to normalize in the original PathIndexUnit.</param>
+        /// <param name="originalPathUnit">The PathIndexUnit from the original 't'.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        /// <returns>The normalized time.</returns>
-        public static float GetNormalizedT<T>(T spline, float time, PathIndexUnit originalTimeUnit) where T : ISpline
+        /// <returns>The normalized interpolation ratio (0 to 1).</returns>
+        public static float GetNormalizedInterpolation<T>(T spline, float t, PathIndexUnit originalPathUnit) where T : ISpline
         {
-            switch(originalTimeUnit)
+            switch(originalPathUnit)
             {
                 case PathIndexUnit.Knot:
-                    return CurveToSplineInterpolation(spline, time);
+                    return CurveToSplineInterpolation(spline, t);
                 case PathIndexUnit.Distance:
-                    return time / spline.GetLength();
+                    return t / spline.GetLength();
                 default:
-                    return time;
+                    return t;
             }
         }
 
-        internal static int PreviousIndex<T>(this T spline, int index) where T : ISpline 
-            => PreviousIndex(index, spline.KnotCount, spline.Closed);
+        internal static int PreviousIndex<T>(this T spline, int index) where T : ISpline
+            => PreviousIndex(index, spline.Count, spline.Closed);
 
         internal static int NextIndex<T>(this T spline, int index) where T : ISpline
-            => NextIndex(index, spline.KnotCount, spline.Closed);
-        
+            => NextIndex(index, spline.Count, spline.Closed);
+
         internal static int PreviousIndex(int index, int count, bool wrap)
         {
             return wrap ? (index + (count-1)) % count : math.max(index - 1, 0);
@@ -713,7 +724,7 @@ namespace UnityEngine.Splines
         {
             return wrap ? (index + 1) % count : math.min(index + 1, count - 1);
         }
-        
+
         internal static float3 GetLinearTangent(float3 point, float3 to)
         {
             return (to - point) / 3.0f;
@@ -731,7 +742,7 @@ namespace UnityEngine.Splines
             var delta = position - transform.position;
             transform.position = position;
             var spline = container.Spline;
-            for (int i = 0, c = spline.KnotCount; i < c; i++)
+            for (int i = 0, c = spline.Count; i < c; i++)
                 spline[i] = spline[i] - delta;
         }
     }

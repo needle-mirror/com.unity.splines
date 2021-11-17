@@ -18,13 +18,13 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Calculate a value between from and to at time interval.
         /// </summary>
-        /// <param name="from">The starting value. At time = 0 this method should return an unmodified 'from' value.</param>
-        /// <param name="to">The ending value. At time = 1 this method should return an unmodified 'to' value.</param>
+        /// <param name="from">The starting value. At t = 0 this method should return an unmodified 'from' value.</param>
+        /// <param name="to">The ending value. At t = 1 this method should return an unmodified 'to' value.</param>
         /// <param name="t">A percentage between 'from' and 'to'. Must be between 0 and 1.</param>
         /// <returns>A value between 'from' and 'to'.</returns>
         T Interpolate(T from, T to, float t);
     }
-    
+
     /// <summary>
     /// Describes the unit of measurement used by <see cref="DataPoint{T}"/>.
     /// </summary>
@@ -36,7 +36,7 @@ namespace UnityEngine.Splines
         /// </summary>
         Distance,
         /// <summary>
-        /// The 't' value used when interpolating is normalized. Values range from 0 (start of Spline) to 1 (end of Spline). 
+        /// The 't' value used when interpolating is normalized. Values range from 0 (start of Spline) to 1 (end of Spline).
         /// </summary>
         Normalized,
         /// <summary>
@@ -72,7 +72,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Access a <see cref="DataPoint{T}"/> by index. Keyframes are sorted in ascending order by the
-        /// <see cref="DataPoint{T}.Time"/> value.
+        /// <see cref="DataPoint{DataType}.Index"/> value.
         /// </summary>
         /// <param name="index">
         /// The index of the keyframe to access.
@@ -82,7 +82,7 @@ namespace UnityEngine.Splines
             get => m_DataPoints[index];
             set => SetDataPoint(index, value);
         }
-        
+
         /// <summary>
         /// PathIndexUnit defines how SplineData will interpret 't' values when interpolating data.
         /// </summary>
@@ -112,8 +112,8 @@ namespace UnityEngine.Splines
         bool m_Dirty = false;
         internal static Action<SplineData<T>> afterSplineDataWasModified;
 #endif
-        
-        
+
+
         /// <summary>
         /// Create a new SplineData instance.
         /// </summary>
@@ -133,7 +133,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Create a new SplineData instance and initialize it with a collection of data points. DataPoints will be sorted and stored
-        /// in ascending order by <see cref="DataPoint{T}.Time"/>.
+        /// in ascending order by <see cref="DataPoint{DataType}.Index"/>.
         /// </summary>
         /// <param name="dataPoints">
         /// A collection of DataPoints to initialize SplineData.`
@@ -174,11 +174,11 @@ namespace UnityEngine.Splines
         /// The data to store in the created data point.
         /// </param>
         public void Add(float t, T data) => Add(new DataPoint<T>(t, data));
-    
+
         /// <summary>
         /// Append a <see cref="DataPoint{T}"/> to this collection.
         /// </summary>
-        /// <param name="key">
+        /// <param name="dataPoint">
         /// The data point to append to the SplineData collection.
         /// </param>
         public void Add(DataPoint<T> dataPoint)
@@ -227,7 +227,7 @@ namespace UnityEngine.Splines
             return math.clamp(index, 0, Count - 1);
         }
 
-        (int, int, float) GetIndex(float time, float splineLength, int knotCount, bool closed)
+        (int, int, float) GetIndex(float t, float splineLength, int knotCount, bool closed)
         {
             if(Count < 1)
                 return default;
@@ -240,37 +240,37 @@ namespace UnityEngine.Splines
             else if(m_IndexUnit == PathIndexUnit.Knot)
                 splineLengthInIndexUnits = closed ? knotCount : knotCount - 1;
 
-            float maxDataPointTime = m_DataPoints[m_DataPoints.Count - 1].Time;
+            float maxDataPointTime = m_DataPoints[m_DataPoints.Count - 1].Index;
             float maxRevolutionLength = math.ceil(maxDataPointTime / splineLengthInIndexUnits) * splineLengthInIndexUnits;
             float maxTime = closed ? math.max(maxRevolutionLength, splineLengthInIndexUnits) : splineLengthInIndexUnits;
 
             if(closed)
             {
-                if(time < 0f)
-                    time = maxTime + time % maxTime;
+                if(t < 0f)
+                    t = maxTime + t % maxTime;
                 else
-                    time = time % maxTime;
+                    t = t % maxTime;
             }
             else
-                time = math.clamp(time, 0f, maxTime);
+                t = math.clamp(t, 0f, maxTime);
 
-            int index = m_DataPoints.BinarySearch(0, Count, new DataPoint<T>(time, default), k_DataPointComparer);
+            int index = m_DataPoints.BinarySearch(0, Count, new DataPoint<T>(t, default), k_DataPointComparer);
             int fromIndex = ResolveBinaryIndex(index, closed);
             int toIndex = closed ? ( fromIndex + 1 ) % Count : math.clamp(fromIndex + 1, 0, Count - 1);
 
-            float fromTime = m_DataPoints[fromIndex].Time;
-            float toTime = m_DataPoints[toIndex].Time;
+            float fromTime = m_DataPoints[fromIndex].Index;
+            float toTime = m_DataPoints[toIndex].Index;
 
             if(fromIndex > toIndex)
                 toTime += maxTime;
 
-            if(time < fromTime && closed)
-                time += maxTime;
+            if(t < fromTime && closed)
+                t += maxTime;
 
             if(fromTime == toTime)
                 return ( fromIndex, toIndex, fromTime );
 
-            return ( fromIndex, toIndex, math.abs(math.max(0f, time - fromTime) / ( toTime - fromTime )) );
+            return ( fromIndex, toIndex, math.abs(math.max(0f, t - fromTime) / ( toTime - fromTime )) );
         }
 
         /// <summary>
@@ -284,13 +284,13 @@ namespace UnityEngine.Splines
         /// <typeparam name="TInterpolator">The IInterpolator type.</typeparam>
         /// <typeparam name="TSpline">The Spline type.</typeparam>
         /// <returns>An interpolated value.</returns>
-        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, PathIndexUnit indexUnit, TInterpolator interpolator) 
+        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, PathIndexUnit indexUnit, TInterpolator interpolator)
             where TSpline : ISpline
             where TInterpolator : IInterpolator<T>
         {
             if(indexUnit == m_IndexUnit)
                 return Evaluate(spline, t, interpolator);
-            
+
             return Evaluate(spline, SplineUtility.ConvertIndexUnit(spline, t, indexUnit, m_IndexUnit), interpolator);
         }
 
@@ -304,14 +304,14 @@ namespace UnityEngine.Splines
         /// <typeparam name="TInterpolator">The IInterpolator type.</typeparam>
         /// <typeparam name="TSpline">The Spline type.</typeparam>
         /// <returns>An interpolated value.</returns>
-        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, TInterpolator interpolator) 
-            where TSpline : ISpline 
+        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, TInterpolator interpolator)
+            where TSpline : ISpline
             where TInterpolator : IInterpolator<T>
         {
-            var knotCount = spline.KnotCount;
+            var knotCount = spline.Count;
             if(knotCount < 1 || m_DataPoints.Count == 0)
                 return default;
-            
+
             var indices = GetIndex(t, spline.GetLength(), knotCount, spline.Closed);
             DataPoint<T> a = m_DataPoints[indices.Item1];
             DataPoint<T> b = m_DataPoints[indices.Item2];
@@ -378,47 +378,50 @@ namespace UnityEngine.Splines
             m_DataPoints.Sort();
             SetDirty();
         }
-        
+
         internal void ForceSort()
         {
             m_NeedsSort = true;
             SortIfNecessary();
         }
 
+
         /// <summary>
         /// Given a spline and a target PathIndex Unit, convert the SplineData to a new PathIndexUnit without changing the final positions on the Spline.
         /// </summary>
+        /// <typeparam name="TSplineType">The Spline type.</typeparam>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute most of PathIndexUnits.</param>
         /// <param name="toUnit">The unit to convert SplineData to.</param>>
-        public void ConvertPathUnit<TS>(TS spline, PathIndexUnit toUnit)
-            where TS : ISpline
+        public void ConvertPathUnit<TSplineType>(TSplineType spline, PathIndexUnit toUnit)
+            where TSplineType : ISpline
         {
             if(toUnit == m_IndexUnit)
                 return;
-            
+
             for(int i = 0; i<m_DataPoints.Count; i++)
             {
                 var dataPoint = m_DataPoints[i];
-                var newTime = spline.ConvertIndexUnit(dataPoint.Time, m_IndexUnit, toUnit);
+                var newTime = spline.ConvertIndexUnit(dataPoint.Index, m_IndexUnit, toUnit);
                 m_DataPoints[i] = new DataPoint<T>(newTime, dataPoint.Value);
             }
             m_IndexUnit = toUnit;
             SetDirty();
         }
-        
+
         /// <summary>
         /// Given a time value using a certain PathIndexUnit type, calculate the normalized time value regarding a specific spline.
         /// </summary>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
-        /// <param name="time">The time to normalize in the original PathIndexUnit.</param>>
+        /// <param name="t">The time to normalize in the original PathIndexUnit.</param>>
+        /// <typeparam name="TSplineType">The Spline type.</typeparam>
         /// <returns>The normalized time.</returns>
-        public float GetNormalizedTime(NativeSpline spline, float time)
+        public float GetNormalizedInterpolation<TSplineType>(TSplineType spline, float t) where TSplineType : ISpline
         {
-            return SplineUtility.GetNormalizedT(spline, time, m_IndexUnit);
+            return SplineUtility.GetNormalizedInterpolation(spline, t, m_IndexUnit);
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        
+
         /// <summary>
         /// Returns an enumerator that iterates through the DataPoints collection.
         /// </summary>

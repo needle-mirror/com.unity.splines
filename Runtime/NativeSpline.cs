@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -18,10 +19,10 @@ namespace UnityEngine.Splines
         NativeArray<BezierKnot> m_Knots;
         // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
         // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
-        NativeArray<ISpline.DistanceToTime> m_SegmentLengthsLookupTable;
+        NativeArray<DistanceToInterpolation> m_SegmentLengthsLookupTable;
         bool m_Closed;
         float m_Length;
-        const int k_SegmentResolution = 30; 
+        const int k_SegmentResolution = 30;
 
         /// <summary>
         /// A NativeArray of <see cref="BezierKnot"/> that form this Spline.
@@ -30,23 +31,23 @@ namespace UnityEngine.Splines
         /// Returns a reference to the knots array.
         /// </returns>
         public NativeArray<BezierKnot> Knots => m_Knots;
-        
+
         /// <summary>
         /// Whether the spline is open (has a start and end point) or closed (forms an unbroken loop).
         /// </summary>
         public bool Closed => m_Closed;
-        
+
         /// <summary>
         /// Return the number of knots.
         /// </summary>
-        public int KnotCount => m_Knots.Length;
-        
+        public int Count => m_Knots.Length;
+
         /// <summary>
         /// Return the sum of all curve lengths, accounting for <see cref="Closed"/> state.
         /// Note that this value is affected by the transform used to create this NativeSpline.
         /// </summary>
         /// <returns>
-        /// Returns the sum length of all curves composing this spline, accounting for closed state. 
+        /// Returns the sum length of all curves composing this spline, accounting for closed state.
         /// </returns>
         public float GetLength() => m_Length;
 
@@ -57,13 +58,29 @@ namespace UnityEngine.Splines
         public BezierKnot this[int index] => m_Knots[index];
 
         /// <summary>
+        /// Get an enumerator that iterates through the <see cref="BezierKnot"/> collection.
+        /// </summary>
+        /// <returns>An IEnumerator that is used to iterate the <see cref="BezierKnot"/> collection.</returns>
+        public IEnumerator<BezierKnot> GetEnumerator() => m_Knots.GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
         /// </summary>
-        /// <param name="knots">A collection of sequential <see cref="BezierKnot"/> forming the spline path.</param>
-        /// <param name="closed">Whether the spline is open (has a start and end point) or closed (forms an unbroken loop).</param>
+        /// <param name="spline">The <see cref="ISpline"/> object to convert to a <see cref="NativeSpline"/>.</param>
         /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
-        public NativeSpline(IList<BezierKnot> knots, bool closed, Allocator allocator = Allocator.Temp)
-            : this(knots, closed, float4x4.identity, allocator) { }
+        public NativeSpline(ISpline spline, Allocator allocator = Allocator.Temp)
+            : this(spline, spline.Closed, float4x4.identity, allocator) { }
+
+        /// <summary>
+        /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
+        /// </summary>
+        /// <param name="spline">The <see cref="ISpline"/> object to convert to a <see cref="NativeSpline"/>.</param>
+        /// <param name="transform">A transform matrix to be applied to the spline knots and tangents.</param>
+        /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
+        public NativeSpline(ISpline spline, float4x4 transform, Allocator allocator = Allocator.Temp)
+            : this(spline, spline.Closed, transform, allocator) { }
 
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
@@ -72,7 +89,7 @@ namespace UnityEngine.Splines
         /// <param name="closed">Whether the spline is open (has a start and end point) or closed (forms an unbroken loop).</param>
         /// <param name="transform">Apply a transformation matrix to the control <see cref="Knots"/>.</param>
         /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
-        public NativeSpline(IList<BezierKnot> knots, bool closed, float4x4 transform, Allocator allocator = Allocator.Temp)
+        public NativeSpline(IReadOnlyList<BezierKnot> knots, bool closed, float4x4 transform, Allocator allocator = Allocator.Temp)
         {
             int kc = knots.Count;
             m_Knots = new NativeArray<BezierKnot>(knots.Count, allocator);
@@ -84,23 +101,23 @@ namespace UnityEngine.Splines
             m_Length = 0f;
 
             int curveCount = m_Closed ? kc : kc - 1;
-            
+
             // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
             // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
-            m_SegmentLengthsLookupTable = new NativeArray<ISpline.DistanceToTime>(knots.Count * k_SegmentResolution, allocator);
+            m_SegmentLengthsLookupTable = new NativeArray<DistanceToInterpolation>(knots.Count * k_SegmentResolution, allocator);
             m_Length = 0f;
 
-            List<ISpline.DistanceToTime> distanceToTimes = new List<ISpline.DistanceToTime>(k_SegmentResolution);
+            DistanceToInterpolation[] distanceToTimes = new DistanceToInterpolation[k_SegmentResolution];
+
             for (int i = 0; i < curveCount; i++)
             {
                 CurveUtility.CalculateCurveLengths(GetCurve(i), distanceToTimes);
-                m_Length += distanceToTimes.Count > 0 ? distanceToTimes[k_SegmentResolution - 1].distance : 0f;
-                
+                m_Length += distanceToTimes[k_SegmentResolution - 1].Distance;
                 for(int distanceToTimeIndex = 0; distanceToTimeIndex < k_SegmentResolution; distanceToTimeIndex++)
                     m_SegmentLengthsLookupTable[i * k_SegmentResolution + distanceToTimeIndex] = distanceToTimes[distanceToTimeIndex];
             }
         }
-        
+
         /// <summary>
         /// Get a <see cref="BezierCurve"/> from a knot index.
         /// </summary>
@@ -110,7 +127,7 @@ namespace UnityEngine.Splines
         /// </returns>
         public BezierCurve GetCurve(int index)
         {
-            int next = m_Closed ? (index + 1) % KnotCount : math.min(index + 1, KnotCount - 1);
+            int next = m_Closed ? (index + 1) % Count : math.min(index + 1, Count - 1);
             return new BezierCurve(m_Knots[index], m_Knots[next]);
         }
 
@@ -119,7 +136,7 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="curveIndex">The 0 based index of the curve to find length for.</param>
         /// <returns>The length of the bezier curve at index.</returns>
-        public float GetCurveLength(int curveIndex) => m_SegmentLengthsLookupTable[curveIndex * k_SegmentResolution + k_SegmentResolution - 1].distance;
+        public float GetCurveLength(int curveIndex) => m_SegmentLengthsLookupTable[curveIndex * k_SegmentResolution + k_SegmentResolution - 1].Distance;
 
         /// <summary>
         /// Release allocated resources.
@@ -129,37 +146,33 @@ namespace UnityEngine.Splines
             m_Knots.Dispose();
             m_SegmentLengthsLookupTable.Dispose();
         }
-        
-        /// <summary>
-        /// Return the time normalized time t corresponding to a distance on a <see cref="BezierCurve"/>.
-        /// </summary>
-        /// <param name="index"> The zero-based index of the curve.</param>
-        /// <returns>  The normalized time associated to distance on the designated curve. </returns>
-        public float CurveDistanceToTime(int index, float dist)
+
+        struct Slice<T> : IReadOnlyList<T> where T : struct
         {
-            if(index <0 || index >= m_SegmentLengthsLookupTable.Length || dist <= 0)
-                return 0;
-            
-            var curveLength = GetCurveLength(index);
-            if(dist >= curveLength)
+            NativeSlice<T> m_Slice;
+            public Slice(NativeArray<T> array, int start, int count) { m_Slice = new NativeSlice<T>(array, start, count); }
+            public IEnumerator<T> GetEnumerator() => m_Slice.GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+            public int Count => m_Slice.Length;
+            public T this[int index] => m_Slice[index];
+        }
+
+        /// <summary>
+        /// Return the normalized interpolation (t) corresponding to a distance on a <see cref="BezierCurve"/>.
+        /// </summary>
+        /// <param name="curveIndex"> The zero-based index of the curve.</param>
+        /// <param name="curveDistance">The curve-relative distance to convert to an interpolation ratio (also referred to as 't').</param>
+        /// <returns>  The normalized interpolation ratio associated to distance on the designated curve.</returns>
+        public float GetCurveInterpolation(int curveIndex, float curveDistance)
+        {
+            if(curveIndex <0 || curveIndex >= m_SegmentLengthsLookupTable.Length || curveDistance <= 0)
+                return 0f;
+            var curveLength = GetCurveLength(curveIndex);
+            if(curveDistance >= curveLength)
                 return 1f;
-        
-            var t = 0f;
-            var startIndex = index * k_SegmentResolution;
-            var prev = m_SegmentLengthsLookupTable[startIndex];
-            for(int i = 1; i < k_SegmentResolution; i++)
-            {
-                var current = m_SegmentLengthsLookupTable[startIndex + i];
-                if(dist < current.distance)
-                {
-                    t = math.lerp(prev.time, current.time, (dist - prev.distance) / (current.distance - prev.distance));
-                    return t;
-                }
-        
-                prev = current;
-            }
-            
-            return 1f;
+            var startIndex = curveIndex * k_SegmentResolution;
+            var slice = new Slice<DistanceToInterpolation>(m_SegmentLengthsLookupTable, startIndex, k_SegmentResolution);
+            return CurveUtility.GetDistanceToInterpolation(slice, curveDistance);
         }
     }
 }

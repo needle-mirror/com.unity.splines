@@ -119,7 +119,7 @@ namespace UnityEditor.Splines
                 var tangent = knot.GetTangent(tangentIndex);
                 screenSpace = HandleUtility.WorldToGUIPointWithDepth(tangent.position);
                 
-                if (screenSpace.z > 0 && rect.Contains(screenSpace))
+                if (SplineSelectionUtility.IsSelectable(spline, index, tangent) && screenSpace.z > 0 && rect.Contains(screenSpace))
                     results.Add(tangent);
             }
         }

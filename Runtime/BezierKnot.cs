@@ -18,13 +18,13 @@ namespace UnityEngine.Splines
         /// of the curve.
         /// </summary>
         public float3 Position;
-        
+
         /// <summary>
         /// The tangent leading into this knot. On a cubic bezier curve, this value is used to calculate
         /// <see cref="BezierCurve.P2"/> when used as the second knot in a curve.
         /// </summary>
         public float3 TangentIn;
-        
+
         /// <summary>
         /// The tangent following this knot. On a cubic bezier curve, this value is used to calculate
         /// <see cref="BezierCurve.P1"/> when used as the first knot in a curve.
@@ -35,6 +35,18 @@ namespace UnityEngine.Splines
         /// Rotation of the knot.
         /// </summary>
         public quaternion Rotation;
+
+        /// <summary>
+        /// Create a new BezierKnot struct.
+        /// </summary>
+        /// <param name="position">The position of the knot relative to the spline.</param>
+        public BezierKnot(float3 position)
+        {
+            Position = position;
+            TangentIn = float3.zero;
+            TangentOut = float3.zero;
+            Rotation = quaternion.identity;
+        }
 
         /// <summary>
         /// Create a new BezierKnot struct.
@@ -61,14 +73,14 @@ namespace UnityEngine.Splines
             var rotation = math.mul(new quaternion(matrix), Rotation);
             var invRotation = math.inverse(rotation);
             // Tangents need to be scaled, so rotation should be applied to them.
-            // No need however to use the translation as this is only a direction. 
+            // No need however to use the translation as this is only a direction.
             return new BezierKnot(
                 math.transform(matrix, Position),
                 math.rotate(invRotation, math.rotate(matrix, math.rotate(Rotation,TangentIn))),
                 math.rotate(invRotation, math.rotate(matrix, math.rotate(Rotation,TangentOut))),
                 rotation);
         }
-        
+
         /// <summary>
         /// Knot position addition. This operation only applies to the position, tangents and rotation are unmodified.
         /// </summary>
@@ -79,7 +91,7 @@ namespace UnityEngine.Splines
         {
             return new BezierKnot(knot.Position + rhs, knot.TangentIn, knot.TangentOut, knot.Rotation);
         }
-        
+
         /// <summary>
         /// Knot position subtraction. This operation only applies to the position, tangents and rotation are unmodified.
         /// </summary>
@@ -95,13 +107,13 @@ namespace UnityEngine.Splines
         /// See ISerializationCallbackReceiver.
         /// </summary>
         public void OnBeforeSerialize() {}
-        
+
         /// <summary>
         /// See ISerializationCallbackReceiver.
         /// </summary>
         public void OnAfterDeserialize()
         {
-            // Ensures that when adding the first knot via Unity inspector 
+            // Ensures that when adding the first knot via Unity inspector
             // or when deserializing knot that did not have the rotation field prior,
             // rotation is deserialized to identity instead of (0, 0, 0, 0) which does not represent a valid rotation.
             if (math.lengthsq(Rotation) == 0f)

@@ -74,7 +74,7 @@ namespace Unity.Splines.Examples
 		// Generate a set of ties along the spline path.
 		public void RebuildTracks()
 		{
-			using var spline = ToNativeSpline();
+			using var spline = new NativeSpline(this);
 			var len = spline.GetLength();
 			var tieCount = (int) (len * m_TracksPerMeter);
 

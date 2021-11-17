@@ -60,7 +60,7 @@ namespace UnityEngine.Splines
 
             if (IsScaled)
             {
-                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                using var nativeSpline = new NativeSpline(Spline, transform.localToWorldMatrix);
                 return SplineUtility.Evaluate(nativeSpline, t, out position, out tangent, out upVector);
             }
 
@@ -87,7 +87,7 @@ namespace UnityEngine.Splines
 
             if(IsScaled)
             {
-                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                using var nativeSpline = new NativeSpline(Spline, transform.localToWorldMatrix);
                 return SplineUtility.EvaluatePosition(nativeSpline, t);
             }
             return transform.TransformPoint(SplineUtility.EvaluatePosition(Spline, t));
@@ -105,7 +105,7 @@ namespace UnityEngine.Splines
 
             if(IsScaled)
             {
-                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                using var nativeSpline = new NativeSpline(Spline, transform.localToWorldMatrix);
                 return SplineUtility.EvaluateTangent(nativeSpline, t);
             }
             return transform.TransformVector(SplineUtility.EvaluateTangent(Spline, t));
@@ -123,7 +123,7 @@ namespace UnityEngine.Splines
 
             if(IsScaled)
             {
-                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                using var nativeSpline = new NativeSpline(Spline, transform.localToWorldMatrix);
                 return SplineUtility.EvaluateUpVector(nativeSpline, t);
             }
 
@@ -143,7 +143,7 @@ namespace UnityEngine.Splines
 
             if(IsScaled)
             {
-                using var nativeSpline = Spline.ToNativeSpline(transform.localToWorldMatrix);
+                using var nativeSpline = new NativeSpline(Spline, transform.localToWorldMatrix);
                 return SplineUtility.EvaluateAcceleration(nativeSpline, t);
             }
             return transform.TransformVector(SplineUtility.EvaluateAcceleration(Spline, t));

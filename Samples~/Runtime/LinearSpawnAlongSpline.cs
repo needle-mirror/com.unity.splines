@@ -62,7 +62,7 @@ public class LinearSpawnAlongSpline : MonoBehaviour
         if(m_Container == null || m_PrefabToSpawn == null)
             return;
         
-        var points = GetPointsWithLinearDistance(m_Container.Spline.ToNativeSpline(m_Container.transform.localToWorldMatrix), m_Distance);
+        var points = GetPointsWithLinearDistance(new NativeSpline(m_Container.Spline, m_Container.transform.localToWorldMatrix), m_Distance);
         
         for(int pIndex = 0; pIndex < points.Count; pIndex++)
         {

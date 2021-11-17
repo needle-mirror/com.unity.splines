@@ -1,37 +1,40 @@
+using System.Collections.Generic;
+
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// ISpline defines the interface from which Spline types inherit.
+    /// A key-value pair associating a distance to interpolation ratio ('t') value. This is used when evaluating Spline
+    /// attributes to ensure uniform ditribution of sampling points.
     /// </summary>
-    public interface ISpline
-    {   
-        public struct DistanceToTime
-        {
-            public float distance;
-            public float time;
-        }
+    /// <seealso cref="CurveUtility.CalculateCurveLengths"/>
+    public struct DistanceToInterpolation
+    {
+        /// <summary>
+        /// Distance in Unity units.
+        /// </summary>
+        public float Distance;
         
         /// <summary>
-        /// Return the number of knots.
+        /// A normalized interpolation ratio ('t').
         /// </summary>
-        int KnotCount { get; }
-        
+        public float T;
+    }
+
+    /// <summary>
+    /// ISpline defines the interface from which Spline types inherit.
+    /// </summary>
+    public interface ISpline : IReadOnlyList<BezierKnot>
+    {
         /// <summary>
         /// Whether the spline is open (has a start and end point) or closed (forms an unbroken loop).
         /// </summary>
         bool Closed { get; }
-        
-        /// <summary>
-        /// Get the knot at <paramref name="index"/>.
-        /// </summary>
-        /// <param name="index">The zero-based index of the knot.</param>
-        BezierKnot this[int index] { get; }
 
         /// <summary>
         /// Return the sum of all curve lengths, accounting for <see cref="Closed"/> state.
         /// </summary>
         /// <returns>
-        /// Returns the sum length of all curves composing this spline, accounting for closed state. 
+        /// Returns the sum length of all curves composing this spline, accounting for closed state.
         /// </returns>
         float GetLength();
 
@@ -55,11 +58,12 @@ namespace UnityEngine.Splines
         public float GetCurveLength(int index);
 
         /// <summary>
-        /// Return the normalized time corresponding to a distance on a <see cref="BezierCurve"/>.
+        /// Return the interpolation ratio (0 to 1) corresponding to a distance on a <see cref="BezierCurve"/>. Distance
+        /// is relative to the curve.
         /// </summary>
-        /// <param name="index"> The zero-based index of the curve.</param>
-        /// <param name="distance"> The distance to convert to time.</param>
-        /// <returns>  The normalized time associated to distance on the designated curve. </returns>
-        public float CurveDistanceToTime(int index, float distance);
+        /// <param name="curveIndex"> The zero-based index of the curve.</param>
+        /// <param name="curveDistance"> The distance (measuring from the knot at curveIndex) to convert to a normalized interpolation ratio.</param>
+        /// <returns>The normalized interpolation ratio matching distance on the designated curve. </returns>
+        public float GetCurveInterpolation(int curveIndex, float curveDistance);
     }
 }

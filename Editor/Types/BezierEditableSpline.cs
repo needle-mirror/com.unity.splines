@@ -214,21 +214,19 @@ namespace UnityEditor.Splines
             if (this.mode == mode)
                 return;
 
+            var previousMode = m_Mode;
             m_Mode = mode;
-            ForceUpdateTangentsFromMode();
+            ForceUpdateTangentsFromMode(previousMode);
             SetDirty();
         }
 
-        public void ForceUpdateTangentsFromMode()
+        public void ForceUpdateTangentsFromMode(Mode previousMode)
         {
             switch (mode)
             {
                 case Mode.Continuous:
-                    m_TangentOut.SetLocalPositionNoNotify(SplineUtility.GetContinuousTangent(m_TangentIn.localPosition, m_TangentOut.localPosition));
-                    break;
-
                 case Mode.Mirrored:
-                    m_TangentOut.SetLocalPositionNoNotify(-m_TangentIn.localPosition);
+                    SyncKnotAndTangents(previousMode);
                     break;
 
                 case Mode.Linear:
@@ -237,6 +235,28 @@ namespace UnityEditor.Splines
             }
         }
 
+        void SyncKnotAndTangents(Mode previousMode)
+        {
+            var newDirection = float3.zero;
+            if (mode == Mode.Continuous)
+                newDirection = SplineUtility.GetContinuousTangent(m_TangentIn.localPosition, m_TangentOut.localPosition);
+            else if (mode == Mode.Mirrored)
+                newDirection = -m_TangentIn.localPosition;
+
+            if (previousMode == Mode.Broken && math.lengthsq(newDirection) > 0f)
+            {
+                var newDirectionW = localToWorldMatrix.MultiplyVector(newDirection);
+                var newDirectionNorm = math.normalize(newDirectionW);
+                var newUp = math.rotate(Quaternion.FromToRotation(math.forward(), newDirectionNorm), math.up());
+                
+                rotation = Quaternion.LookRotation(newDirectionNorm, newUp);
+                m_TangentIn.SetLocalPositionNoNotify(-math.forward() * math.length(m_TangentIn.localPosition));
+                m_TangentOut.SetLocalPositionNoNotify(math.forward() * math.length(m_TangentOut.localPosition));
+            }
+            else
+                m_TangentOut.SetLocalPositionNoNotify(newDirection);
+        }
+        
         void UpdateAdjacentLinearTangents()
         {
             if (GetPrevious() is BezierEditableKnot previous)

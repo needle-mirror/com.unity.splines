@@ -18,7 +18,7 @@ namespace Unity.Splines.Examples
             if(container.Spline == null || Event.current.type != EventType.Repaint)
                 return;
 
-            using var nativeSpline = container.Spline.ToNativeSpline(container.transform.localToWorldMatrix);
+            using var nativeSpline = new NativeSpline(container.Spline, container.transform.localToWorldMatrix);
 
             foreach(var config in curvatureTimes)
             {

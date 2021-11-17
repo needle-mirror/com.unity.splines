@@ -22,10 +22,10 @@ namespace UnityEngine.Splines
             var localToWorld = ((MonoBehaviour)provider).transform.localToWorldMatrix;
             foreach (var spline in splines)
             {
-                if (spline == null || spline.KnotCount < 2)
+                if (spline == null || spline.Count < 2)
                     continue;
 
-                for (int i = 0, c = spline.Closed ? spline.KnotCount : spline.KnotCount - 1; i < c; ++i)
+                for (int i = 0, c = spline.Closed ? spline.Count : spline.Count - 1; i < c; ++i)
                     DrawCurve(spline.GetCurve(i), localToWorld);
             }
         }

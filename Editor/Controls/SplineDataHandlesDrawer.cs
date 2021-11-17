@@ -61,13 +61,13 @@ namespace UnityEditor.Splines
             if (keyframeDrawMethodInfo == null)
                 return;
 
-            var native = spline.ToNativeSpline(localToWorld);
+            var native = new NativeSpline(spline, localToWorld);
             var ids = ( (SplineDataHandle<T>)drawerInstance ).controlIDs;
 
             for(int splineDataIndex = 0; splineDataIndex < splineData.Count; splineDataIndex++)
             {
                 var keyframe = splineData[splineDataIndex];
-                var normalizedT = SplineUtility.GetNormalizedT(native, keyframe.Time, splineData.PathIndexUnit);
+                var normalizedT = SplineUtility.GetNormalizedInterpolation(native, keyframe.Index, splineData.PathIndexUnit);
 
                 native.Evaluate(normalizedT, out float3 dataPosition, out float3 dataDirection, out float3 dataUp);
                 using(new Handles.DrawingScope(color))
@@ -98,7 +98,7 @@ namespace UnityEditor.Splines
             LabelType labelType)
         {
             Undo.RecordObject(component, "Modifying Spline Data Points");
-            using var native = spline.ToNativeSpline(localToWorld);
+            using var native = new NativeSpline(spline, localToWorld);
 
             using(new Handles.DrawingScope(color))
             {
@@ -109,7 +109,7 @@ namespace UnityEditor.Splines
 
                     if(inUse)
                     {
-                        keyframe.Time = time;
+                        keyframe.Index = time;
                         splineData.SetKeyframeNoSort(keyframeIndex, keyframe);
 
                         //OnMouseUp event
@@ -132,7 +132,7 @@ namespace UnityEditor.Splines
             Event evt = Event.current;
             EventType eventType = evt.GetTypeForControl(id);
 
-            var normalizedT = SplineUtility.GetNormalizedT(spline, dataPoint.Time, splineData.PathIndexUnit);
+            var normalizedT = SplineUtility.GetNormalizedInterpolation(spline, dataPoint.Index, splineData.PathIndexUnit);
             var dataPosition = SplineUtility.EvaluatePosition(spline, normalizedT);
 
             switch (eventType)
@@ -193,7 +193,7 @@ namespace UnityEditor.Splines
                     break;
             }
 
-            newTime = dataPoint.Time;
+            newTime = dataPoint.Index;
             return false;
         }
 
@@ -226,7 +226,7 @@ namespace UnityEditor.Splines
             if(labelType == LabelType.None)
                 return;
 
-            float labelVal = dataPoint.Time;
+            float labelVal = dataPoint.Index;
             if(labelType == LabelType.Index && keyframeIndex >= 0)
                 labelVal = keyframeIndex;
 

@@ -25,7 +25,7 @@ namespace Unity.Splines.Examples.Editor
         
         void Update()
         {
-            for (int i = 0, c = m_Spline.KnotCount; i < c; ++i)
+            for (int i = 0, c = m_Spline.Count; i < c; ++i)
             {
                 var offset = i / (c - 1f) * m_Frequency;
                 m_Spline[i] = m_Origins[i] + math.cos((Time.time + offset) * m_Speed) * new float3(0, 1, 0);

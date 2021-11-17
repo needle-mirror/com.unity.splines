@@ -13,17 +13,37 @@ namespace UnityEditor.Splines
     [EditorTool("Place Spline Knots", typeof(ISplineProvider), typeof(SplineToolContext))]
     sealed class KnotPlacementTool : SplineTool
     {
+        enum State
+        {
+            KnotPlacement,
+            TangentPlacement,
+            SplineClosure
+        }
+        
         const string k_DistanceAboveSurfacePrefKey = "KnotPlacementTool_DistanceAboveSurface";
         static float? s_DistanceAboveSurface;
 
         public override GUIContent toolbarIcon => PathIcons.knotPlacementTool;
 
-        internal override SplineHandlesOptions handlesOptions => m_PlacingTangents ? SplineHandlesOptions.ShowTangents : SplineHandlesOptions.KnotInsert | SplineHandlesOptions.ShowTangents;
+        internal override SplineHandlesOptions handlesOptions
+        {
+            get
+            {
+                switch (m_State)
+                {
+                    case State.SplineClosure:
+                    case State.TangentPlacement:
+                        return SplineHandlesOptions.ShowTangents;
+                    default:
+                        return SplineHandlesOptions.KnotInsert | SplineHandlesOptions.ShowTangents;
+                }
+            }
+        }
 
         readonly List<IEditableSpline> m_Splines = new List<IEditableSpline>();
         int m_ActiveSplineIndex;
 
-        bool m_PlacingTangents;
+        State m_State;
         Vector3 m_LastSurfacePoint;
         Vector3 m_LastSurfaceNormal;
         Vector3 m_CustomTangentOut;
@@ -38,6 +58,7 @@ namespace UnityEditor.Splines
         public override void OnActivated()
         {
             base.OnActivated();
+            m_State = State.KnotPlacement;
             SplineToolContext.UseCustomSplineHandles(true);
             Selection.selectionChanged -= OnSelectionChanged;
             Undo.undoRedoPerformed -= OnSelectionChanged;
@@ -104,7 +125,7 @@ namespace UnityEditor.Splines
 
         void ClearTangentPlacementData()
         {
-            m_PlacingTangents = false;
+            m_State = State.KnotPlacement;
             m_LastSurfacePoint = Vector3.zero;
             m_LastSurfaceNormal = Vector3.zero;
             m_CustomTangentOut = Vector3.zero;
@@ -112,11 +133,37 @@ namespace UnityEditor.Splines
 
         void DoClosingKnot(IEditableSpline spline, bool active)
         {
-            if(spline.knotCount >= 3 && spline.canBeClosed && !spline.closed)
+            if (m_State != State.TangentPlacement && spline.knotCount >= 3 && spline.canBeClosed && !spline.closed)
             {
+                if (HandleUtility.nearestControl == m_ClosingKnotId || m_State == State.SplineClosure)
+                {
+                    Event evt = Event.current;
+                    switch (evt.GetTypeForControl(m_ClosingKnotId))
+                    {
+                        case EventType.Repaint:
+                            if (!Tools.viewToolActive)
+                            {
+                                var firstKnot = spline.GetKnot(0);
+                                if (firstKnot.tangentCount > 1)
+                                {
+                                    var tangentOut = firstKnot.GetTangent(1).direction;
+                                    DrawPreviewCurveForNewEndKnot(spline, firstKnot.position, tangentOut, m_LastSurfaceNormal, m_ClosingKnotId, true);
+                                }
+                            }
+                            break;
+                        
+                        case EventType.MouseDown:
+                            m_State = State.SplineClosure;
+                            break;
+                    }
+                }
+                
                 EditableKnot knot = spline.GetKnot(0);
-                if(SplineHandles.ButtonHandle(m_ClosingKnotId, knot, active))
+                if (SplineHandles.ButtonHandle(m_ClosingKnotId, knot, active))
+                {
                     EditableSplineUtility.CloseSpline(spline);
+                    m_State = State.KnotPlacement;
+                }
             }
         }
 
@@ -137,9 +184,13 @@ namespace UnityEditor.Splines
                     if (HandleUtility.nearestControl == controlID && !Tools.viewToolActive)
                     {
                         // Draw curve preview if we're placing tangents. Otherwise, draw it only if the cursor's ray is intersecting with a surface.
-                        if (m_PlacingTangents || isMouseInWindow && SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out m_LastSurfacePoint, out m_LastSurfaceNormal))
-                            DrawPreviewCurveForNewEndKnot(spline, m_LastSurfacePoint, m_LastSurfaceNormal, controlID);
+                        if (m_State == State.TangentPlacement || 
+                            (m_State == State.KnotPlacement && 
+                             isMouseInWindow && 
+                             SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out m_LastSurfacePoint, out m_LastSurfaceNormal)))
+                            DrawPreviewCurveForNewEndKnot(spline, m_LastSurfacePoint, m_CustomTangentOut, m_LastSurfaceNormal, controlID);
                     }
+        
                     break;
 
                 case EventType.MouseDown:
@@ -152,7 +203,7 @@ namespace UnityEditor.Splines
                         m_KnotPlane = new Plane(m_LastSurfaceNormal, m_LastSurfacePoint);
 
                         if (spline.tangentsPerKnot > 0)
-                            m_PlacingTangents = true;
+                            m_State = State.TangentPlacement;
                     }
                     break;
 
@@ -193,7 +244,7 @@ namespace UnityEditor.Splines
                     break;
 
                 case EventType.MouseDrag:
-                    if (m_PlacingTangents && GUIUtility.hotControl == controlID && evt.button == 0)
+                    if (m_State == State.TangentPlacement && GUIUtility.hotControl == controlID && evt.button == 0)
                     {
                         evt.Use();
                         var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
@@ -204,22 +255,33 @@ namespace UnityEditor.Splines
             }
         }
 
-        void DrawPreviewCurveForNewEndKnot(IEditableSpline spline, float3 point, float3 normal, int knotHandleId)
+        void DrawPreviewCurveForNewEndKnot(IEditableSpline spline, float3 point, float3 tangentOut, float3 normal, int knotHandleId, bool isClosingCurve = false)
         {
-            var previewCurve = spline.GetPreviewCurveForEndKnot(point, normal, m_CustomTangentOut);
+            var previewCurve = spline.GetPreviewCurveForEndKnot(point, normal, tangentOut);
 
             if (spline.knotCount > 0)
-                SplineHandles.CurveHandleCap(previewCurve, -1, EventType.Repaint, !m_PlacingTangents);
+                SplineHandles.CurveHandleCap(previewCurve, -1, EventType.Repaint, m_State != State.TangentPlacement);
 
-            for (int i = 0; i < previewCurve.b.tangentCount; ++i)
-                SplineHandles.DrawTangentHandle(previewCurve.b.GetTangent(i));
+            if (!isClosingCurve)
+            {
+                for (int i = 0; i < previewCurve.b.tangentCount; ++i)
+                    SplineHandles.DrawTangentHandle(previewCurve.b.GetTangent(i));
 
-            // In addition, display the normally hidden tangent out of the last knot.
-            // It gives an impression of an issue when it's hidden but the preview knot shows both tangents.
-            if (spline.knotCount > 0 && previewCurve.a.tangentCount > 0)
-                SplineHandles.DrawTangentHandle(previewCurve.a.GetTangent(previewCurve.a.tangentCount-1));
+                // In addition, display the normally hidden tangent out of the last knot.
+                // It gives an impression of an issue when it's hidden but the preview knot shows both tangents.
+                if (spline.knotCount > 0 && previewCurve.a.tangentCount > 0)
+                    SplineHandles.DrawTangentHandle(previewCurve.a.GetTangent(previewCurve.a.tangentCount - 1));
 
-            SplineHandles.DrawKnotHandle(m_LastSurfacePoint, previewCurve.b.rotation, false, knotHandleId);
+                SplineHandles.DrawKnotHandle(m_LastSurfacePoint, previewCurve.b.rotation, false, knotHandleId);
+            }
+            else
+            {
+                var firstKnot = spline.GetKnot(0);
+                SplineHandles.DrawTangentHandle(firstKnot.GetTangent(0));
+                
+                if (spline.knotCount > 0 && previewCurve.a.tangentCount > 0)
+                    SplineHandles.DrawTangentHandle(previewCurve.a.GetTangent(previewCurve.a.tangentCount - 1));
+            }
         }
 
         void GetSelectedSplines(List<IEditableSpline> results)

@@ -6,7 +6,13 @@ using UnityEngine;
 using UnityEditor.SettingsManagement;
 using UnityEditor.ShortcutManagement;
 using UnityEngine.Splines;
+using UnityEditor.Toolbars;
+using UnityEngine.UIElements;
+#if UNITY_2022_1_OR_NEWER
 using UnityEditor.Overlays;
+#else
+using System.Reflection;
+#endif
 
 namespace UnityEditor.Splines
 {
@@ -33,7 +39,11 @@ namespace UnityEditor.Splines
         Element = 3
     }
 
+#if UNITY_2022_1_OR_NEWER
     abstract class SplineToolSettings : UnityEditor.Editor, ICreateToolbar
+#else
+    abstract class SplineToolSettings : UnityEditor.Editor
+#endif
     {
         public virtual IEnumerable<string> toolbarElements
         {
@@ -43,6 +53,69 @@ namespace UnityEditor.Splines
                 yield return "Spline Tool Settings/Handle Rotation";
             }
         }
+        
+#if !UNITY_2022_1_OR_NEWER
+        const string k_ElementClassName = "unity-editor-toolbar-element";
+        const string k_StyleSheetsPath = "StyleSheets/Toolbars/";
+
+        static VisualElement CreateToolbar()
+        {
+            var target = new VisualElement();
+            var path = k_StyleSheetsPath + "EditorToolbar";
+
+            var common = EditorGUIUtility.Load($"{path}Common.uss") as StyleSheet;
+            if (common != null)
+                target.styleSheets.Add(common);
+
+            var themeSpecificName = EditorGUIUtility.isProSkin ? "Dark" : "Light";
+            var themeSpecific = EditorGUIUtility.Load($"{path}{themeSpecificName}.uss") as StyleSheet;
+            if (themeSpecific != null)
+                target.styleSheets.Add(themeSpecific);
+
+            target.AddToClassList("unity-toolbar-overlay");
+            target.style.flexDirection = FlexDirection.Row;
+            return target;
+        }
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            var root = CreateToolbar();
+            
+            var elements = TypeCache.GetTypesWithAttribute(typeof(EditorToolbarElementAttribute));
+            
+            foreach (var element in toolbarElements)
+            {
+                var type = elements.FirstOrDefault(x =>
+                {
+                    var attrib = x.GetCustomAttribute<EditorToolbarElementAttribute>();
+                    return attrib != null && attrib.id == element;
+                });
+
+                if (type != null)
+                {
+                    try
+                    {
+                        const BindingFlags flags =  BindingFlags.Instance |
+                            BindingFlags.Public |
+                            BindingFlags.NonPublic |
+                            BindingFlags.CreateInstance;
+
+                        var ve = (VisualElement)Activator.CreateInstance(type, flags, null, null, null, null);
+                        ve.AddToClassList(k_ElementClassName);
+                        root.Add(ve);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Failed creating toolbar element from ID \"{element}\".\n{e}");
+                    }
+                }
+            }
+
+            EditorToolbarUtility.SetupChildrenAsButtonStrip(root);
+            
+            return root;
+        }
+#endif
     }
 
     /// <summary>
@@ -164,7 +237,19 @@ namespace UnityEditor.Splines
                         if (!oppositeTangentSelected)
                         {
                             if (owner.mode == BezierEditableKnot.Mode.Broken)
+                            {
+                                // Mirror otherTangent against the active tangent prior to SetMode call.
+                                // As SetMode always mirrors tangentOut against tangentIn, this prevents an active selection's
+                                // tangentOut from shrinking or becoming zero tangent unexpectidly.
+                                for (int i = 0; i < owner.tangentCount; ++i)
+                                {
+                                    var otherTangent = owner.GetTangent(i);
+                                    if (otherTangent != tangent)
+                                        otherTangent.SetLocalPositionNoNotify(-tangent.localPosition);
+                                }
+
                                 owner.SetMode(BezierEditableKnot.Mode.Mirrored);
+                            }
                             else if (owner.mode == BezierEditableKnot.Mode.Mirrored)
                                 owner.SetMode(BezierEditableKnot.Mode.Continuous);
                             else if (owner.mode == BezierEditableKnot.Mode.Continuous)

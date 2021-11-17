@@ -18,17 +18,17 @@ namespace UnityEngine.Splines
         {
             var knotCount = positions.Count;
             var spline = new Spline(knotCount, closed) { EditType = SplineType.Linear };
-            
+
             for (int i = 0; i < knotCount; ++i)
             {
                 var position = positions[i];
                 var n = SplineUtility.NextIndex(i, knotCount, closed);
                 var p = SplineUtility.PreviousIndex(i, knotCount, closed);
-                
+
                 var tangentIn = SplineUtility.GetLinearTangent(position, positions[p]);
                 var tangentOut = SplineUtility.GetLinearTangent(position, positions[n]);
-                
-                spline.AddKnot(new BezierKnot(position, tangentIn, tangentOut, quaternion.identity));
+
+                spline.Add(new BezierKnot(position, tangentIn, tangentOut, quaternion.identity));
             }
 
             return spline;
@@ -48,7 +48,7 @@ namespace UnityEngine.Splines
             float3 p3 = new float3( .5f, 0f, -.5f);
             float3 tanIn  = new float3(0f, 0f, -1f);
             float3 tanOut = new float3(0f, 0f,  1f);
-            
+
             return new Spline(new BezierKnot[]
             {
                 new BezierKnot(p0 * radius, tanIn * rounding, tanOut * rounding, Quaternion.Euler(0f,  -45f, 0f)),
@@ -57,7 +57,7 @@ namespace UnityEngine.Splines
                 new BezierKnot(p3 * radius, tanIn * rounding, tanOut * rounding, Quaternion.Euler(0f, -135f, 0f))
             }, true) { EditType = SplineType.Bezier };
         }
-        
+
         /// <summary>
         /// Create a <see cref="Spline"/> in a square shape with sharp corners.
         /// </summary>

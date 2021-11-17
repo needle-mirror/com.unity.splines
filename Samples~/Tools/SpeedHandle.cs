@@ -27,7 +27,7 @@ namespace Unity.Splines.Examples
              Color color)
          {
              s_LineSegments.Clear();
-             using(var nativeSpline = spline.ToNativeSpline(localToWorld))
+             using(var nativeSpline = new NativeSpline(spline, localToWorld))
              {
                  if(GUIUtility.hotControl == 0 || ( (IList)controlIDs ).Contains(GUIUtility.hotControl))
                  {

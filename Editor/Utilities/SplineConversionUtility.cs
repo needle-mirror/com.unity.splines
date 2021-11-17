@@ -76,7 +76,7 @@ namespace UnityEditor.Splines
                 
                 editableSpline.closed = spline.Closed;
                 s_KnotBuffer.Clear();
-                for (int j = 0; j < spline.KnotCount; ++j)
+                for (int j = 0; j < spline.Count; ++j)
                 {
                     s_KnotBuffer.Add(spline[j]);
                 }

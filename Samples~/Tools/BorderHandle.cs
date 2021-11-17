@@ -26,7 +26,7 @@ namespace Unity.Splines.Examples
             {
                 s_LineSegments.Clear();
 
-                var curveCount = spline.Closed ? spline.KnotCount : spline.KnotCount - 1;
+                var curveCount = spline.Closed ? spline.Count : spline.Count - 1;
                 var stepSize = 1f / k_SamplesPerCurve;
                 var prevBorderPos = Vector3.zero;
 

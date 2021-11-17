@@ -278,7 +278,7 @@ namespace Unity.Splines.Examples
             m_SplineSegments.Clear();
 
             var spline = m_SplineContainer.Spline;
-            var curveCount = spline.Closed ? spline.KnotCount : spline.KnotCount - 1;
+            var curveCount = spline.Closed ? spline.Count : spline.Count - 1;
             var stepSize = 1f / k_SegmentsPerCurve;
 
             for (int curveIndex = 0; curveIndex < curveCount; ++curveIndex)

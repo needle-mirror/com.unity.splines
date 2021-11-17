@@ -175,7 +175,7 @@ public class PipeMeshGenerator: MonoBehaviour
         if (m_Spline == null || m_Spline.Spline == null)
             return;
 
-        if (m_Spline.Spline == null || m_Spline.Spline.KnotCount < 2)
+        if (m_Spline.Spline == null || m_Spline.Spline.Count < 2)
             return;
 
         mesh.Clear();

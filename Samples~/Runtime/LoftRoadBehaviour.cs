@@ -119,7 +119,7 @@ namespace Unity.Splines.Examples
         
         public void Loft()
         {
-            if (spline == null || spline.KnotCount < 2)
+            if (spline == null || spline.Count < 2)
                 return;
             
             mesh.Clear();
