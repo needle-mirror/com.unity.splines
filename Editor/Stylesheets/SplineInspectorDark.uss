@@ -13,3 +13,11 @@
 #Broken {
 	background-image: url("../Resources/Icons/d_Tangent_Broken.png");
 }
+
+#PositionIcon {
+	background-image: resource("Icons/d_MoveTool on.png");
+}
+
+#RotationIcon {
+	background-image: resource("Icons/d_RotateTool On.png");
+}

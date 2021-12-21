@@ -8,15 +8,42 @@ namespace UnityEditor.Splines
 
     class KnotDrawer<T> : ElementDrawer<T> where T : EditableKnot
     {
-        readonly ReadOnlyField m_KnotIndex;
+        readonly Label m_KnotLabel;
         readonly Vector3Field m_Position;
+        readonly FloatField m_PositionX;
+        readonly FloatField m_PositionY;
+        readonly FloatField m_PositionZ;
         readonly Vector3Field m_Rotation;
+        readonly FloatField m_RotationX;
+        readonly FloatField m_RotationY;
+        readonly FloatField m_RotationZ;
 
         public KnotDrawer()
         {
-            Add(m_KnotIndex = new ReadOnlyField(L10n.Tr("Knot Index")));
-            Add(m_Position = new Vector3Field(L10n.Tr("Position")) { name = "Position" });
-            Add(m_Rotation = new Vector3Field(L10n.Tr("Rotation")) { name = "Rotation" });
+            Add(m_KnotLabel = new Label());
+            m_KnotLabel.style.height = 24;
+            m_KnotLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+
+            VisualElement row;
+            Add(row = new VisualElement(){name = "Vector3WithIcon"});
+            row.style.flexDirection = FlexDirection.Row;
+            row.Add(new VisualElement(){name = "PositionIcon"});
+            row.Add(m_Position = new Vector3Field() { name = "Position" });
+            
+            m_Position.style.flexGrow = 1;
+            m_PositionX = m_Position.Q<FloatField>("unity-x-input");
+            m_PositionY = m_Position.Q<FloatField>("unity-y-input");
+            m_PositionZ = m_Position.Q<FloatField>("unity-z-input");
+            
+            Add(row = new VisualElement(){name = "Vector3WithIcon"});
+            row.style.flexDirection = FlexDirection.Row;
+            row.Add(new VisualElement(){name = "RotationIcon"});
+            row.Add(m_Rotation = new Vector3Field() { name = "Rotation" });;
+            
+            m_Rotation.style.flexGrow = 1;
+            m_RotationX = m_Rotation.Q<FloatField>("unity-x-input");
+            m_RotationY = m_Rotation.Q<FloatField>("unity-y-input");
+            m_RotationZ = m_Rotation.Q<FloatField>("unity-z-input");
 
             m_Position.RegisterValueChangedCallback((evt) => target.localPosition = evt.newValue);
             m_Rotation.RegisterValueChangedCallback((evt) => target.localRotation = Quaternion.Euler(evt.newValue));
@@ -26,9 +53,21 @@ namespace UnityEditor.Splines
         {
             base.Update();
 
-            m_KnotIndex.SetValueWithoutNotify(target.index.ToString());
+            m_KnotLabel.text = "Knot "+target.index.ToString()+" selected";
             m_Position.SetValueWithoutNotify(target.localPosition);
             m_Rotation.SetValueWithoutNotify(((Quaternion)target.localRotation).eulerAngles);
+            
+            RoundFloatFieldsValues();
+        }
+        
+        void RoundFloatFieldsValues()
+        {
+            m_PositionX.SetValueWithoutNotify(Round(m_PositionX.value));
+            m_PositionY.SetValueWithoutNotify(Round(m_PositionY.value));
+            m_PositionZ.SetValueWithoutNotify(Round(m_PositionZ.value));
+            m_RotationX.SetValueWithoutNotify(Round(m_RotationX.value));
+            m_RotationY.SetValueWithoutNotify(Round(m_RotationY.value));
+            m_RotationZ.SetValueWithoutNotify(Round(m_RotationZ.value));
         }
     }
 }

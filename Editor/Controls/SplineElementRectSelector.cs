@@ -63,7 +63,7 @@ namespace UnityEditor.Splines
                     {
                         GUIUtility.hotControl = 0;
                         evt.Use();
-                        
+
                         EndSelection(m_Rect, paths);
                     }
                     break;
@@ -74,7 +74,8 @@ namespace UnityEditor.Splines
         {
             s_SplineElementsCompareSet.Clear();
             s_SplineElementsBuffer.Clear();
-            SplineSelection.Clear();
+            if(!Event.current.shift)
+                SplineSelection.Clear();
         }
 
         protected virtual void UpdateSelection(Rect rect, IReadOnlyList<IEditableSpline> paths)
@@ -88,7 +89,7 @@ namespace UnityEditor.Splines
                     GetElementSelection(rect, spline, j, s_SplineElementsBuffer);
             }
 
-            //Compare current frame buffer with last frame's to find new addition 
+            //Compare current frame buffer with last frame's to find new addition
             foreach (var splineElement in s_SplineElementsBuffer)
             {
                 //If wasn't there last frame, add to selection
@@ -110,7 +111,7 @@ namespace UnityEditor.Splines
         {
             var knot = spline.GetKnot(index);
             Vector3 screenSpace = HandleUtility.WorldToGUIPointWithDepth(knot.position);
-            
+
             if (screenSpace.z > 0 && rect.Contains(screenSpace))
                 results.Add(knot);
 
@@ -118,7 +119,7 @@ namespace UnityEditor.Splines
             {
                 var tangent = knot.GetTangent(tangentIndex);
                 screenSpace = HandleUtility.WorldToGUIPointWithDepth(tangent.position);
-                
+
                 if (SplineSelectionUtility.IsSelectable(spline, index, tangent) && screenSpace.z > 0 && rect.Contains(screenSpace))
                     results.Add(tangent);
             }

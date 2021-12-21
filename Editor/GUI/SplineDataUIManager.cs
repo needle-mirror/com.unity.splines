@@ -78,7 +78,7 @@ namespace UnityEditor.Splines
                     EditorGUI.indentLevel++; 
                     SplineUIManager.ReserveSpace(EditorGUIUtility.standardVerticalSpacing, ref position);
                     EditorGUI.BeginChangeCheck();
-                    var timeProperty = ppte.FindPropertyRelative("m_Time");
+                    var timeProperty = ppte.FindPropertyRelative("m_Index");
                     EditorGUI.DelayedFloatField(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), timeProperty, new GUIContent($"Data Index ({GetDisplayName(unit)})", L10n.Tr(k_DataIndexTooltip)));
                     if(EditorGUI.EndChangeCheck())
                     {                
@@ -86,18 +86,18 @@ namespace UnityEditor.Splines
                             return;
                         
                         keyframesProperty.serializedObject.ApplyModifiedProperties();
-                        var newTime = ppte.FindPropertyRelative("m_Time").floatValue;
+                        var newTime = ppte.FindPropertyRelative("m_Index").floatValue;
                         
                         var targetObject = fieldInfo.GetValue(keyframesProperty.serializedObject.targetObject);
                         var sortMethod = targetObject.GetType().GetMethod("ForceSort", BindingFlags.Instance | BindingFlags.NonPublic);
-
+                    
                         EditorApplication.delayCall += () =>
                         {
                             sortMethod?.Invoke(targetObject, null);
                             keyframesProperty.serializedObject.Update();
                             for(int i = 0; i < keyframesProperty.arraySize; i++)
                             {
-                                var time = keyframesProperty.GetArrayElementAtIndex(i).FindPropertyRelative("m_Time").floatValue;
+                                var time = keyframesProperty.GetArrayElementAtIndex(i).FindPropertyRelative("m_Index").floatValue;
                                 if(time == newTime)
                                 {
                                     list.index = i;
@@ -111,7 +111,7 @@ namespace UnityEditor.Splines
                     EditorGUI.BeginChangeCheck();
                     var valueProperty = ppte.FindPropertyRelative("m_Value");
                     EditorGUI.PropertyField(SplineUIManager.ReserveSpace(EditorGUI.GetPropertyHeight(valueProperty), ref position), valueProperty, new GUIContent("Data Value", L10n.Tr(k_DataValueTooltip)));
-
+                    
                     if(EditorGUI.EndChangeCheck())
                     {
                         if(!isActive)

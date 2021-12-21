@@ -6,12 +6,12 @@ using UnityEngine;
 using UnityEditor.SettingsManagement;
 using UnityEditor.ShortcutManagement;
 using UnityEngine.Splines;
-using UnityEditor.Toolbars;
-using UnityEngine.UIElements;
 #if UNITY_2022_1_OR_NEWER
 using UnityEditor.Overlays;
 #else
 using System.Reflection;
+using UnityEditor.Toolbars;
+using UnityEngine.UIElements;
 #endif
 
 namespace UnityEditor.Splines
@@ -240,7 +240,7 @@ namespace UnityEditor.Splines
                             {
                                 // Mirror otherTangent against the active tangent prior to SetMode call.
                                 // As SetMode always mirrors tangentOut against tangentIn, this prevents an active selection's
-                                // tangentOut from shrinking or becoming zero tangent unexpectidly.
+                                // tangentOut from shrinking or becoming zero tangent unexpectedly.
                                 for (int i = 0; i < owner.tangentCount; ++i)
                                 {
                                     var otherTangent = owner.GetTangent(i);

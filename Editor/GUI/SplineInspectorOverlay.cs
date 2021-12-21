@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace UnityEditor.Splines
 {
     [Icon("UnityEditor.InspectorWindow")]
-    [Overlay(typeof(SceneView), "unity-spline-inspector", "Element Inspector", "SplineInspector")]
+    [Overlay(typeof(SceneView), "unity-spline-inspector", "Spline Inspector", "SplineInspector")]
     sealed class SplineInspectorOverlay : Overlay, ITransientOverlay
     {
         static VisualTreeAsset s_VisualTree;
@@ -48,8 +48,7 @@ namespace UnityEditor.Splines
 
         void UpdateInspector()
         {
-            m_ElementInspector?.SetElement(SplineSelection.GetActiveElement(),
-                SplineSelection.count > 1);
+            m_ElementInspector?.SetElement(SplineSelection.GetActiveElement(), SplineSelection.count);
         }
     }
 }

@@ -56,7 +56,7 @@ namespace UnityEngine.Splines
         /// </summary>
         public const int DrawResolutionDefault = 10;
 
-        
+
         /// <summary>
         /// Compute interpolated position, direction and upDirection at ratio t. Calling this method to get the
         /// 3 vectors is faster than calling independently EvaluatePosition, EvaluateDirection and EvaluateUpVector
@@ -84,7 +84,7 @@ namespace UnityEngine.Splines
                 return false;
             }
 
-            var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
+            var curveIndex = SplineToCurveT(spline, t, out var curveT);
             var curve = spline.GetCurve(curveIndex);
 
             position = CurveUtility.EvaluatePosition(curve, curveT);
@@ -105,7 +105,7 @@ namespace UnityEngine.Splines
         {
             if (spline.Count < 1)
                 return float.PositiveInfinity;
-            var curve = spline.GetCurve(SplineToCurveInterpolation(spline, t, out var curveT));
+            var curve = spline.GetCurve(SplineToCurveT(spline, t, out var curveT));
             return CurveUtility.EvaluatePosition(curve, curveT);
         }
 
@@ -120,7 +120,7 @@ namespace UnityEngine.Splines
         {
             if (spline.Count < 1)
                 return float.PositiveInfinity;
-            var curve = spline.GetCurve(SplineToCurveInterpolation(spline, t, out var curveT));
+            var curve = spline.GetCurve(SplineToCurveT(spline, t, out var curveT));
             return CurveUtility.EvaluateTangent(curve, curveT);
         }
 
@@ -145,7 +145,7 @@ namespace UnityEngine.Splines
             if (spline.Count < 1)
                 return 0;
 
-            var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
+            var curveIndex = SplineToCurveT(spline, t, out var curveT);
             var curve = spline.GetCurve(curveIndex);
 
             var curveStartRotation = spline[curveIndex].Rotation;
@@ -173,7 +173,7 @@ namespace UnityEngine.Splines
         {
             if (spline.Count < 1)
                 return float3.zero;
-            var curve = spline.GetCurve(SplineToCurveInterpolation(spline, t, out var curveT));
+            var curve = spline.GetCurve(SplineToCurveT(spline, t, out var curveT));
             return CurveUtility.EvaluateAcceleration(curve, curveT);
         }
 
@@ -189,7 +189,7 @@ namespace UnityEngine.Splines
             if (spline.Count < 1)
                 return 0f;
 
-            var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
+            var curveIndex = SplineToCurveT(spline, t, out var curveT);
             var curve = spline.GetCurve(curveIndex);
 
             return CurveUtility.EvaluateCurvature(curve, curveT);
@@ -209,7 +209,7 @@ namespace UnityEngine.Splines
             if (spline.Count < 1)
                 return 0f;
 
-            var curveIndex = SplineToCurveInterpolation(spline, t, out var curveT);
+            var curveIndex = SplineToCurveT(spline, t, out var curveT);
             var curve = spline.GetCurve(curveIndex);
 
             var curvature = CurveUtility.EvaluateCurvature(curve, curveT);
@@ -248,7 +248,12 @@ namespace UnityEngine.Splines
         /// <param name="curveT">A normalized curve interpolation value.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>The curve index.</returns>
-        public static int SplineToCurveInterpolation<T>(this T spline, float splineT, out float curveT) where T : ISpline
+        public static int SplineToCurveT<T>(this T spline, float splineT, out float curveT) where T : ISpline
+        {
+            return SplineToCurveT(spline, splineT, out curveT, true);
+        }
+
+        static int SplineToCurveT<T>(this T spline, float splineT, out float curveT, bool useLUT) where T : ISpline
         {
             splineT = math.clamp(splineT, 0, 1);
             var tLength = splineT * spline.GetLength();
@@ -264,7 +269,9 @@ namespace UnityEngine.Splines
 
                 if (tLength <= (start + curveLength))
                 {
-                    curveT = spline.GetCurveInterpolation(index, tLength - start);
+                    curveT =  useLUT ? 
+                        spline.GetCurveInterpolation(index, tLength - start) :
+                        (tLength - start)/ curveLength;
                     return index;
                 }
 
@@ -285,8 +292,8 @@ namespace UnityEngine.Splines
         /// </param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>An interpolation value relative to normalized Spline length (0 to 1).</returns>
-        /// <seealso cref="SplineToCurveInterpolation{T}"/>
-        public static float CurveToSplineInterpolation<T>(this T spline, float curve) where T : ISpline
+        /// <seealso cref="SplineToCurveT{T}"/>
+        public static float CurveToSplineT<T>(this T spline, float curve) where T : ISpline
         {
             if(spline.Count == 0 || curve < 0f)
                 return 0f;
@@ -310,9 +317,10 @@ namespace UnityEngine.Splines
         /// Calculate the length of a spline when transformed by a matrix.
         /// </summary>
         /// <param name="spline"></param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <param name="transform"></param>
         /// <returns></returns>
-        public static float CalculateLength(this Spline spline, float4x4 transform)
+        public static float CalculateLength<T>(this T spline, float4x4 transform) where T : ISpline
         {
             using var nativeSpline = new NativeSpline(spline, transform);
             return nativeSpline.GetLength();
@@ -678,7 +686,9 @@ namespace UnityEngine.Splines
             switch(targetPathUnit)
             {
                 case PathIndexUnit.Knot:
-                    int splineIndex = SplineToCurveInterpolation(spline, t, out float curveTime);
+                    //LUT SHOULD NOT be used here as PathIndexUnit.KnotIndex is linear regarding the distance 
+                    //(and thus not be interpreted using the LUT and the interpolated T)
+                    int splineIndex = spline.SplineToCurveT(t, out float curveTime, false);
                     return splineIndex + curveTime;
                 case PathIndexUnit.Distance:
                     return t * spline.GetLength();
@@ -686,6 +696,7 @@ namespace UnityEngine.Splines
                     return t;
             }
         }
+
 
         /// <summary>
         /// Given an interpolation value in any PathIndexUnit type, calculate the normalized interpolation ratio value
@@ -701,7 +712,7 @@ namespace UnityEngine.Splines
             switch(originalPathUnit)
             {
                 case PathIndexUnit.Knot:
-                    return CurveToSplineInterpolation(spline, t);
+                    return CurveToSplineT(spline, t);
                 case PathIndexUnit.Distance:
                     return t / spline.GetLength();
                 default:

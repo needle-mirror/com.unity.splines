@@ -31,8 +31,8 @@ namespace Unity.Splines.Examples
                 {
                     //Convert t to be the same for the spline and the spline data in case
                     //a scale is applied on the SplineContainer GameObject
-                    var curveIndex = container.Spline.SplineToCurveInterpolation(t, out float curveT);
-                    t = nativeSpline.CurveToSplineInterpolation(curveIndex + curveT);
+                    var curveIndex = container.Spline.SplineToCurveT(t, out float curveT);
+                    t = nativeSpline.CurveToSplineT(curveIndex + curveT);
                 }
 
                 //Compute Spline Position in World Space

@@ -80,6 +80,7 @@ namespace UnityEditor.Splines
 				SplineHandles.DrawSplineHandles(m_Splines, s_SplineHandlesOptions);
 	        
             HandleSelectionFraming();
+            HandleSelectAll();
             HandleDeleteSelectedKnots();
         }
 
@@ -104,7 +105,7 @@ namespace UnityEditor.Splines
 	        Selection.selectionChanged += OnSelectionChanged;
 	        Spline.afterSplineWasModified += OnSplineWasModified;
 	        Undo.undoRedoPerformed += UndoRedoPerformed;
-	        SplineConversionUtility.splinesUpdated += OnSelectionChanged;
+	        SplineConversionUtility.splinesUpdated += SceneView.RepaintAll;
 	        SplineConversionUtility.UpdateEditableSplinesForTargets(targets);
         }
         
@@ -116,7 +117,7 @@ namespace UnityEditor.Splines
 	        Selection.selectionChanged -= OnSelectionChanged;
 	        Spline.afterSplineWasModified -= OnSplineWasModified;
 	        Undo.undoRedoPerformed -= UndoRedoPerformed;
-	        SplineConversionUtility.splinesUpdated -= OnSelectionChanged;
+	        SplineConversionUtility.splinesUpdated -= SceneView.RepaintAll;
             
 	        EditableSplineManager.FreeEntireCache();
             SplineSelection.ClearNoUndo(false);
@@ -125,7 +126,7 @@ namespace UnityEditor.Splines
 	    void OnSplineWasModified(Spline spline) => UpdateSelection();
 	    void OnSelectionChanged() => UpdateSelection();
 	    void UndoRedoPerformed() => UpdateSelection();
-
+	    
 	    void UpdateSelection()
 	    {
 		    EditableSplineUtility.GetSelectedSplines(targets, m_Splines);
@@ -185,7 +186,39 @@ namespace UnityEditor.Splines
 	            }
 	        }
 	    }
-	    
+
+	    void HandleSelectAll()
+	    {
+		    Event evt = Event.current;
+		    if (evt.commandName.Equals("SelectAll"))
+		    {
+			    var execute = evt.type == EventType.ExecuteCommand;
+
+			    if (evt.type == EventType.ValidateCommand || execute)
+			    {
+				    var allElements = new List<ISplineElement>();
+				    foreach (var spline in m_Splines)
+				    {
+					    for (int knotIdx = 0; knotIdx < spline.knotCount; ++knotIdx)
+					    {
+						    var knot = spline.GetKnot(knotIdx);
+						    allElements.Add(knot);
+						    for (int tangentIdx = 0; tangentIdx < knot.tangentCount; ++tangentIdx)
+						    {
+							    var tangent = knot.GetTangent(tangentIdx);
+							    if (SplineSelectionUtility.IsSelectable(spline, knotIdx, tangent))
+								    allElements.Add(tangent);
+						    }
+					    }
+				    }
+
+				    SplineSelection.Add(allElements);
+				 
+				    evt.Use();
+			    }
+		    }
+	    }
+
 	    void OnAfterDomainReload()
 	    {
 		    m_WasActiveAfterDeserialize = ToolManager.activeContextType == typeof(SplineToolContext);

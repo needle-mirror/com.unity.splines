@@ -34,7 +34,7 @@ namespace Unity.Splines.Examples
                 {
                     for (int step = 0; step < k_SamplesPerCurve; ++step)
                     {
-                        var splineTime = spline.CurveToSplineInterpolation(curveIndex + step * stepSize);
+                        var splineTime = spline.CurveToSplineT(curveIndex + step * stepSize);
                         spline.Evaluate(splineTime, out var position, out var tangent, out var upVector);
                         var right = math.cross(math.normalize(tangent), upVector);
                         var border = splineData.Evaluate(spline, splineTime, PathIndexUnit.Normalized, new Interpolators.LerpFloat());

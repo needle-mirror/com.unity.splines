@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines
@@ -6,7 +8,7 @@ namespace UnityEditor.Splines
     sealed class ElementInspector : VisualElement, IDisposable
     {
         static readonly string k_NoSelectionMessage = L10n.Tr("No element selected");
-        static readonly string k_MultiSelectNoAllowedMessage = L10n.Tr("Multi select not supported");
+        static readonly string k_MultiSelectNoAllowedMessage = L10n.Tr(" - not supported");
 
         readonly Label m_ErrorMessage;
 
@@ -16,14 +18,16 @@ namespace UnityEditor.Splines
 
         static StyleSheet s_CommonStyleSheet;
         static StyleSheet s_ThemeStyleSheet;
-        
+
+        bool m_InspectorDirty;
+
         public ElementInspector()
         {
             if (s_CommonStyleSheet == null)
                 s_CommonStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/com.unity.splines/Editor/Stylesheets/SplineInspectorCommon.uss");
             if (s_ThemeStyleSheet == null)
                 s_ThemeStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"Packages/com.unity.splines/Editor/Stylesheets/SplineInspector{(EditorGUIUtility.isProSkin ? "Dark" : "Light")}.uss");
-            
+
             styleSheets.Add(s_CommonStyleSheet);
             styleSheets.Add(s_ThemeStyleSheet);
 
@@ -31,6 +35,7 @@ namespace UnityEditor.Splines
             Add(m_ErrorMessage);
 
             EditableKnot.knotModified += OnKnotModified;
+            EditorApplication.update += UpdateIfDirty;
         }
 
         public void Dispose()
@@ -40,23 +45,27 @@ namespace UnityEditor.Splines
 
         void OnKnotModified(EditableKnot knot)
         {
-            if (m_TargetKnot == knot)
-                m_ElementDrawer?.Update();
+            if(m_TargetKnot == knot)
+                m_InspectorDirty = true;
         }
-        
-        public void SetElement(ISplineElement element, bool multiSelect)
-        {
-            UpdateDrawerForElementType(multiSelect ? null : element?.GetType());
-            
-            if (multiSelect) 
-            {
-                ShowErrorMessage(k_MultiSelectNoAllowedMessage);
-            }
-            else if (element == null || m_ElementDrawer == null)
-            {
 
-                ShowErrorMessage(k_NoSelectionMessage);
+        void UpdateIfDirty()
+        {
+            if(m_InspectorDirty)
+            {
+                m_ElementDrawer?.Update();
+                m_InspectorDirty = false;
             }
+        }
+
+        public void SetElement(ISplineElement element, int selectCount)
+        {
+            UpdateDrawerForElementType(selectCount > 1 ? null : element?.GetType());
+
+            if (selectCount > 1)
+                ShowErrorMessage(BuildMultiSelectError(selectCount)+k_MultiSelectNoAllowedMessage);
+            else if (element == null || m_ElementDrawer == null)
+                ShowErrorMessage(k_NoSelectionMessage);
             else
             {
                 if (element is EditableKnot knot)
@@ -70,10 +79,30 @@ namespace UnityEditor.Splines
             }
         }
 
+        string BuildMultiSelectError(int selectCount)
+        {
+            string message = "(" + selectCount + ") ";
+            var selectionList = new List<ISplineElement>();
+            SplineSelection.GetSelectedElements(selectionList);
+            var isLookingForKnots = selectionList.FirstOrDefault() is EditableKnot;
+            foreach(var element in selectionList)
+            {
+                if(isLookingForKnots && element is EditableKnot)
+                    continue;
+                if(!isLookingForKnots && element is EditableTangent)
+                    continue;
+
+                message += "Elements selected";
+                return message;
+            }
+
+            message += isLookingForKnots ? "Knots selected" : "Tangents selected";
+            return message;
+        }
+
         void ShowErrorMessage(string error)
         {
             m_ErrorMessage.style.display = DisplayStyle.Flex;
-
             m_ErrorMessage.text = error;
         }
 

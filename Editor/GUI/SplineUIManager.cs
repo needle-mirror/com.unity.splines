@@ -87,6 +87,7 @@ namespace UnityEditor.Splines
         public void ApplyProxyToProperty(SplineUIProxy proxy, SerializedProperty property)
         {
             proxy.SerializedObject.ApplyModifiedPropertiesWithoutUndo();
+            
             var path = proxy.Spline;
             path.ValidateData();
             property.FindPropertyRelative("m_EditModeType").enumValueIndex = (int)EditableSplineUtility.GetSplineType(path);
@@ -116,7 +117,9 @@ namespace UnityEditor.Splines
                 SetQuaternionFromProperty(knotProperty.FindPropertyRelative("Rotation"), knot.Rotation);
             }
 
-            EditorApplication.delayCall += () => SplineConversionUtility.UpdateEditableSplinesForTarget(property.serializedObject.targetObject );
+            var targetSpline = GetSplineValue(property.serializedObject.targetObject, property.propertyPath);
+            targetSpline.SetDirty();
+            EditorApplication.delayCall += () => SplineConversionUtility.UpdateEditableSplinesForTarget(property.serializedObject.targetObject);
         }
 
         Spline GetSplineValue(UnityEngine.Object targetObject, string propertyPath)

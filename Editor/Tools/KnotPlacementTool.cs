@@ -199,11 +199,12 @@ namespace UnityEditor.Splines
                         GUIUtility.hotControl = controlID;
                         evt.Use();
 
-                        SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out m_LastSurfacePoint, out m_LastSurfaceNormal);
-                        m_KnotPlane = new Plane(m_LastSurfaceNormal, m_LastSurfacePoint);
-
-                        if (spline.tangentsPerKnot > 0)
-                            m_State = State.TangentPlacement;
+                        if (SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out m_LastSurfacePoint, out m_LastSurfaceNormal))
+                        {
+                            m_KnotPlane = new Plane(m_LastSurfaceNormal, m_LastSurfacePoint);
+                            if (spline.tangentsPerKnot > 0)
+                                m_State = State.TangentPlacement;
+                        }
                     }
                     break;
 

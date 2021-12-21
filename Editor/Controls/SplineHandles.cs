@@ -31,10 +31,9 @@ namespace UnityEditor.Splines
             s_TangentColor.value = SettingsGUILayout.SettingsColorField("Tangent Color", s_TangentColor, searchContext);
         }
 
-        const float k_KnotPickingDistance = 18f;
-        const float k_TangentPickingDistance = 8f;
+        const float k_SizeFactor = 0.1f;
+        const float k_PickingDistance = 8f;
         const float k_TangentLineWidth = 3f;
-        const float k_CurvePickingDistance = 8f;
         const int k_SegmentCount = 30;
         const float k_CurveLineWidth = 5f;
         const float k_PreviewCurveOpacity = 0.5f;
@@ -117,7 +116,7 @@ namespace UnityEditor.Splines
             {
                 case EventType.Layout:
                     if (!Tools.viewToolActive)
-                        HandleUtility.AddControl(id, SplineHandleUtility.DistanceToCircle(element.position, GetPickingDistance(element)));
+                        HandleUtility.AddControl(id, SplineHandleUtility.DistanceToCircle(element.position, k_PickingDistance));
                     break;
 
                 case EventType.MouseDown:
@@ -146,7 +145,7 @@ namespace UnityEditor.Splines
                         }
                         else
                         {
-                            SplineSelection.ClearNoUndo(false);
+                            SplineSelection.Clear();
                             SplineSelection.Add(element);
                         }
                     }
@@ -230,16 +229,6 @@ namespace UnityEditor.Splines
             }
 
             return false;
-        }
-
-        static float GetPickingDistance(ISplineElement element)
-        {
-            switch (element)
-            {
-                case EditableKnot _: return k_KnotPickingDistance;
-                case EditableTangent _: return k_TangentPickingDistance;
-                default: return 0f;
-            }
         }
         
         public static void CurveHandleWithKnotInsert(CurveData curve, int controlID, bool activeSpline)
@@ -343,7 +332,7 @@ namespace UnityEditor.Splines
 
         internal static void DrawKnotHandle(Vector3 knotPosition, Quaternion rotation, Color mainColor)
         {
-            var size = HandleUtility.GetHandleSize(knotPosition) * 0.1f;
+            var size = HandleUtility.GetHandleSize(knotPosition) * k_SizeFactor;
             
             using(new ColorScope(mainColor))
                 Handles.CubeHandleCap(-1, knotPosition, rotation, size, EventType.Repaint);
@@ -413,7 +402,7 @@ namespace UnityEditor.Splines
                         }
 
                         if (!Tools.viewToolActive)
-                            HandleUtility.AddControl(controlID, Mathf.Max(0, dist - k_CurvePickingDistance));
+                            HandleUtility.AddControl(controlID, Mathf.Max(0, dist - k_PickingDistance));
                         break;
                     }
 

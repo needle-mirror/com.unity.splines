@@ -1,4 +1,7 @@
 .button-strip {
+	overflow: hidden;
+	flex-shrink: 0;
+	margin: 1px 3px;
 	flex-direction: row;
 }
 

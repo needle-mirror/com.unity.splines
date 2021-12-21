@@ -243,7 +243,7 @@ namespace UnityEditor.Splines
             else if (mode == Mode.Mirrored)
                 newDirection = -m_TangentIn.localPosition;
 
-            if (previousMode == Mode.Broken && math.lengthsq(newDirection) > 0f)
+            if (previousMode == Mode.Broken || previousMode == Mode.Linear && math.lengthsq(newDirection) > 0f)
             {
                 var newDirectionW = localToWorldMatrix.MultiplyVector(newDirection);
                 var newDirectionNorm = math.normalize(newDirectionW);

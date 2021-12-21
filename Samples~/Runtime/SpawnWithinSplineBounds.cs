@@ -285,7 +285,7 @@ namespace Unity.Splines.Examples
             {
                 for (int step = 0; step < k_SegmentsPerCurve; ++step)
                 {
-                    var splineTime = spline.CurveToSplineInterpolation(curveIndex + step * stepSize);
+                    var splineTime = spline.CurveToSplineT(curveIndex + step * stepSize);
                     var pos = spline.EvaluatePosition(splineTime);
 
                     m_SplineSegments.Add(new Vector2(pos.x, pos.z));

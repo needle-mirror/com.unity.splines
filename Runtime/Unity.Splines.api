@@ -199,6 +199,21 @@ namespace UnityEngine.Splines
         protected SplineDataHandleAttribute() {}
     }
 
+    [UnityEngine.RequireComponent(typeof(UnityEngine.MeshFilter), typeof(UnityEngine.MeshRenderer))] public class SplineExtrude : UnityEngine.MonoBehaviour
+    {
+        public bool capped { get; set; }
+        public UnityEngine.Splines.SplineContainer container { get; set; }
+        public float radius { get; set; }
+        public UnityEngine.Vector2 range { get; set; }
+        public int rebuildFrequency { get; set; }
+        public bool rebuildOnSplineChange { get; set; }
+        public float segmentsPerUnit { get; set; }
+        public int sides { get; set; }
+        public UnityEngine.Splines.Spline spline { get; }
+        public SplineExtrude() {}
+        public void Rebuild();
+    }
+
     public static class SplineFactory
     {
         public static UnityEngine.Splines.Spline CreateLinear(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, bool closed = False);
@@ -209,6 +224,20 @@ namespace UnityEngine.Splines
     public static class SplineGizmoUtility
     {
         public static void DrawGizmos(UnityEngine.Splines.ISplineProvider provider);
+    }
+
+    public static class SplineMesh
+    {
+        public static void Extrude<T>(T spline, UnityEngine.Mesh mesh, float radius, int sides, int segments, bool capped = True) where T : UnityEngine.Splines.ISpline;
+        public static void Extrude<T>(T spline, UnityEngine.Mesh mesh, float radius, int sides, int segments, bool capped, Unity.Mathematics.float2 range) where T : UnityEngine.Splines.ISpline;
+        public static void Extrude<TSplineType, TVertexType, TIndexType>(TSplineType spline, Unity.Collections.NativeArray<TVertexType> vertices, Unity.Collections.NativeArray<TIndexType> indices, float radius, int sides, int segments, bool capped, Unity.Mathematics.float2 range) where TSplineType : UnityEngine.Splines.ISpline where TVertexType : System.ValueType, UnityEngine.Splines.SplineMesh.ISplineVertexData, new() where TIndexType : System.ValueType, new();
+        public static void GetVertexAndIndexCount(int sides, int segments, bool capped, bool closed, UnityEngine.Vector2 range, out int vertexCount, out int indexCount);
+        public interface ISplineVertexData
+        {
+            public abstract UnityEngine.Vector3 normal { get; set; }
+            public abstract UnityEngine.Vector3 position { get; set; }
+            public abstract UnityEngine.Vector2 texture { get; set; }
+        }
     }
 
     public enum SplineType
@@ -225,7 +254,7 @@ namespace UnityEngine.Splines
         public const int PickResolutionDefault = 4;
         public const int PickResolutionMax = 64;
         public const int PickResolutionMin = 2;
-        [System.Runtime.CompilerServices.Extension] public static float CalculateLength(UnityEngine.Splines.Spline spline, Unity.Mathematics.float4x4 transform);
+        [System.Runtime.CompilerServices.Extension] public static float CalculateLength<T>(T spline, Unity.Mathematics.float4x4 transform) where T : UnityEngine.Splines.ISpline;
         [System.Runtime.CompilerServices.Extension] public static float ConvertIndexUnit<T>(T spline, float t, UnityEngine.Splines.PathIndexUnit fromPathUnit, UnityEngine.Splines.PathIndexUnit targetPathUnit) where T : UnityEngine.Splines.ISpline;
         [System.Runtime.CompilerServices.Extension] public static float CurveToSplineInterpolation<T>(T spline, float curve) where T : UnityEngine.Splines.ISpline;
         [System.Runtime.CompilerServices.Extension] public static bool Evaluate<T>(T spline, float t, out Unity.Mathematics.float3 position, out Unity.Mathematics.float3 tangent, out Unity.Mathematics.float3 upVector) where T : UnityEngine.Splines.ISpline;

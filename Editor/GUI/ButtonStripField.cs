@@ -1,10 +1,12 @@
+using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines
 {
-    sealed class ButtonStripField : BaseField<int>
+    sealed class ButtonStripField : VisualElement
     {
         static readonly StyleSheet s_StyleSheet;
 
@@ -22,48 +24,59 @@ namespace UnityEditor.Splines
         const string k_AloneButtonClass = k_ButtonClass + "--alone";
         const string k_CheckedButtonClass = k_ButtonClass + "--checked";
 
-        string[] m_Choices = new string[0];
+        GUIContent[] m_Choices = new GUIContent[0];
         readonly VisualElement m_ButtonStrip;
 
-        public string[] choices
+        public GUIContent[] choices
         {
             get => m_Choices;
             set
             {
-                m_Choices = value ?? new string[0];
+                m_Choices = value ?? new GUIContent[0];
                 RebuildButtonStrip();
             }
         }
 
-        public ButtonStripField() : this("") {}
+        int m_Value;
 
-        public ButtonStripField(string label) : base(label, new VisualElement {name = "ButtonStrip"})
+        public int value
+        {
+            get => m_Value;
+            set
+            {
+                m_Value = value;
+                UpdateButtonsState(m_Value);
+                OnValueChanged?.Invoke(m_Value);
+            }
+        }
+
+        public event Action<int> OnValueChanged;
+
+        public ButtonStripField()
         {
             styleSheets.Add(s_StyleSheet);
 
-            m_ButtonStrip = this.Q("ButtonStrip");
+            m_ButtonStrip = this;
             m_ButtonStrip.AddToClassList(k_ButtonStripClass);
-            m_ButtonStrip.AddToClassList(inputUssClassName);
         }
 
-        Button CreateButton(string iconName)
+        Button CreateButton(GUIContent content)
         {
             var button = new Button();
             button.displayTooltipWhenElided = false;
-            button.tooltip = L10n.Tr(iconName);
-            var icon = new VisualElement { name = iconName };
+            button.tooltip = L10n.Tr(content.tooltip);
+            var icon = new VisualElement { name = content.text };
             icon.AddToClassList(k_ButtonIconClass);
             button.AddToClassList(k_ButtonClass);
             button.Add(icon);
             return button;
         }
 
-        public override void SetValueWithoutNotify(int newValue)
+        //public override void SetValueWithoutNotify(int newValue)
+        public void SetValueWithoutNotify(int newValue)
         {
-            newValue = math.clamp(newValue, 0, choices.Length - 1);
-            base.SetValueWithoutNotify(newValue);
-
-            UpdateButtonsState(newValue);
+            m_Value = math.clamp(newValue, 0, choices.Length - 1);
+            UpdateButtonsState(m_Value);
         }
 
         void UpdateButtonsState(int value)

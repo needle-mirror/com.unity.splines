@@ -285,6 +285,18 @@ namespace UnityEditor.Splines
             }
         }
 
+        public static void Add(IEnumerable<ISplineElement> elements)
+        {
+            IncrementVersion();
+
+            bool changed = false;
+            foreach (var element in elements)
+                changed |= AddElement(new SelectableSplineElement(element));
+
+            if (changed)
+                NotifySelectionChanged();
+        }
+
         public static void Add(EditableKnot knot)
         {
             IncrementVersion();

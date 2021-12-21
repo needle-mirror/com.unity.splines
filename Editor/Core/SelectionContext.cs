@@ -13,17 +13,28 @@ namespace UnityEditor.Splines
         public int knotIndex;
         public int tangentIndex; //-1 if knot
 
-        public SelectableSplineElement(EditableKnot knot)
+        public SelectableSplineElement(ISplineElement element)
         {
-            target = knot.spline.conversionTarget;
-            pathIndex = knot.spline.conversionIndex;
-            knotIndex = knot.index;
+            target = default;
+            pathIndex = -1;
+            knotIndex = -1;
             tangentIndex = -1;
-        }
+            
+            EditableKnot knot = null;
+            if (element is EditableKnot knotElement)
+                knot = knotElement;
+            else if (element is EditableTangent tangent)
+            {
+                knot = tangent.owner;
+                tangentIndex = tangent.tangentIndex;
+            }
 
-        public SelectableSplineElement(EditableTangent tangent) : this(tangent.owner)
-        {
-            tangentIndex = tangent.tangentIndex;
+            if (knot != null)
+            {
+                target = knot.spline.conversionTarget;
+                pathIndex = knot.spline.conversionIndex;
+                knotIndex = knot.index;
+            }
         }
 
         public bool isTangent => tangentIndex >= 0;

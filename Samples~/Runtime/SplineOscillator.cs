@@ -6,23 +6,23 @@ using UnityEngine.Splines;
 namespace Unity.Splines.Examples.Editor
 {
     [RequireComponent(typeof(SplineContainer))]
-    class SplineLineOscillator : MonoBehaviour
+    class SplineOscillator : MonoBehaviour
     {
         Spline m_Spline;
         BezierKnot[] m_Origins;
 
         [SerializeField, Range(.1f, 10f)]
         float m_Speed = 3f;
-        
+
         [SerializeField, Range(1f, 10f)]
         float m_Frequency = 3.14f;
-        
+
         void Start()
         {
             m_Spline = GetComponent<SplineContainer>().Spline;
             m_Origins = m_Spline.Knots.ToArray();
         }
-        
+
         void Update()
         {
             for (int i = 0, c = m_Spline.Count; i < c; ++i)

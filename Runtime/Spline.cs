@@ -56,7 +56,7 @@ namespace UnityEngine.Splines
         bool m_Dirty;
 #endif
 
-        void SetDirty()
+        internal void SetDirty()
         {
             SetLengthCacheDirty();
             changed?.Invoke();

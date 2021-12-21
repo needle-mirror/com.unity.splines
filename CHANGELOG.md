@@ -5,6 +5,26 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-pre.8] - 2021-12-21
+
+### Bug Fixes
+
+- [1384451] Fixing knot handles size being too large.
+- [1386704] Fixing SplineData Inspector not being displayed.
+- Fixing wrong Spline length when editing spline using the inspector.
+- [1384455] Fix single element selections breaking the undo stack.
+- [1384448] Fix for CTRL/CMD + Drag not performing a multi selection.
+- [1384457] Fix for an exception being sometimes thrown when drawing a spline and rotating the scene view.
+- [1384520] Fixing stack overflow when entering playmode.
+- Fixing SplineData conversion being wrong with KnotIndex.
+
+### Changes
+
+- Added a `SplineExtrude` component and an accompanying ExtrudeSpline sample scene.
+- When using a spline transform tool, CTRL/CMD + A now selects all spline elements.
+- Improving Spline Inspector overlay.
+- `SplineUtility.CalculateLength` now accepts `T : ISpline` instead of `Spline`.
+
 ## [1.0.0-pre.7] - 2021-11-17
 
 ### Changes
