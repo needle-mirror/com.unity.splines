@@ -9,7 +9,4 @@ public class AnimateCarAlongSplineEditor : Editor
     {
         ((AnimateCarAlongSpline)target).Initialize();
     }
-    void OnDisable()
-    {
-    }
 }

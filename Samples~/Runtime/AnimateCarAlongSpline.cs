@@ -11,28 +11,49 @@ namespace Unity.Splines.Examples
     {
         [SerializeField]
         SplineContainer m_SplineContainer;
+        public SplineContainer splineContainer => m_SplineContainer;
         
         [SerializeField]
         Car m_CarToAnimate;
 
+        [Min(0f)]
         public float m_DefaultSpeed = 10f;
+        [Min(0f)]
+        public float m_MaxSpeed = 30f;
         [SerializeField]
-        [SpeedHandle(30f)]
         SplineData<float> m_Speed;
+        public SplineData<float> speed => m_Speed;
         
         public Vector3 m_DefaultTilt = Vector3.up;
         [SerializeField]
-        [TiltHandle]
         SplineData<float3> m_Tilt;
-        
-        public float m_DefaultDrift = 0f;
-        [SerializeField]
-        [DriftHandle]
-        SplineData<float> m_Drift;
+        public SplineData<float3> tilt => m_Tilt;
         
         [SerializeField]
-        [PointHandle]
-        SplineData<float2> m_LookAtPoints;
+        DriftSplineData m_Drift;
+        public DriftSplineData driftData
+        {
+            get
+            {
+                if(m_Drift == null)
+                    m_Drift = GetComponent<DriftSplineData>();
+
+                return m_Drift;
+            }
+        }
+
+        [SerializeField]
+        PointSplineData m_LookAtPoints;
+        public PointSplineData lookAtPoints
+        {
+            get
+            {
+                if(m_LookAtPoints == null)
+                    m_LookAtPoints = GetComponent<PointSplineData>();
+
+                return m_LookAtPoints;
+            }
+        }
 
         [SerializeField] 
         Transform m_LookTransform;
@@ -61,27 +82,41 @@ namespace Unity.Splines.Examples
 
         void OnValidate()
         {
-            for(int index = 0; index < m_Speed.Count; index++)
+            if(m_Speed != null)
             {
-                var data = m_Speed[index];
-                //We don't want to have a value that is negative or null as it might block the simulation
-                if(data.Value <= 0)
+                for(int index = 0; index < m_Speed.Count; index++)
                 {
-                    data.Value = m_DefaultSpeed;
-                    m_Speed[index] = data;
+                    var data = m_Speed[index];
+
+                    //We don't want to have a value that is negative or null as it might block the simulation
+                    if(data.Value <= 0)
+                    {
+                        data.Value = m_DefaultSpeed;
+                        m_Speed[index] = data;
+                    }
                 }
             }
-            
-            for(int index = 0; index < m_Tilt.Count; index++)
+
+            if(m_Tilt != null)
             {
-                var data = m_Tilt[index];
-                //We don't want to have a up vector of magnitude 0
-                if(math.length(data.Value) == 0)
+                for(int index = 0; index < m_Tilt.Count; index++)
                 {
-                    data.Value = m_DefaultTilt;
-                    m_Tilt[index] = data;
+                    var data = m_Tilt[index];
+
+                    //We don't want to have a up vector of magnitude 0
+                    if(math.length(data.Value) == 0)
+                    {
+                        data.Value = m_DefaultTilt;
+                        m_Tilt[index] = data;
+                    }
                 }
             }
+
+            if(lookAtPoints != null)
+                lookAtPoints.container = splineContainer;
+
+            if(driftData != null)
+                driftData.container = splineContainer;
         }
 
         void Update()
@@ -100,10 +135,13 @@ namespace Unity.Splines.Examples
             var direction = SplineUtility.EvaluateTangent(m_Spline, m_CurrentOffset);
             var upSplineDirection = SplineUtility.EvaluateUpVector(m_Spline, m_CurrentOffset);
             var right = math.normalize(math.cross(upSplineDirection, direction));
-            var driftOffset = 
-                (m_Drift == null  || m_Drift.Count == 0) ? 
-                    m_DefaultDrift : 
-                    m_Drift.Evaluate(m_Spline, m_CurrentOffset, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
+            var driftOffset = 0f;
+            if(driftData != null)
+            {
+                driftOffset = driftData.drift.Count == 0 ?
+                    driftData.m_Default : 
+                    driftData.drift.Evaluate(m_Spline, m_CurrentOffset, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
+            }
             
             m_CarToAnimate.transform.position = m_SplineContainer.transform.TransformPoint(posOnSplineLocal + driftOffset * right);
 
@@ -115,9 +153,9 @@ namespace Unity.Splines.Examples
             var rot = Quaternion.LookRotation(direction, upSplineDirection);
             m_CarToAnimate.transform.rotation = Quaternion.LookRotation(direction, rot * up);
 
-            if (m_LookTransform != null && m_LookAtPoints.Count > 0)
+            if (lookAtPoints != null && m_LookTransform != null && m_LookAtPoints.Count > 0)
             {
-                var lookAtPoint = m_LookAtPoints.Evaluate(m_Spline, m_CurrentOffset, PathIndexUnit.Normalized, new Interpolators.LerpFloat2());
+                var lookAtPoint = m_LookAtPoints.points.Evaluate(m_Spline, m_CurrentOffset, PathIndexUnit.Normalized, new Interpolators.LerpFloat2());
                 direction = math.normalize(new float3(lookAtPoint.x, 0f, lookAtPoint.y) - (float3)m_LookTransform.position);
                 m_LookTransform.transform.rotation = Quaternion.LookRotation(direction, up);
             }

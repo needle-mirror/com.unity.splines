@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEditorInternal;
 using UnityEngine;
@@ -42,34 +43,44 @@ namespace UnityEditor.Splines
             s_ReorderableLists.Clear();
         }
         
-        public ReorderableList GetKeyframesReorderableList(SerializedProperty property, SerializedProperty keyframesProperty, FieldInfo fieldInfo, PathIndexUnit unit)
+        public ReorderableList GetDataPointsReorderableList(SerializedProperty property, SerializedProperty dataPointProperty, FieldInfo fieldInfo, PathIndexUnit unit)
         {
-            var key = keyframesProperty.propertyPath + property.serializedObject.targetObject.GetInstanceID();
+            var key = dataPointProperty.propertyPath + property.serializedObject.targetObject.GetInstanceID();
             if(s_ReorderableLists.TryGetValue(key, out var list))
-                return list;
+            {
+                try
+                {
+                    SerializedProperty.EqualContents(list.serializedProperty, dataPointProperty);
+                    return list;
+                }
+                catch(NullReferenceException _) 
+                {
+                    s_ReorderableLists.Remove(key);
+                }
+            }
 
-            list = new ReorderableList(keyframesProperty.serializedObject, keyframesProperty, true, false, true, true);
+            list = new ReorderableList(dataPointProperty.serializedObject, dataPointProperty, true, false, true, true);
             s_ReorderableLists.Add(key, list);
             
             list.elementHeightCallback = (int index) =>
             {
-                return keyframesProperty.GetArrayElementAtIndex(index).isExpanded
+                return dataPointProperty.GetArrayElementAtIndex(index).isExpanded
                     ? 3 * EditorGUIUtility.singleLineHeight + 2 * EditorGUIUtility.standardVerticalSpacing
                     : EditorGUIUtility.singleLineHeight;
             };
 
             list.drawElementCallback =
-                (Rect position, int index, bool isActive, bool isFocused) =>
+                (Rect position, int listIndex, bool isActive, bool isFocused) =>
             {
-                var ppte = keyframesProperty.GetArrayElementAtIndex(index);
+                var ppte = dataPointProperty.GetArrayElementAtIndex(listIndex);
             
                 EditorGUI.indentLevel++;
-                var expended = EditorGUI.Foldout(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), ppte.isExpanded, new GUIContent($"Data Point [{index}]"), true);
+                var expended = EditorGUI.Foldout(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), ppte.isExpanded, new GUIContent($"Data Point [{listIndex}]"), true);
                 if(expended != ppte.isExpanded)
                 {
                     ppte.isExpanded = expended;
                     if(!isActive)
-                        list.index = index;
+                        list.index = listIndex;
                     list.GrabKeyboardFocus();
                 }
             
@@ -78,27 +89,27 @@ namespace UnityEditor.Splines
                     EditorGUI.indentLevel++; 
                     SplineUIManager.ReserveSpace(EditorGUIUtility.standardVerticalSpacing, ref position);
                     EditorGUI.BeginChangeCheck();
-                    var timeProperty = ppte.FindPropertyRelative("m_Index");
-                    EditorGUI.DelayedFloatField(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), timeProperty, new GUIContent($"Data Index ({GetDisplayName(unit)})", L10n.Tr(k_DataIndexTooltip)));
+                    var indexProperty = ppte.FindPropertyRelative("m_Index");
+                    EditorGUI.DelayedFloatField(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), indexProperty, new GUIContent($"Data Index ({GetDisplayName(unit)})", L10n.Tr(k_DataIndexTooltip)));
                     if(EditorGUI.EndChangeCheck())
                     {                
                         if(!isActive)
                             return;
                         
-                        keyframesProperty.serializedObject.ApplyModifiedProperties();
-                        var newTime = ppte.FindPropertyRelative("m_Index").floatValue;
+                        dataPointProperty.serializedObject.ApplyModifiedProperties();
+                        var newIndex = ppte.FindPropertyRelative("m_Index").floatValue;
                         
-                        var targetObject = fieldInfo.GetValue(keyframesProperty.serializedObject.targetObject);
+                        var targetObject = fieldInfo.GetValue(dataPointProperty.serializedObject.targetObject);
                         var sortMethod = targetObject.GetType().GetMethod("ForceSort", BindingFlags.Instance | BindingFlags.NonPublic);
                     
                         EditorApplication.delayCall += () =>
                         {
                             sortMethod?.Invoke(targetObject, null);
-                            keyframesProperty.serializedObject.Update();
-                            for(int i = 0; i < keyframesProperty.arraySize; i++)
+                            dataPointProperty.serializedObject.Update();
+                            for(int i = 0; i < dataPointProperty.arraySize; i++)
                             {
-                                var time = keyframesProperty.GetArrayElementAtIndex(i).FindPropertyRelative("m_Index").floatValue;
-                                if(time == newTime)
+                                var index = dataPointProperty.GetArrayElementAtIndex(i).FindPropertyRelative("m_Index").floatValue;
+                                if(index == newIndex)
                                 {
                                     list.index = i;
                                     break;
@@ -115,7 +126,7 @@ namespace UnityEditor.Splines
                     if(EditorGUI.EndChangeCheck())
                     {
                         if(!isActive)
-                            list.index = index;
+                            list.index = listIndex;
                     }
 
                     EditorGUI.indentLevel--;

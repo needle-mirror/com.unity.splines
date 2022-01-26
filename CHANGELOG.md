@@ -5,6 +5,17 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-pre.9] - 2022-01-26
+
+## Changes 
+
+- Adding new API to interact with SplineData Handles
+
+### Bug fixes
+
+- [1395734] Fixing SplineUtility errors with Spline made of 1 knot.
+- Fixing Tangent Out when switching from Broken Tangents to Continuous Tangents Mode.
+
 ## [1.0.0-pre.8] - 2021-12-21
 
 ### Bug Fixes

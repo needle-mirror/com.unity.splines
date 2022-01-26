@@ -45,9 +45,9 @@ namespace UnityEditor.Splines
         {
             if(splineData.Count == 0)
                 return;
-
+            
             Undo.RecordObject(component, "Modifying Spline Data Points");
-
+            
             //Invoke if existing the custom drawer for the whole spline
             splineDataDrawMethodInfo?.Invoke(drawerInstance,
                 new object[]
@@ -57,18 +57,18 @@ namespace UnityEditor.Splines
                     localToWorld,
                     color
                 });
-
+            
             if (keyframeDrawMethodInfo == null)
                 return;
-
+            
             var native = new NativeSpline(spline, localToWorld);
             var ids = ( (SplineDataHandle<T>)drawerInstance ).controlIDs;
-
+            
             for(int splineDataIndex = 0; splineDataIndex < splineData.Count; splineDataIndex++)
             {
                 var keyframe = splineData[splineDataIndex];
                 var normalizedT = SplineUtility.GetNormalizedInterpolation(native, keyframe.Index, splineData.PathIndexUnit);
-
+            
                 native.Evaluate(normalizedT, out float3 dataPosition, out float3 dataDirection, out float3 dataUp);
                 using(new Handles.DrawingScope(color))
                 {
@@ -85,7 +85,7 @@ namespace UnityEditor.Splines
                         });
                 }
             }
-
+            
             native.Dispose();
         }
 
@@ -99,19 +99,19 @@ namespace UnityEditor.Splines
         {
             Undo.RecordObject(component, "Modifying Spline Data Points");
             using var native = new NativeSpline(spline, localToWorld);
-
+            
             using(new Handles.DrawingScope(color))
             {
                 for(int keyframeIndex = 0; keyframeIndex < splineData.Count; keyframeIndex++)
                 {
                     var keyframe = splineData[keyframeIndex];
                     var inUse = SplineDataHandle(splineData, keyframe, native, labelType, keyframeIndex, out float time);
-
+            
                     if(inUse)
                     {
                         keyframe.Index = time;
-                        splineData.SetKeyframeNoSort(keyframeIndex, keyframe);
-
+                        splineData.SetDataPointNoSort(keyframeIndex, keyframe);
+            
                         //OnMouseUp event
                         if(GUIUtility.hotControl == 0)
                             splineData.SortIfNecessary();

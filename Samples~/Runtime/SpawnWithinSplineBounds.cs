@@ -24,6 +24,8 @@ namespace Unity.Splines.Examples
 
         [SerializeField] 
         SplineContainer m_SplineContainer;
+        public SplineContainer splineContainer => m_SplineContainer;
+        
         [SerializeField] 
         Transform m_SpawnContainer;
         [SerializeField]
@@ -45,8 +47,8 @@ namespace Unity.Splines.Examples
         [Range(0, 1)]
         float m_BorderSpawnChance;
         [SerializeField]
-        [BorderHandle]
         SplineData<float> m_SpawnBorderData;
+        public SplineData<float> spawnBorderData => m_SpawnBorderData;
         
         [Header("Randomization")]
         [SerializeField] 

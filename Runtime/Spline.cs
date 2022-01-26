@@ -41,7 +41,7 @@ namespace UnityEngine.Splines
         public bool IsReadOnly => false;
 
         /// <summary>
-        /// Invoked any time a spline property is modified.
+        /// Invoked in the editor any time a spline property is modified.
         /// </summary>
         /// <remarks>
         /// In the editor this can be invoked many times per-frame.

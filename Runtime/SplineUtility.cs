@@ -255,13 +255,18 @@ namespace UnityEngine.Splines
 
         static int SplineToCurveT<T>(this T spline, float splineT, out float curveT, bool useLUT) where T : ISpline
         {
+            var knotCount = spline.Count;
+            if(knotCount <= 1)
+            {
+                curveT = 0f;
+                return 0;
+            }
+
             splineT = math.clamp(splineT, 0, 1);
             var tLength = splineT * spline.GetLength();
+
             var start = 0f;
-
             var closed = spline.Closed;
-            var knotCount = spline.Count;
-
             for (int i = 0, c = closed ? knotCount : knotCount - 1; i < c; i++)
             {
                 var index = i % knotCount;
@@ -278,7 +283,7 @@ namespace UnityEngine.Splines
                 start += curveLength;
             }
 
-            curveT = 1;
+            curveT = 1f;
             return closed ? knotCount - 1 : knotCount - 2;
         }
 
@@ -295,7 +300,7 @@ namespace UnityEngine.Splines
         /// <seealso cref="SplineToCurveT{T}"/>
         public static float CurveToSplineT<T>(this T spline, float curve) where T : ISpline
         {
-            if(spline.Count == 0 || curve < 0f)
+            if(spline.Count <= 1 || curve < 0f)
                 return 0f;
 
             if(curve >= ( spline.Closed ? spline.Count : spline.Count - 1 ))
@@ -665,7 +670,23 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given a time value using a certain PathIndexUnit type, calculate the associated time value in another targetPathUnit regarding a specific spline.
+        /// Given an interpolation value using a certain PathIndexUnit type, calculate the associated interpolation value in another targetPathUnit regarding a specific spline.
+        /// </summary>
+        /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
+        /// <param name="t">Interpolation in the original PathIndexUnit.</param>
+        /// <param name="targetPathUnit">The PathIndexUnit to which 't' should be converted.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <returns>The interpolation value converted to targetPathUnit.</returns>
+        public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit targetPathUnit)
+            where T : ISpline
+        {
+            if(targetPathUnit == PathIndexUnit.Normalized)
+                return t;
+            return ConvertNormalizedIndexUnit(spline, t, targetPathUnit);
+        }
+        
+        /// <summary>
+        /// Given an interpolation value using a certain PathIndexUnit type, calculate the associated interpolation value in another targetPathUnit regarding a specific spline.
         /// </summary>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
         /// <param name="t">Interpolation in the original PathIndexUnit.</param>
@@ -678,10 +699,10 @@ namespace UnityEngine.Splines
         {
             if(fromPathUnit == targetPathUnit)
                 return t;
-            return ConvertIndexUnit(spline, GetNormalizedInterpolation(spline, t, fromPathUnit), targetPathUnit);
+            return ConvertNormalizedIndexUnit(spline, GetNormalizedInterpolation(spline, t, fromPathUnit), targetPathUnit);
         }
 
-        static float ConvertIndexUnit<T>(T spline, float t, PathIndexUnit targetPathUnit) where T : ISpline
+        static float ConvertNormalizedIndexUnit<T>(T spline, float t, PathIndexUnit targetPathUnit) where T : ISpline
         {
             switch(targetPathUnit)
             {
@@ -714,7 +735,8 @@ namespace UnityEngine.Splines
                 case PathIndexUnit.Knot:
                     return CurveToSplineT(spline, t);
                 case PathIndexUnit.Distance:
-                    return t / spline.GetLength();
+                    var length = spline.GetLength();
+                    return length > 0 ? t / length : 0f;
                 default:
                     return t;
             }

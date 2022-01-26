@@ -194,12 +194,12 @@ namespace UnityEditor.Splines
                                     splineContainer = (SplineContainer)fi.GetValue(component);
                             }
                             
+                            //Skip this SplineData if no splineContainer can be automatically attributed
+                            if(splineContainer == null)
+                                continue;
+                            
                             Type splineDataType = fieldInfos[i].FieldType.GetTypeInfo().GenericTypeArguments[0];
                             Type drawer = typeof(SplineDataHandlesDrawer);
-                            MethodInfo drawerMethod = drawer.GetMethod("DrawSplineDataHandles", BindingFlags.Static | BindingFlags.NonPublic);
-                            MethodInfo drawerMethodInfo = drawerMethod.MakeGenericMethod(splineDataType);
-                            MethodInfo dpDrawerMethod = drawer.GetMethod("DrawCustomHandles", BindingFlags.Static | BindingFlags.NonPublic);
-                            MethodInfo dataPointDrawerMethodInfo = dpDrawerMethod.MakeGenericMethod(splineDataType);
                             
                             SplineDataHandleAttribute splineDataAttribute = fieldInfos[i].GetCustomAttribute<SplineDataHandleAttribute>();
                             ISplineDataHandle customDrawerInstance = null;
@@ -230,16 +230,20 @@ namespace UnityEditor.Splines
                                         customSplineDataHandleMethodInfo = GetCustomSplineDataDrawerMethodInfo(customDrawerMethodInfos, splineDataType);
                                         customKeyframeHandleMethodInfo = GetCustomKeyframeDrawerMethodInfo(customDrawerMethodInfos, splineDataType);
 
-                                        var declaringType = customSplineDataHandleMethodInfo.DeclaringType.IsAbstract ? 
-                                            customKeyframeHandleMethodInfo.DeclaringType : 
-                                            customSplineDataHandleMethodInfo.DeclaringType;
                                         customDrawerInstance = splineDataHandleInstance;
                                     }
                                 }
                                 else
                                     Debug.LogError($"No valid SplineDataHandle<> type was found for drawerID = \"{splineDataAttribute.GetType()}\" (used in {component.gameObject.name}/{component.GetType().Name})");
                             }
+                            else 
+                                continue;
 
+                            MethodInfo drawerMethod = drawer.GetMethod("DrawSplineDataHandles", BindingFlags.Static | BindingFlags.NonPublic);
+                            MethodInfo drawerMethodInfo = drawerMethod.MakeGenericMethod(splineDataType);
+                            MethodInfo dpDrawerMethod = drawer.GetMethod("DrawCustomHandles", BindingFlags.Static | BindingFlags.NonPublic);
+                            MethodInfo dataPointDrawerMethodInfo = dpDrawerMethod.MakeGenericMethod(splineDataType);
+                            
                             var splineDataElement = new SplineDataElement()
                             {
                                 splineDataField = fieldInfos[i],

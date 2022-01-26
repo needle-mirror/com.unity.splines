@@ -114,6 +114,9 @@ namespace UnityEditor.Splines
 
         void TangentChanged(EditableTangent changed, EditableTangent opposite)
         {
+            if (float.IsNaN(changed.localPosition.x) || float.IsNaN(changed.localPosition.y) || float.IsNaN(changed.localPosition.z))
+                changed.localPosition = new float3(0, 0, 0);
+            
             switch (mode)
             {
                 case Mode.Continuous:

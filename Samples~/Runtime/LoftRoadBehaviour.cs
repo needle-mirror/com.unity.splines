@@ -29,11 +29,24 @@ namespace Unity.Splines.Examples
         [SerializeField]
         float m_TextureScale = 1f;
 
-        public float m_DefaultWidth = 1f;
-        [SerializeField]
-        [WidthHandle]
-        SplineData<float> m_Width;
+        WidthSplineData m_WidthData;
+        
+        WidthSplineData widthData
+        {
+            get
+            {
+                if(m_WidthData == null)
+                    m_WidthData = GetComponent<WidthSplineData>();
+                if(m_WidthData == null)
+                    m_WidthData = gameObject.AddComponent<WidthSplineData>();
 
+                if(m_WidthData.container == null)
+                    m_WidthData.container = m_Spline;
+
+                return m_WidthData;
+            }
+        }
+        
         public Spline spline
         {
             get
@@ -64,12 +77,6 @@ namespace Unity.Splines.Examples
 
         public int segmentsPerMeter => Mathf.Min(10, Mathf.Max(1, m_SegmentsPerMeter));
 
-        public SplineData<float> width
-        {
-            get => m_Width;
-            set => m_Width = value;
-        }
-
         List<Vector3> m_Positions = new List<Vector3>();
         List<Vector3> m_Normals = new List<Vector3>();
         List<Vector2> m_Textures = new List<Vector2>();
@@ -81,6 +88,11 @@ namespace Unity.Splines.Examples
             if(m_Mesh != null)
                 m_Mesh = null;
 
+            if(m_WidthData == null)
+                m_WidthData = GetComponent<WidthSplineData>();
+            if(m_WidthData == null)
+                m_WidthData = gameObject.AddComponent<WidthSplineData>();
+            
             Loft();
 #if UNITY_EDITOR            
             EditorSplineUtility.afterSplineWasModified += OnAfterSplineWasModified;
@@ -113,7 +125,7 @@ namespace Unity.Splines.Examples
         
         void OnAfterSplineDataWasModified(SplineData<float> splineData)
         {
-            if (splineData == width)
+            if (splineData == m_WidthData.width)
                 Loft();
         }
         
@@ -153,10 +165,10 @@ namespace Unity.Splines.Examples
                 //var tangent = math.normalize((float3)math.mul(math.cross(up, dir), new float3(1f / scale.x, 1f / scale.y, 1f / scale.z)));
                 var tangent = math.normalize(math.cross(up, dir)) * new float3(1f / scale.x, 1f / scale.y, 1f / scale.z);
 
-                var w = m_DefaultWidth;
-                if(width != null && width.Count > 0)
+                var w = widthData.m_DefaultWidth;
+                if(widthData.width != null && widthData.Count > 0)
                 {
-                    w = m_Width.Evaluate(spline, index, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
+                    w = widthData.width.Evaluate(spline, index, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
                     w = math.clamp(w, .001f, 10000f);
                 }
 

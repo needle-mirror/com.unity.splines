@@ -256,7 +256,7 @@ namespace UnityEngine.Splines
         public const int PickResolutionMin = 2;
         [System.Runtime.CompilerServices.Extension] public static float CalculateLength<T>(T spline, Unity.Mathematics.float4x4 transform) where T : UnityEngine.Splines.ISpline;
         [System.Runtime.CompilerServices.Extension] public static float ConvertIndexUnit<T>(T spline, float t, UnityEngine.Splines.PathIndexUnit fromPathUnit, UnityEngine.Splines.PathIndexUnit targetPathUnit) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static float CurveToSplineInterpolation<T>(T spline, float curve) where T : UnityEngine.Splines.ISpline;
+        [System.Runtime.CompilerServices.Extension] public static float CurveToSplineT<T>(T spline, float curve) where T : UnityEngine.Splines.ISpline;
         [System.Runtime.CompilerServices.Extension] public static bool Evaluate<T>(T spline, float t, out Unity.Mathematics.float3 position, out Unity.Mathematics.float3 tangent, out Unity.Mathematics.float3 upVector) where T : UnityEngine.Splines.ISpline;
         [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 EvaluateAcceleration<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
         [System.Runtime.CompilerServices.Extension] public static float EvaluateCurvature<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
@@ -271,7 +271,7 @@ namespace UnityEngine.Splines
         [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 GetPointAtLinearDistance<T>(T spline, float fromT, float relativeDistance, out float resultPointT) where T : UnityEngine.Splines.ISpline;
         public static int GetSegmentCount(float length, int resolution);
         public static void SetPivot(UnityEngine.Splines.SplineContainer container, UnityEngine.Vector3 position);
-        [System.Runtime.CompilerServices.Extension] public static int SplineToCurveInterpolation<T>(T spline, float splineT, out float curveT) where T : UnityEngine.Splines.ISpline;
+        [System.Runtime.CompilerServices.Extension] public static int SplineToCurveT<T>(T spline, float splineT, out float curveT) where T : UnityEngine.Splines.ISpline;
     }
 }
 

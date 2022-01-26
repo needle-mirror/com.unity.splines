@@ -42,9 +42,9 @@ namespace UnityEditor.Splines
                 }
                 else
                 {
-                    for(int keyframeIndex = 0; keyframeIndex < arraySize; keyframeIndex++)
+                    for(int dataPointIndex = 0; dataPointIndex < arraySize; dataPointIndex++)
                     {
-                        height += datapointsProperty.GetArrayElementAtIndex(keyframeIndex).isExpanded
+                        height += datapointsProperty.GetArrayElementAtIndex(dataPointIndex).isExpanded
                             ? 3 * EditorGUIUtility.singleLineHeight + 2 * EditorGUIUtility.standardVerticalSpacing
                             : EditorGUIUtility.singleLineHeight;
                     }
@@ -70,14 +70,14 @@ namespace UnityEditor.Splines
                 SplineUIManager.ReserveSpace(EditorGUIUtility.standardVerticalSpacing, ref position);
                 
                 var indexProperty = property.FindPropertyRelative("m_IndexUnit");
-                var keyframesProperty = property.FindPropertyRelative("m_DataPoints");
+                var dataPointsProperty = property.FindPropertyRelative("m_DataPoints");
                 var pathUnit = (PathIndexUnit)indexProperty.intValue;
                 EditorGUI.BeginChangeCheck();
                 var newPathUnit = EditorGUI.Popup(SplineUIManager.ReserveSpace(EditorGUI.GetPropertyHeight(indexProperty), ref position),
                     new GUIContent("Data Index Unit",L10n.Tr(k_DataUnitTooltip)), (int)pathUnit, k_PathUnitIndexLabels);
                 if(EditorGUI.EndChangeCheck())
                 {
-                    if(keyframesProperty.arraySize == 0)
+                    if(dataPointsProperty.arraySize == 0)
                         indexProperty.intValue = newPathUnit;
                     else
                         SplineDataConversionWindow.DoConfirmWindow(property, indexProperty, fieldInfo, property.serializedObject.targetObject as Component, newPathUnit);
@@ -85,11 +85,9 @@ namespace UnityEditor.Splines
 
                 SplineUIManager.ReserveSpace(EditorGUIUtility.standardVerticalSpacing, ref position);
 
-                keyframesProperty.isExpanded = EditorGUI.Foldout(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), keyframesProperty.isExpanded, new GUIContent("Data Points"));
-                if(keyframesProperty.isExpanded)
-                {
-                    SplineDataUIManager.instance.GetKeyframesReorderableList(property, keyframesProperty, fieldInfo, pathUnit).DoList(position);
-                }
+                dataPointsProperty.isExpanded = EditorGUI.Foldout(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), dataPointsProperty.isExpanded, new GUIContent("Data Points"));
+                if(dataPointsProperty.isExpanded)
+                    SplineDataUIManager.instance.GetDataPointsReorderableList(property, dataPointsProperty, fieldInfo, pathUnit).DoList(position);
                 
                 EditorGUI.indentLevel--;
             }

@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "1.0.0-pre.8",
+  "version": "1.0.0-pre.9",
   "unity": "2022.1",
   "description": "Framework and tools for working with curves and splines.",
   "dependencies": {
@@ -25,14 +25,14 @@
     "com.unity.test-framework.performance"
   ],
   "relatedPackages": {
-    "com.unity.splines.tests": "1.0.0-pre.8"
+    "com.unity.splines.tests": "1.0.0-pre.9"
   },
   "upmCi": {
-    "footprint": "c7f554d9771ec106ef23536dc4299c47c1380a6a"
+    "footprint": "dc566829db0e08c482433204278ec594e6d5d3ed"
   },
   "repository": {
     "url": "https://github.com/Unity-Technologies/com.unity.splines.git",
     "type": "git",
-    "revision": "56fd482b45f1b9d52160ad8c0e34f0327063495d"
+    "revision": "a54f49f9f909ab40bdcc3a8fb33c6e20c0664c8e"
   }
 }
