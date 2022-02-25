@@ -5,16 +5,35 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2022-02-25
+
+## Changes
+
+- New icons set for Spline-related items.
+- `SplineContainer` inspector is now more user-friendly.
+- Fixed issue where Spline Inspector fields would not accept negative values.
+- Fixed issue where the X shortcut would only cycle through World/Local handle orientations and ignore Parent/Element.
+- Fixed samples compatibility issues on 2021.2.
+- Spline Inspector no longer shows 2 editable tangent fields for Knots that only have one tangent.
+- Fixed poor performance when manipulating long continuous tangents.
+- `SplineUtility.ConvertIndexUnit` now wraps when returning normalized interpolations.
+- Fixed issue where Knot rotation would not properly align to the surface the Knot is placed on.
+- Fixed Spline length serialization issue that would result in incorrect Spline evaluations and length calculations.
+- Updated Knot and Tangent handle design.
+
 ## [1.0.0-pre.9] - 2022-01-26
 
 ## Changes 
 
 - Adding new API to interact with SplineData Handles
+- Adding a `SplineInstantiate` component and updating associated samples.
+- Added a `SplineAnimate` component and sample scene.
 
 ### Bug fixes
 
 - [1395734] Fixing SplineUtility errors with Spline made of 1 knot.
 - Fixing Tangent Out when switching from Broken Tangents to Continuous Tangents Mode.
+- Fixing Preview Curve for Linear and Catcall Rom when Closing Spline.
 
 ## [1.0.0-pre.8] - 2021-12-21
 

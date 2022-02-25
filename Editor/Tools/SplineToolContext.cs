@@ -96,7 +96,7 @@ namespace UnityEditor.Splines
         {
 	        // Sync handleOrientation to Tools.pivotRotation only if we're switching from a different context.
 	        // This ensures that Parent/Element handleOrientation is retained after domain reload.
-	        if (!m_WasActiveAfterDeserialize)
+	        if(!m_WasActiveAfterDeserialize)
 		        SplineTool.handleOrientation = (HandleOrientation)Tools.pivotRotation;
 	        else
 		        m_WasActiveAfterDeserialize = false;

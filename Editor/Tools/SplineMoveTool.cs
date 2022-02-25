@@ -16,6 +16,11 @@ namespace UnityEditor.Splines
 #endif
     sealed class SplineMoveTool : SplineTool
     {
+        public override bool gridSnapEnabled
+        {
+            get => handleOrientation == HandleOrientation.Global; 
+        }
+
         public override GUIContent toolbarIcon => PathIcons.splineMoveTool;
         
         internal override SplineHandlesOptions handlesOptions => SplineHandlesOptions.ManipulationDefault;
@@ -24,7 +29,7 @@ namespace UnityEditor.Splines
         {
             if (Event.current.type == EventType.MouseDrag)
             {
-                if (SplineTool.handleOrientation == HandleOrientation.Element || SplineTool.handleOrientation == HandleOrientation.Parent)
+                if (handleOrientation == HandleOrientation.Element || handleOrientation == HandleOrientation.Parent)
                     TransformOperation.pivotFreeze |= TransformOperation.PivotFreeze.Rotation;
 
                 // In rotation sync center mode, pivot has to be allowed to move away

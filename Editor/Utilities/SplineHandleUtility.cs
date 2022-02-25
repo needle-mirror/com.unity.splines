@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
 {
@@ -43,21 +44,56 @@ namespace UnityEditor.Splines
         static readonly Vector3[] s_ClosestPointArray = new Vector3[k_SegmentsPointCount];
         const float k_KnotPickingDistance = 18f;
         
-        static readonly Vector3[] s_LineBuffer = new Vector3[2];
+        static readonly Vector3[] s_LineBuffer = new Vector3[2]; 
         
-        const float k_DottedLineLength = 0.2f;
-        const float k_DottedLineSpace = 0.15f;
-
         internal static Ray TransformRay(Ray ray, Matrix4x4 matrix)
         {
             return new Ray(matrix.MultiplyPoint3x4(ray.origin), matrix.MultiplyVector(ray.direction));
+        }
+
+        internal static Vector3 DoIncrementSnap(Vector3 position, Vector3 previousPosition)
+        {
+            var delta = position - previousPosition;
+
+            var right = Tools.handleRotation * Vector3.right;
+            var up = Tools.handleRotation * Vector3.up;
+            var forward = Tools.handleRotation * Vector3.forward;
+            
+            var snappedDelta = 
+                Snapping.Snap(Vector3.Dot(delta, right), EditorSnapSettings.move[0]) * right + 
+                Snapping.Snap(Vector3.Dot(delta, up), EditorSnapSettings.move[1]) * up + 
+                Snapping.Snap(Vector3.Dot(delta, forward), EditorSnapSettings.move[2]) * forward;
+            return previousPosition + snappedDelta;
+        }
+        
+        static Vector3 SnapToGrid(Vector3 position)
+        {
+            //todo Temporary version, waiting for a trunk PR to land to move to the commented version:
+//#if UNITY_2022_2_OR_NEWER
+            // if(EditorSnapSettings.gridSnapActive)
+            //     return Snapping.Snap(position, EditorSnapSettings.gridSize, SnapAxis.All);
+//#else
+            GameObject tmp = new GameObject();
+            tmp.hideFlags = HideFlags.HideAndDontSave;
+            var trs = tmp.transform;
+            trs.position = position;
+            Handles.SnapToGrid(new []{trs});
+            var snapped = trs.position;
+            Object.DestroyImmediate(tmp);
+
+            return snapped;
+//#endif
         }
         
         internal static bool GetPointOnSurfaces(Vector2 mousePosition, out Vector3 point, out Vector3 normal)
         {
 #if UNITY_2020_1_OR_NEWER
-            if (HandleUtility.PlaceObject(mousePosition, out point, out normal))
+            if(HandleUtility.PlaceObject(mousePosition, out point, out normal))
+            {
+                if(EditorSnapSettings.gridSnapEnabled)
+                    point = SnapToGrid(point);
                 return true;
+            }
 #endif
 
             var ray = HandleUtility.GUIPointToWorldRay(mousePosition);
@@ -77,52 +113,25 @@ namespace UnityEditor.Splines
             {
                 normal = constraint.normal;
                 point = ray.origin + ray.direction * distance;
+                
+                if(EditorSnapSettings.gridSnapEnabled)
+                    point = SnapToGrid(point);
+                
                 return true;
             }
 
             point = normal = Vector3.zero;
             return false;
         }
-        
-        internal static void DrawLineWithWidth(Vector3 a, Vector3 b, float width, bool dottedLine)
+
+        internal static void DrawLineWithWidth(Vector3 a, Vector3 b, float width, Texture2D lineAATex = null)
         {
-            //Dotted line is used to represent continuous tangents when the opposite tangent is selected
-            if(dottedLine)
-            {
-                var totalLength = ( b - a ).magnitude;
-                var direction = ( b - a ).normalized;
-                
-                var partsCount = (int)(totalLength / (k_DottedLineLength + k_DottedLineSpace));
-                var extraLine = totalLength > ( partsCount * ( k_DottedLineLength + k_DottedLineSpace ) );
-
-                var currentPos = a;
-                for(int linePart = 0; linePart < partsCount; linePart++)
-                {
-                    s_LineBuffer[0] = currentPos;
-                    currentPos += k_DottedLineLength * direction;
-                    s_LineBuffer[1] = currentPos;
-                    currentPos += k_DottedLineSpace * direction;
-                    
-                    Handles.DrawAAPolyLine(width, s_LineBuffer);
-                }
-
-                if(extraLine)
-                {
-                    s_LineBuffer[0] = currentPos;
-                    currentPos += k_DottedLineLength * direction;
-                    s_LineBuffer[1] = ( currentPos - a ).magnitude < totalLength ? currentPos : b;
-                    
-                    Handles.DrawAAPolyLine(width, s_LineBuffer);
-                }
-            }
-            else
-            {
-                s_LineBuffer[0] = a;
-                s_LineBuffer[1] = b;
-                Handles.DrawAAPolyLine(width, s_LineBuffer);
-            }
+            s_LineBuffer[0] = a;
+            s_LineBuffer[1] = b;
+         
+            Handles.DrawAAPolyLine(lineAATex, width, s_LineBuffer);
         }
-        
+
         public static float DistanceToKnot(Vector3 position)
         {
             return DistanceToCircle(position, k_KnotPickingDistance); 

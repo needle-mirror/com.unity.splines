@@ -93,7 +93,7 @@ namespace UnityEditor.Splines
             return GetTangentOut(currentKnot, previousKnot, nextKnot);
         }
 
-        Vector3 GetTangentOut(EditableKnot knot, EditableKnot previousKnot, EditableKnot nextKnot)
+        public static Vector3 GetTangentOut(EditableKnot knot, EditableKnot previousKnot, EditableKnot nextKnot)
         {
             if (previousKnot == null && nextKnot == null)
                 return Vector3.forward;

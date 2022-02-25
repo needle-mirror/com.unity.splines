@@ -1,20 +1,31 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 using UnityEditor;
 using UnityEditor.EditorTools;
-using UnityEditor.Overlays;
 using UnityEditor.Splines;
 using UnityEngine;
 using UnityEngine.Splines;
+#if UNITY_2022_1_OR_NEWER
+using UnityEditor.Overlays;
+#else
+using System.Reflection;
+using UnityEditor.Toolbars;
+using UnityEngine.UIElements;
+#endif
 
 using Interpolators = UnityEngine.Splines.Interpolators;
 
 namespace Unity.Splines.Examples
 {
     [CustomEditor(typeof(SpeedTiltTool))]
+#if UNITY_2022_1_OR_NEWER
     class SplineDataPointToolSettings : UnityEditor.Editor, ICreateToolbar
+#else
+    class SplineDataPointToolSettings : UnityEditor.Editor
+#endif
     {
         public virtual IEnumerable<string> toolbarElements
         {
@@ -25,6 +36,69 @@ namespace Unity.Splines.Examples
                 yield return "SpeedTiltTool/SplineDataType";
             }
         }
+        
+#if !UNITY_2022_1_OR_NEWER
+        const string k_ElementClassName = "unity-editor-toolbar-element";
+        const string k_StyleSheetsPath = "StyleSheets/Toolbars/";
+
+        static VisualElement CreateToolbar()
+        {
+            var target = new VisualElement();
+            var path = k_StyleSheetsPath + "EditorToolbar";
+
+            var common = EditorGUIUtility.Load($"{path}Common.uss") as StyleSheet;
+            if (common != null)
+                target.styleSheets.Add(common);
+
+            var themeSpecificName = EditorGUIUtility.isProSkin ? "Dark" : "Light";
+            var themeSpecific = EditorGUIUtility.Load($"{path}{themeSpecificName}.uss") as StyleSheet;
+            if (themeSpecific != null)
+                target.styleSheets.Add(themeSpecific);
+
+            target.AddToClassList("unity-toolbar-overlay");
+            target.style.flexDirection = FlexDirection.Row;
+            return target;
+        }
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            var root = CreateToolbar();
+            
+            var elements = TypeCache.GetTypesWithAttribute(typeof(EditorToolbarElementAttribute));
+            
+            foreach (var element in toolbarElements)
+            {
+                var type = elements.FirstOrDefault(x =>
+                {
+                    var attrib = x.GetCustomAttribute<EditorToolbarElementAttribute>();
+                    return attrib != null && attrib.id == element;
+                });
+
+                if (type != null)
+                {
+                    try
+                    {
+                        const BindingFlags flags =  BindingFlags.Instance |
+                            BindingFlags.Public |
+                            BindingFlags.NonPublic |
+                            BindingFlags.CreateInstance;
+
+                        var ve = (VisualElement)Activator.CreateInstance(type, flags, null, null, null, null);
+                        ve.AddToClassList(k_ElementClassName);
+                        root.Add(ve);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Failed creating toolbar element from ID \"{element}\".\n{e}");
+                    }
+                }
+            }
+
+            EditorToolbarUtility.SetupChildrenAsButtonStrip(root);
+            
+            return root;
+        }
+#endif
     }
     
     [EditorTool("Speed & Tilt Tool", typeof(AnimateCarAlongSpline))]

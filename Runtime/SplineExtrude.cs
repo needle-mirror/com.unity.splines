@@ -8,6 +8,7 @@ namespace UnityEngine.Splines
     /// A component for creating a tube mesh from a Spline at runtime.
     /// </summary>
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+    [AddComponentMenu("Splines/Spline Extrude")]
     public class SplineExtrude : MonoBehaviour
     {
         [SerializeField, Tooltip("The Spline to extrude.")]

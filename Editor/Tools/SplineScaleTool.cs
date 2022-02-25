@@ -25,7 +25,7 @@ namespace UnityEditor.Splines
         {
             if (Event.current.type == EventType.MouseDrag)
             {
-                if (SplineTool.handleOrientation == HandleOrientation.Element || SplineTool.handleOrientation == HandleOrientation.Parent)
+                if (handleOrientation == HandleOrientation.Element || handleOrientation == HandleOrientation.Parent)
                     TransformOperation.pivotFreeze |= TransformOperation.PivotFreeze.Rotation;
             }
             

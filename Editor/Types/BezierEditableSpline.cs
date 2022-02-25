@@ -174,9 +174,6 @@ namespace UnityEditor.Splines
                 m_TangentIn.localPosition = localTangentIn;
                 m_TangentOut.localPosition = localTangentOut;
             }
-
-            if (spline is LinearEditableSpline)
-                UpdateAdjacentLinearTangents();
         }
 
         /// <summary>
@@ -227,69 +224,82 @@ namespace UnityEditor.Splines
         {
             switch (mode)
             {
-                case Mode.Continuous:
                 case Mode.Mirrored:
+                case Mode.Continuous:
+                case Mode.Broken:
                     SyncKnotAndTangents(previousMode);
                     break;
-
+                
                 case Mode.Linear:
-                    UpdateLinearTangents();
+                    m_TangentIn.SetLocalPositionNoNotify(float3.zero);
+                    m_TangentOut.SetLocalPositionNoNotify(float3.zero);
+                    break;
+                
+                default:
+                    Debug.LogError($"{mode} Knot mode is not supported!");
                     break;
             }
         }
 
         void SyncKnotAndTangents(Mode previousMode)
         {
-            var newDirection = float3.zero;
-            if (mode == Mode.Continuous)
-                newDirection = SplineUtility.GetContinuousTangent(m_TangentIn.localPosition, m_TangentOut.localPosition);
-            else if (mode == Mode.Mirrored)
-                newDirection = -m_TangentIn.localPosition;
-
-            if (previousMode == Mode.Broken || previousMode == Mode.Linear && math.lengthsq(newDirection) > 0f)
+            if (mode == Mode.Broken)
             {
+                // When switching from Linear to Broken, tangents should just be set to 1/3 curve length "linear" tangents. Otherwise, switching to Broken requires no sync.
+                if (previousMode == Mode.Linear)
+                {
+                    var prevKnot = GetPrevious();
+                    var toPrevious = prevKnot != null ? prevKnot.position - position : float3.zero;
+                    m_TangentIn.SetLocalPositionNoNotify(worldToLocalMatrix.MultiplyVector(toPrevious / 3f));
+
+                    var nextKnot = GetNext();
+                    var toNext = nextKnot != null ? nextKnot.position - position : float3.zero;
+                    m_TangentOut.SetLocalPositionNoNotify(worldToLocalMatrix.MultiplyVector(toNext / 3f));
+                }
+                return;
+            }
+            
+            var newDirection = float3.zero;
+            if (mode == Mode.Continuous || mode == Mode.Mirrored)
+            {
+                // Smooth the tangent when switching from linear mode to continous or mirrored
+                if (previousMode == Mode.Linear)
+                    newDirection = math.mul(math.inverse(localRotation), CatmullRomEditableSpline.GetTangentOut(this, this.GetPrevious(), this.GetNext())) / 3f;
+                else
+                {
+                    if (mode == Mode.Continuous)
+                        newDirection = SplineUtility.GetContinuousTangent(m_TangentIn.localPosition, m_TangentOut.localPosition);
+                    else if (mode == Mode.Mirrored)
+                        newDirection = -m_TangentIn.localPosition;
+                }
+            } 
+            
+            var tangentOutNorm = math.normalize(m_TangentOut.localPosition);
+            // Sync tangents to knot if we're switching out of broken mode and our tangents
+            // are not opposite to each other and/or are not aligned with knot's forward
+            if ((previousMode == Mode.Broken || previousMode == Mode.Linear && math.lengthsq(newDirection) > 0f) &&
+                (!Mathf.Approximately(math.dot(math.normalize(m_TangentIn.localPosition), tangentOutNorm), -1f) ||
+                 math.abs(math.dot(math.forward(), tangentOutNorm.z)) < 1f))
+            {
+                var length =  math.length(previousMode == Mode.Linear ? newDirection : m_TangentIn.localPosition);
+                m_TangentIn.SetLocalPositionNoNotify(-math.forward() * length);
+                
+                length = math.length(previousMode == Mode.Linear ? newDirection : m_TangentOut.localPosition);
+                m_TangentOut.SetLocalPositionNoNotify(math.forward() * length);
+    
                 var newDirectionW = localToWorldMatrix.MultiplyVector(newDirection);
                 var newDirectionNorm = math.normalize(newDirectionW);
                 var newUp = math.rotate(Quaternion.FromToRotation(math.forward(), newDirectionNorm), math.up());
+                var newRotation = Quaternion.LookRotation(newDirectionNorm, newUp);
+                
+                // If the new rotation is just a roll, favor old rotation
+                if (Mathf.Approximately(Vector3.Dot((Quaternion) rotation * Vector3.forward, newRotation * Vector3.forward), 1f))
+                    return;
                 
                 rotation = Quaternion.LookRotation(newDirectionNorm, newUp);
-                m_TangentIn.SetLocalPositionNoNotify(-math.forward() * math.length(m_TangentIn.localPosition));
-                m_TangentOut.SetLocalPositionNoNotify(math.forward() * math.length(m_TangentOut.localPosition));
             }
             else
                 m_TangentOut.SetLocalPositionNoNotify(newDirection);
-        }
-        
-        void UpdateAdjacentLinearTangents()
-        {
-            if (GetPrevious() is BezierEditableKnot previous)
-            {
-                UpdateLinearTangent(m_TangentIn, previous);
-                previous.UpdateLinearTangent(previous.m_TangentOut, this);
-            }
-
-            if (GetNext() is BezierEditableKnot next)
-            {
-                UpdateLinearTangent(m_TangentOut, next);
-                next.UpdateLinearTangent(next.m_TangentIn, this);
-            }
-        }
-
-        void UpdateLinearTangents()
-        {
-            if (spline.GetPreviousKnot(index, out EditableKnot prevKnot))
-                UpdateLinearTangent(m_TangentIn, prevKnot);
-
-            if (spline.GetNextKnot(index, out EditableKnot nextKnot))
-                UpdateLinearTangent(m_TangentOut, nextKnot);
-        }
-
-        void UpdateLinearTangent(EditableTangent tangent, EditableKnot target)
-        {
-            if (mode != Mode.Linear)
-                return;
-            
-            tangent.SetLocalPositionNoNotify(this.ToKnotSpaceTangent((target.localPosition - localPosition) / 3.0f));
         }
 
         public static bool AreTangentsContinuous(float3 tangentIn, float3 tangentOut)
@@ -319,35 +329,9 @@ namespace UnityEditor.Splines
             return false;
         }
 
-        public static bool IsTangentLinear(float3 knotPos, float3 nextPos, float3 tangentTowardNext)
-        {
-            var nextDir = math.normalize(nextPos - knotPos);
-            var tangentDir = math.normalize(tangentTowardNext);
-
-            if (Mathf.Approximately(math.dot(nextDir, tangentDir), 1f))
-                return true;
-
-            return false;
-        }
-
         bool AreTangentsLinear()
         {
-            var knotIndex = index;
-            var hasPrevKnot = spline.GetPreviousKnot(knotIndex, out var prevKnot);
-            var hasNextKnot = spline.GetNextKnot(knotIndex, out var nextKnot);
-            
-            
-            if (hasPrevKnot && hasNextKnot)
-                return IsTangentLinear(localPosition, prevKnot.localPosition, this.ToSplineSpaceTangent(m_TangentIn.localPosition)) &&
-                       IsTangentLinear(localPosition, nextKnot.localPosition, this.ToSplineSpaceTangent(m_TangentOut.localPosition));
-
-            if (hasPrevKnot)
-                return IsTangentLinear(localPosition, prevKnot.localPosition, this.ToSplineSpaceTangent(m_TangentIn.localPosition));
-
-            if (hasNextKnot)
-                return IsTangentLinear(localPosition, nextKnot.localPosition, this.ToSplineSpaceTangent(m_TangentOut.localPosition));
-
-            return false;
+            return m_TangentIn.localPosition.Equals(float3.zero) && m_TangentOut.localPosition.Equals(float3.zero);
         }
 
         public override void OnPathUpdatedFromTarget()

@@ -75,6 +75,45 @@ namespace UnityEngine.Splines.Interpolators
     }
     
     /// <summary>
+    /// Spherically interpolate between two values a and b by ratio t. 
+    /// </summary>
+    public struct SlerpFloat2 : IInterpolator<float2>
+    {
+        /// <summary>
+        /// Spherically interpolates between a and b by t.
+        /// </summary>
+        /// <param name="a">Start value, returned when t = 0.</param>
+        /// <param name="b">End value, returned when t = 1.</param>
+        /// <param name="t">Interpolation ratio.</param>
+        /// <returns> The spherically interpolated result between the two values.</returns>
+        public float2 Interpolate(float2 a, float2 b, float t)
+        {
+            // Using Vector3 API as Mathematics does not provide Slerp for float2.
+            var result = Vector3.Slerp(new Vector3(a.x, a.y, 0f), new Vector3(b.x, b.y, 0f), t);
+            return new float2(result.x, result.y);
+        }
+    }
+    
+    /// <summary>
+    /// Spherically interpolate between two values a and b by ratio t. 
+    /// </summary>
+    public struct SlerpFloat3 : IInterpolator<float3>
+    {
+        /// <summary>
+        /// Spherically interpolates between a and b by t.
+        /// </summary>
+        /// <param name="a">Start value, returned when t = 0.</param>
+        /// <param name="b">End value, returned when t = 1.</param>
+        /// <param name="t">Interpolation ratio.</param>
+        /// <returns> The spherically interpolated result between the two values.</returns>
+        public float3 Interpolate(float3 a, float3 b, float t)
+        {
+            // Using Vector3 API as Mathematics does not provide Slerp for float3.
+            return Vector3.Slerp(a, b, t);
+        }
+    }
+    
+    /// <summary>
     /// Linearly interpolate between two values a and b by ratio t. 
     /// </summary>
     public struct LerpQuaternion : IInterpolator<quaternion>

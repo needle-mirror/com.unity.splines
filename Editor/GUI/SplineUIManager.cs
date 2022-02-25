@@ -42,7 +42,7 @@ namespace UnityEditor.Splines
         {
             var targetSpline = GetSplineValue(splineProperty.serializedObject.targetObject, splineProperty.propertyPath);
             
-            if (!m_Proxies.TryGetValue(targetSpline, out SplineUIProxy proxy))
+            if (targetSpline == null || !m_Proxies.TryGetValue(targetSpline, out SplineUIProxy proxy))
             {
                 proxy = ScriptableObject.CreateInstance<SplineUIProxy>();
                 var editType = splineProperty.FindPropertyRelative("m_EditModeType");
@@ -77,7 +77,8 @@ namespace UnityEditor.Splines
                 }
 
                 proxy.SerializedObject = new SerializedObject(proxy);
-                m_Proxies.Add(targetSpline, proxy);
+                if(targetSpline != null)
+                    m_Proxies.Add(targetSpline, proxy);
             }
 
             proxy.LastFrameCount = Time.frameCount;
@@ -118,7 +119,9 @@ namespace UnityEditor.Splines
             }
 
             var targetSpline = GetSplineValue(property.serializedObject.targetObject, property.propertyPath);
-            targetSpline.SetDirty();
+            targetSpline?.SetDirty();
+            property.FindPropertyRelative("m_Length").floatValue = -1;
+
             EditorApplication.delayCall += () => SplineConversionUtility.UpdateEditableSplinesForTarget(property.serializedObject.targetObject);
         }
 

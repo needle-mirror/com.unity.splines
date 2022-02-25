@@ -7,6 +7,7 @@ namespace UnityEditor.Splines
     {
         void SetTarget(ISplineElement element);
         void Update();
+        void OnTargetSet();
     }
 
     abstract class ElementDrawer<T> : VisualElement, IElementDrawer where T : ISplineElement
@@ -20,6 +21,7 @@ namespace UnityEditor.Splines
         public void SetTarget(ISplineElement element)
         {
             target = (T) element;
+            OnTargetSet();
         }
         
         public static float Round(float value)
@@ -28,5 +30,12 @@ namespace UnityEditor.Splines
             return Mathf.Round(value * mult) / mult;
         }
 
+        public virtual void OnTargetSet() { }
+
+        protected void IgnoreKnotCallbacks(bool ignore)
+        {
+            if (parent is ElementInspector inspector)
+                inspector.ignoreKnotCallbacks = ignore;
+        }
     }
 }

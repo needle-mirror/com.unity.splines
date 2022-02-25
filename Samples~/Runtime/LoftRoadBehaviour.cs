@@ -1,11 +1,11 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.Splines;
 #endif
 
 using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
-using UnityEditor.Splines;
 using UnityEngine;
 using UnityEngine.Splines;
 using Interpolators = UnityEngine.Splines.Interpolators;

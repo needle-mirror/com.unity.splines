@@ -39,10 +39,39 @@ namespace UnityEditor.Splines
             m_OutY = m_Out.Q<FloatField>("unity-y-input");
             m_OutZ = m_Out.Q<FloatField>("unity-z-input");
             
-            m_InMagnitude.RegisterValueChangedCallback((evt) => UpdateTangentMagnitude(target.tangentIn, evt.newValue));
-            m_OutMagnitude.RegisterValueChangedCallback((evt) => UpdateTangentMagnitude(target.tangentOut, evt.newValue));
-            m_In.RegisterValueChangedCallback((evt) => target.tangentIn.localPosition = evt.newValue);
-            m_Out.RegisterValueChangedCallback((evt) => target.tangentOut.localPosition = evt.newValue);
+            m_InMagnitude.RegisterValueChangedCallback((evt) =>
+            {
+                UpdateTangentMagnitude(target.tangentIn, m_InMagnitude, evt.newValue, -1f);
+                m_In.SetValueWithoutNotify(target.tangentIn.localPosition);
+                m_Out.SetValueWithoutNotify(target.tangentOut.localPosition);
+                m_OutMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentOut.localPosition)));
+                RoundFloatFieldsValues();
+            });
+            
+            m_In.RegisterValueChangedCallback((evt) =>
+            {
+                IgnoreKnotCallbacks(true);
+                target.tangentIn.localPosition = evt.newValue;
+                IgnoreKnotCallbacks(false);
+                m_InMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentIn.localPosition)));
+            });
+            
+            m_OutMagnitude.RegisterValueChangedCallback((evt) =>
+            {
+                UpdateTangentMagnitude(target.tangentOut, m_OutMagnitude, evt.newValue, 1f);
+                m_Out.SetValueWithoutNotify(target.tangentOut.localPosition);
+                m_In.SetValueWithoutNotify(target.tangentIn.localPosition);
+                m_InMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentIn.localPosition)));
+                RoundFloatFieldsValues();
+            });
+            
+            m_Out.RegisterValueChangedCallback((evt) =>
+            {
+                IgnoreKnotCallbacks(true);
+                target.tangentOut.localPosition = evt.newValue;
+                IgnoreKnotCallbacks(false);
+                m_OutMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentOut.localPosition)));
+            });
         }
 
         public override void Update()
@@ -60,13 +89,21 @@ namespace UnityEditor.Splines
             EnableElements(target.mode);
         }
 
-        void UpdateTangentMagnitude(EditableTangent tangent, float value)
+        void UpdateTangentMagnitude(EditableTangent tangent, FloatField magnitudeField, float value, float directionSign)
         {
-            var direction = new float3(0, 0, 1);
+            if (value < 0f)
+            {
+                magnitudeField.SetValueWithoutNotify(0f);
+                value = 0f;
+            }
+
+            var direction = new float3(0, 0, directionSign);
             if(math.length(tangent.localPosition) > 0)
                 direction = math.normalize(tangent.localPosition);
-
+         
+            IgnoreKnotCallbacks(true);
             tangent.localPosition = value * direction;
+            IgnoreKnotCallbacks(false);
         }
 
         void RoundFloatFieldsValues()
@@ -109,6 +146,12 @@ namespace UnityEditor.Splines
             foldout.Add(vector3Field);
 
             return (magnitude, vector3Field);
+        }
+
+        public override void OnTargetSet()
+        {
+            m_In.parent.SetEnabled(SplineSelectionUtility.IsSelectable(target.spline, target.index, target.tangentIn));
+            m_Out.parent.SetEnabled(SplineSelectionUtility.IsSelectable(target.spline, target.index, target.tangentOut));
         }
     }
 }

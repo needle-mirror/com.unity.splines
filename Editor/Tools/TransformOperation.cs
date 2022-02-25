@@ -471,7 +471,7 @@ namespace UnityEditor.Splines
             RotateKnot(tangent.owner, s_RotationSyncData.rotationDelta, tangent.owner.position, false);
         }
 
-        static quaternion CalculateElementSpaceHandleRotation(ISplineElement element)
+        internal static quaternion CalculateElementSpaceHandleRotation(ISplineElement element)
         {
             quaternion handleRotation = quaternion.identity;
             if (element is EditableTangent editableTangent && editableTangent.owner is BezierEditableKnot tangentKnot)

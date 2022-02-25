@@ -9,9 +9,10 @@ namespace UnityEngine.Splines
 #if UNITY_2021_2_OR_NEWER
     [Icon(k_IconPath)]
 #endif
+    [AddComponentMenu("Splines/Spline")]
     public sealed class SplineContainer : MonoBehaviour, ISplineProvider
     {
-        const string k_IconPath = "Packages/com.unity.splines/Editor/Resources/Icons/KnotPlacementTool.png";
+        const string k_IconPath = "Packages/com.unity.splines/Editor/Resources/Icons/SplineComponent.png";
 
         readonly Spline[] m_SplineArray = new Spline[1];
 

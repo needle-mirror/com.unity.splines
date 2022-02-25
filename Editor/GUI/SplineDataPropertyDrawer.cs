@@ -9,14 +9,14 @@ namespace UnityEditor.Splines
     public class SplineDataPropertyDrawer : PropertyDrawer
     {
         readonly static string k_MultiSplineEditMessage = L10n.Tr("Multi-selection is not supported for SplineData");
-        readonly static string k_DataUnitTooltip = L10n.Tr("The unit Data Points are using to be associated to the spline. 'Distance' is " +
-            "using the distance in Unity Units from the spline origin, Path % is using a normalized value of the spline " +
-            "length between [0,1] and Knot Index is using Spline Knot Indexes ");
+        readonly static string k_DataUnitTooltip = L10n.Tr("The unit Data Points are using to be associated to the spline. 'Spline Distance' is " +
+            "using the distance in Unity Units from the spline origin, 'Normalized Distance' is using a normalized value of the spline " +
+            "length between [0,1] and 'Knot Index' is using Spline Knot indeces.");
 
         readonly static GUIContent[] k_PathUnitIndexLabels = new[]
         {
-            new GUIContent(L10n.Tr("Path Distance")),
-            new GUIContent(L10n.Tr("Path Percentage")),
+            new GUIContent(L10n.Tr("Spline Distance")),
+            new GUIContent(L10n.Tr("Normalized Distance")),
             new GUIContent(L10n.Tr("Knot Index"))
         };
         

@@ -8,6 +8,7 @@ namespace UnityEditor.Splines
     class SplineDrawer : PropertyDrawer
     {
         const string k_MultiSplineEditMessage = "Multi-selection is not supported for Splines";
+        const string k_SplineFoldoutTitle = "Advanced";
         
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
@@ -37,6 +38,7 @@ namespace UnityEditor.Splines
                 return;
             }
 
+            label.text =  L10n.Tr(k_SplineFoldoutTitle);
             property.isExpanded = EditorGUI.Foldout(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), property.isExpanded, label);
             if (property.isExpanded)
             {

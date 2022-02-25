@@ -14,11 +14,11 @@ namespace UnityEditor.Splines
 			if (typeof(SplineTool).IsAssignableFrom(ToolManager.activeToolType) &&
 			    (provider is UObject objectProvider) && EditableSplineManager.TryGetTargetData(objectProvider, out _))
 				return;
-
+			
 			var prev = Gizmos.color;
 			Gizmos.color = (gizmoType & (GizmoType.Selected | GizmoType.Active)) > 0 
 				? Handles.selectedColor 
-				: Color.blue;
+				: SplineGizmoUtility.s_GizmosLineColor.value;
 			SplineGizmoUtility.DrawGizmos(provider);
 			Gizmos.color = prev;
 		}

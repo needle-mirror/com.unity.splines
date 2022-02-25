@@ -670,18 +670,19 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given an interpolation value using a certain PathIndexUnit type, calculate the associated interpolation value in another targetPathUnit regarding a specific spline.
+        /// Given a normalized interpolation ratio, calculate the associated interpolation value in another targetPathUnit regarding a specific spline.
         /// </summary>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
-        /// <param name="t">Interpolation in the original PathIndexUnit.</param>
+        /// <param name="t">Normalized interpolation ratio (0 to 1).</param>
         /// <param name="targetPathUnit">The PathIndexUnit to which 't' should be converted.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>The interpolation value converted to targetPathUnit.</returns>
         public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit targetPathUnit)
             where T : ISpline
         {
-            if(targetPathUnit == PathIndexUnit.Normalized)
-                return t;
+            if (targetPathUnit == PathIndexUnit.Normalized)
+                return WrapInterpolation(t);
+
             return ConvertNormalizedIndexUnit(spline, t, targetPathUnit);
         }
         
@@ -697,8 +698,14 @@ namespace UnityEngine.Splines
         public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit fromPathUnit, PathIndexUnit targetPathUnit)
             where T : ISpline
         {
-            if(fromPathUnit == targetPathUnit)
+            if (fromPathUnit == targetPathUnit)
+            {
+                if (targetPathUnit == PathIndexUnit.Normalized)
+                    t = WrapInterpolation(t);
+                
                 return t;
+            }
+
             return ConvertNormalizedIndexUnit(spline, GetNormalizedInterpolation(spline, t, fromPathUnit), targetPathUnit);
         }
 
@@ -718,7 +725,11 @@ namespace UnityEngine.Splines
             }
         }
 
-
+        static float WrapInterpolation(float t)
+        {
+            return t % 1f == 0f ? math.clamp(t, 0f, 1f) : t - math.floor(t);
+        }
+        
         /// <summary>
         /// Given an interpolation value in any PathIndexUnit type, calculate the normalized interpolation ratio value
         /// relative to a <see cref="Spline"/>.
@@ -733,12 +744,12 @@ namespace UnityEngine.Splines
             switch(originalPathUnit)
             {
                 case PathIndexUnit.Knot:
-                    return CurveToSplineT(spline, t);
+                    return WrapInterpolation(CurveToSplineT(spline, t));
                 case PathIndexUnit.Distance:
                     var length = spline.GetLength();
-                    return length > 0 ? t / length : 0f;
+                    return WrapInterpolation(length > 0 ? t / length : 0f);
                 default:
-                    return t;
+                    return WrapInterpolation(t);
             }
         }
 

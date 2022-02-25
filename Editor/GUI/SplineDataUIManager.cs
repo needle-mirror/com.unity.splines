@@ -53,7 +53,7 @@ namespace UnityEditor.Splines
                     SerializedProperty.EqualContents(list.serializedProperty, dataPointProperty);
                     return list;
                 }
-                catch(NullReferenceException _) 
+                catch (NullReferenceException) 
                 {
                     s_ReorderableLists.Remove(key);
                 }

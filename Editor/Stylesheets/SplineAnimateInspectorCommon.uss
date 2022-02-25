@@ -1,0 +1,13 @@
+.field__indented {
+    margin-left: 15px;
+}
+
+.field-label__indented .unity-label {
+    margin-left: 15px;
+    margin-right: -13px;
+}
+
+.field-label__double_indented .unity-label {
+    margin-left: 30px;
+    margin-right: -28px;
+}

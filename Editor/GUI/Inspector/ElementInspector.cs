@@ -18,8 +18,9 @@ namespace UnityEditor.Splines
 
         static StyleSheet s_CommonStyleSheet;
         static StyleSheet s_ThemeStyleSheet;
-
+        
         bool m_InspectorDirty;
+        public bool ignoreKnotCallbacks { get; set; }
 
         public ElementInspector()
         {
@@ -45,7 +46,7 @@ namespace UnityEditor.Splines
 
         void OnKnotModified(EditableKnot knot)
         {
-            if(m_TargetKnot == knot)
+            if (!ignoreKnotCallbacks && m_TargetKnot == knot)
                 m_InspectorDirty = true;
         }
 

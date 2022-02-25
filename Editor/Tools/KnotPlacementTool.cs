@@ -13,6 +13,8 @@ namespace UnityEditor.Splines
     [EditorTool("Place Spline Knots", typeof(ISplineProvider), typeof(SplineToolContext))]
     sealed class KnotPlacementTool : SplineTool
     {
+        public override bool gridSnapEnabled => true;
+        
         enum State
         {
             KnotPlacement,
@@ -149,6 +151,11 @@ namespace UnityEditor.Splines
                                     var tangentOut = firstKnot.GetTangent(1).direction;
                                     DrawPreviewCurveForNewEndKnot(spline, firstKnot.position, tangentOut, m_LastSurfaceNormal, m_ClosingKnotId, true);
                                 }
+                                else
+                                {
+                                    var tangentOut = float3.zero;
+                                    DrawPreviewCurveForNewEndKnot(spline, firstKnot.position, tangentOut, m_LastSurfaceNormal, m_ClosingKnotId, true);
+                                }
                             }
                             break;
                         
@@ -167,7 +174,7 @@ namespace UnityEditor.Splines
             }
         }
 
-        void DoKnotSurfaceAddHandle(int controlID, IEditableSpline spline, bool isMouseInWindow)
+        void  DoKnotSurfaceAddHandle(int controlID, IEditableSpline spline, bool isMouseInWindow)
         {
             if (spline == null)
                 return;
@@ -184,11 +191,18 @@ namespace UnityEditor.Splines
                     if (HandleUtility.nearestControl == controlID && !Tools.viewToolActive)
                     {
                         // Draw curve preview if we're placing tangents. Otherwise, draw it only if the cursor's ray is intersecting with a surface.
-                        if (m_State == State.TangentPlacement || 
-                            (m_State == State.KnotPlacement && 
-                             isMouseInWindow && 
-                             SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out m_LastSurfacePoint, out m_LastSurfaceNormal)))
+                        if(m_State == State.TangentPlacement ||
+                            ( m_State == State.KnotPlacement &&
+                                isMouseInWindow &&
+                                SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out m_LastSurfacePoint, out m_LastSurfaceNormal) ))
+                        {
+                            //todo enable this after PR lands
+//#if UNITY_2022_2_OR_NEWER
+                            //if(EditorSnapSettings.incrementalSnapActive)
+                            //    m_LastSurfacePoint = SplineHandleUtility.DoIncrementSnap(m_LastSurfacePoint, spline.GetKnot(spline.knotCount - 1).position);
+//#endif
                             DrawPreviewCurveForNewEndKnot(spline, m_LastSurfacePoint, m_CustomTangentOut, m_LastSurfaceNormal, controlID);
+                        }
                     }
         
                     break;
@@ -201,6 +215,12 @@ namespace UnityEditor.Splines
 
                         if (SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out m_LastSurfacePoint, out m_LastSurfaceNormal))
                         {
+                            //todo enable this after PR lands
+//#if UNITY_2022_2_OR_NEWER
+//                            if(EditorSnapSettings.incrementalSnapActive)
+//                                m_LastSurfacePoint = SplineHandleUtility.DoIncrementSnap(m_LastSurfacePoint, spline.GetKnot(spline.knotCount - 1).position);
+//#endif
+                            
                             m_KnotPlane = new Plane(m_LastSurfaceNormal, m_LastSurfacePoint);
                             if (spline.tangentsPerKnot > 0)
                                 m_State = State.TangentPlacement;
@@ -220,7 +240,12 @@ namespace UnityEditor.Splines
                             if (SplineHandleUtility.GetPointOnSurfaces(evt.mousePosition, out Vector3 _, out Vector3 _))
                             {
                                 m_LastSurfacePoint = SplineHandleUtility.RoundBasedOnMinimumDifference(m_LastSurfacePoint);
-
+                                
+                                //todo enable this after PR lands
+//#if UNITY_2022_2_OR_NEWER
+//                                if(EditorSnapSettings.incrementalSnapActive)
+//                                    m_LastSurfacePoint = SplineHandleUtility.DoIncrementSnap(m_LastSurfacePoint, spline.GetKnot(spline.knotCount - 1).position);
+//#endif
                                 // Check component count to ensure that we only move the transform of a newly created
                                 // spline. I.e., we don't want to move a GameObject that has other components like
                                 // a MeshRenderer, for example.
@@ -278,10 +303,13 @@ namespace UnityEditor.Splines
             else
             {
                 var firstKnot = spline.GetKnot(0);
-                SplineHandles.DrawTangentHandle(firstKnot.GetTangent(0));
-                
-                if (spline.knotCount > 0 && previewCurve.a.tangentCount > 0)
-                    SplineHandles.DrawTangentHandle(previewCurve.a.GetTangent(previewCurve.a.tangentCount - 1));
+                if (firstKnot.tangentCount > 1)
+                {
+                    SplineHandles.DrawTangentHandle(firstKnot.GetTangent(0));
+
+                    if (spline.knotCount > 0 && previewCurve.a.tangentCount > 0)
+                        SplineHandles.DrawTangentHandle(previewCurve.a.GetTangent(previewCurve.a.tangentCount - 1));
+                }
             }
         }
 

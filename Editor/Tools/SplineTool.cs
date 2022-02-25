@@ -137,9 +137,14 @@ namespace UnityEditor.Splines
                 if (m_HandleOrientation != value)
                 {
                     m_HandleOrientation.SetValue(value, true);
-                    if (m_HandleOrientation == HandleOrientation.Local || m_HandleOrientation == HandleOrientation.Global)
-                       Tools.pivotRotation = (PivotRotation)m_HandleOrientation.value;
-
+                    if(m_HandleOrientation == HandleOrientation.Local || m_HandleOrientation == HandleOrientation.Global)
+                        Tools.pivotRotation = (PivotRotation)m_HandleOrientation.value;
+                    else // If setting HandleOrientation to something else, then set the PivotRotation to global, done for GridSnapping button activation 
+                    {
+                        Tools.pivotRotationChanged -= OnPivotRotationChanged;
+                        Tools.pivotRotation = PivotRotation.Local;
+                        Tools.pivotRotationChanged += OnPivotRotationChanged;
+                    }
                     handleOrientationChanged?.Invoke();
                 }
             }
@@ -186,7 +191,7 @@ namespace UnityEditor.Splines
             TransformOperation.UpdateHandleRotation();
         }
 
-        protected virtual void OnPivotRotationChanged()
+        static void OnPivotRotationChanged()
         {
             handleOrientation = (HandleOrientation)Tools.pivotRotation;
         }
@@ -284,6 +289,35 @@ namespace UnityEditor.Splines
         {
             if(m_ActiveTool != null)
                 m_ActiveTool.CycleTangentMode();
+        }
+
+        [Shortcut("Splines/Toggle Manipulation Space", typeof(SceneView), KeyCode.X)]
+        static void ShortcutCycleHandleOrientation(ShortcutArguments args)
+        {
+            /* We're doing a switch here (instead of handleOrientation+1 and wrapping) because HandleOrientation.Global/Local values map
+               to PivotRotation.Global/Local (as they should), but PivotRotation.Global = 1 when it's actually the first option and PivotRotation.Local = 0 when it's the second option. */ 
+            switch (handleOrientation)
+            {
+                case HandleOrientation.Element:
+                    handleOrientation = HandleOrientation.Global;
+                    break;
+                
+                case HandleOrientation.Global:
+                    handleOrientation = HandleOrientation.Local;
+                    break;
+                
+                case HandleOrientation.Local:
+                    handleOrientation = HandleOrientation.Parent;
+                    break;
+                
+                case HandleOrientation.Parent:
+                    handleOrientation = HandleOrientation.Element;
+                    break;
+                
+                default:
+                    Debug.LogError($"{handleOrientation} handle orientation not supported!");
+                    break;
+            }
         }
     }
 }

@@ -7,7 +7,7 @@ namespace UnityEditor.Splines
 {
 	[CustomEditor(typeof(SplineExtrude))]
 	[CanEditMultipleObjects]
-	class SplineExtrudeEditor : UnityEditor.Editor
+	class SplineExtrudeEditor : SplineComponentEditor
 	{
 		SerializedProperty m_Container;
 		SerializedProperty m_RebuildOnSplineChange;
@@ -20,12 +20,24 @@ namespace UnityEditor.Splines
 		SerializedProperty m_UpdateColliders;
 
 		static readonly GUIContent k_RangeContent = new GUIContent("Range", "The section of the Spline to extrude.");
+		static readonly GUIContent k_AdvancedContent = new GUIContent("Advanced", "Advanced Spline Extrude settings.");
+		static readonly GUIContent k_PercentageContent = new GUIContent("Percentage", "The section of the Spline to extrude in percentages.");
+
+		static readonly string k_Spline = "Spline";
+		static readonly string k_Geometry = L10n.Tr("Geometry");
+		static readonly string k_ProfileEdges = "Profile Edges";
+		static readonly string k_CapEnds = "Cap Ends";
+		static readonly string k_AutoRegenGeo = "Auto-Regen Geometry";
+		static readonly string k_To = L10n.Tr("to");
+		static readonly string k_From = L10n.Tr("from");
 
 		SplineExtrude[] m_Components;
 		bool m_AnyMissingMesh;
 
-		void OnEnable()
+		protected override void OnEnable()
 		{
+			base.OnEnable();
+			
 			m_Container = serializedObject.FindProperty("m_Container");
 			m_RebuildOnSplineChange = serializedObject.FindProperty("m_RebuildOnSplineChange");
 			m_RebuildFrequency = serializedObject.FindProperty("m_RebuildFrequency");
@@ -65,7 +77,9 @@ namespace UnityEditor.Splines
 
 			EditorGUI.BeginChangeCheck();
 
-			EditorGUILayout.PropertyField(m_Container);
+			EditorGUILayout.PropertyField(m_Container, new GUIContent(k_Spline, m_Container.tooltip));
+			HorizontalLine(Color.grey);
+			EditorGUILayout.LabelField(k_Geometry, EditorStyles.boldLabel);
 
 			if(m_AnyMissingMesh)
 			{
@@ -75,43 +89,80 @@ namespace UnityEditor.Splines
 					CreateMeshAssets(m_Components);
 				GUILayout.EndHorizontal();
 			}
-
-			EditorGUILayout.PropertyField(m_RebuildOnSplineChange);
-			if (m_RebuildOnSplineChange.boolValue)
-			{
-				EditorGUI.indentLevel++;
-				EditorGUI.BeginDisabledGroup(!m_RebuildOnSplineChange.boolValue);
-					EditorGUILayout.PropertyField(m_RebuildFrequency);
-				EditorGUI.EndDisabledGroup();
-				EditorGUI.indentLevel--;
-			}
-
-			EditorGUILayout.PropertyField(m_UpdateColliders);
-
-			EditorGUI.BeginChangeCheck();
-			EditorGUILayout.PropertyField(m_Sides);
-			if(EditorGUI.EndChangeCheck())
-				m_Sides.intValue = Mathf.Clamp(m_Sides.intValue, 3, 2048);
-
-			EditorGUI.BeginChangeCheck();
-			EditorGUILayout.PropertyField(m_SegmentsPerUnit);
-			if(EditorGUI.EndChangeCheck())
-				m_SegmentsPerUnit.floatValue = Mathf.Clamp(m_SegmentsPerUnit.floatValue, .00001f, 4096f);
-
-			EditorGUILayout.PropertyField(m_Capped);
-
+			
+			EditorGUI.indentLevel++;
+			
 			EditorGUI.BeginChangeCheck();
 			EditorGUILayout.PropertyField(m_Radius);
 			if(EditorGUI.EndChangeCheck())
 				m_Radius.floatValue = Mathf.Clamp(m_Radius.floatValue, .00001f, 1000f);
-
-			EditorGUI.showMixedValue = m_Range.hasMultipleDifferentValues;
-			var range = m_Range.vector2Value;
+			
 			EditorGUI.BeginChangeCheck();
-			EditorGUILayout.MinMaxSlider(k_RangeContent, ref range.x, ref range.y, 0f, 1f);
+			EditorGUILayout.PropertyField(m_Sides, new GUIContent(k_ProfileEdges, m_Sides.tooltip));
 			if(EditorGUI.EndChangeCheck())
-				m_Range.vector2Value = range;
-			EditorGUI.showMixedValue = false;
+				m_Sides.intValue = Mathf.Clamp(m_Sides.intValue, 3, 2048);
+			
+			EditorGUI.BeginChangeCheck();
+			EditorGUILayout.PropertyField(m_SegmentsPerUnit);
+			if(EditorGUI.EndChangeCheck())
+				m_SegmentsPerUnit.floatValue = Mathf.Clamp(m_SegmentsPerUnit.floatValue, .00001f, 4096f);
+			
+			EditorGUILayout.PropertyField(m_Capped, new GUIContent(k_CapEnds, m_Capped.tooltip));
+			EditorGUI.indentLevel--;
+			
+			HorizontalLine(Color.grey);
+
+			m_Range.isExpanded = Foldout(m_Range.isExpanded, k_AdvancedContent);
+			if (m_Range.isExpanded)
+			{
+				EditorGUI.indentLevel++;
+
+				EditorGUI.showMixedValue = m_Range.hasMultipleDifferentValues;
+				var range = m_Range.vector2Value;
+				EditorGUI.BeginChangeCheck();
+				EditorGUILayout.MinMaxSlider(k_RangeContent, ref range.x, ref range.y, 0f, 1f);
+				if (EditorGUI.EndChangeCheck())
+					m_Range.vector2Value = range;
+
+				EditorGUI.indentLevel++;
+				EditorGUILayout.BeginHorizontal();
+				EditorGUILayout.PrefixLabel(k_PercentageContent);
+				EditorGUI.indentLevel--;
+				EditorGUI.indentLevel--;
+
+				EditorGUI.BeginChangeCheck();
+				var newRange = new Vector2(range.x, range.y);
+				using (new LabelWidthScope(30f))
+					newRange.x = EditorGUILayout.FloatField(k_From, range.x * 100f) / 100f;
+					
+				using (new LabelWidthScope(15f))
+					newRange.y = EditorGUILayout.FloatField(k_To, range.y * 100f) / 100f;
+
+				if (EditorGUI.EndChangeCheck())
+				{
+					newRange.x = Mathf.Min(Mathf.Clamp(newRange.x, 0f, 1f), range.y);
+					newRange.y = Mathf.Max(newRange.x, Mathf.Clamp(newRange.y, 0f, 1f));
+					m_Range.vector2Value = newRange;
+				}
+
+				EditorGUILayout.EndHorizontal();
+				EditorGUI.showMixedValue = false;
+
+				EditorGUI.indentLevel++;
+				EditorGUILayout.PropertyField(m_RebuildOnSplineChange, new GUIContent(k_AutoRegenGeo, m_RebuildOnSplineChange.tooltip));
+				if (m_RebuildOnSplineChange.boolValue)
+				{
+					EditorGUI.indentLevel++;
+					EditorGUI.BeginDisabledGroup(!m_RebuildOnSplineChange.boolValue);
+					EditorGUILayout.PropertyField(m_RebuildFrequency);
+					EditorGUI.EndDisabledGroup();
+					EditorGUI.indentLevel--;
+				}
+
+				EditorGUILayout.PropertyField(m_UpdateColliders);
+				
+				EditorGUI.indentLevel--;
+			}
 
 			serializedObject.ApplyModifiedProperties();
 

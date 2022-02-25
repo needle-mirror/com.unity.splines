@@ -1,0 +1,29 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Packages/com.unity.splines/Editor/Stylesheets/SplineAnimateInspectorCommon.uss?fileID=7433441132597879392&amp;guid=2a8a7b20b8efb4f0ab1c2301dbc0e86c&amp;type=3#SplineAnimateInspectorCommon" />
+    <uie:PropertyField name="spline-container" binding-path="m_Target" label="Spline" focusable="true" />
+    <ui:VisualElement class="separator" style="height: 1px; margin-top: 4px; margin-bottom: 4px; margin-left: 4px;" />
+    <ui:Label text="Animated Object Setup" display-tooltip-when-elided="true" name="animated-object-setup" style="margin-left: 3px; margin-right: 3px; margin-top: 3px; margin-bottom: 3px; -unity-font-style: bold;" />
+    <uie:EnumField name="object-up" label="Up Axis " type="UnityEngine.Splines.SplineComponent+AlignAxis, Unity.Splines" binding-path="m_ObjectUpAxis" value="YAxis" class="unity-base-field__aligned field-label__indented" />
+    <uie:EnumField name="object-forward" label="Forward Axis" binding-path="m_ObjectForwardAxis" type="UnityEngine.Splines.SplineComponent+AlignAxis, Unity.Splines" value="ZAxis" class="unity-base-field__aligned field-label__indented" />
+    <uie:PropertyField name="align-coord-space" binding-path="m_AlignmentMode" label="Align To" focusable="true" class="field-label__indented" />
+    <ui:VisualElement class="separator" style="height: 1px; margin-top: 4px; margin-bottom: 4px; margin-left: 4px;" />
+    <ui:Label text="Movement" display-tooltip-when-elided="true" name="movement" style="margin-left: 3px; margin-right: 3px; margin-top: 3px; margin-bottom: 3px; -unity-font-style: bold;" />
+    <uie:PropertyField name="play-on-awake" binding-path="m_PlayOnAwake" label="Play On Awake" focusable="true" class="field-label__indented" />
+    <uie:PropertyField name="method" label="Method" binding-path="m_Method" focusable="true" class="field-label__indented" style="flex-direction: column; flex-grow: 0;" />
+    <uie:PropertyField name="duration" binding-path="m_Duration" label="Duration" focusable="true" class="field-label__double_indented" />
+    <uie:PropertyField name="max-speed" binding-path="m_MaxSpeed" label="Speed" focusable="true" class="field-label__double_indent field-label__double_indented" />
+    <uie:PropertyField name="easing" binding-path="m_EasingMode" label="Easing" focusable="true" class="field-label__indented" />
+    <uie:PropertyField label="Loop Mode" name="loop-mode" binding-path="m_LoopMode" focusable="true" class="field-label__indented" />
+    <ui:VisualElement class="separator" style="height: 1px; margin-top: 4px; margin-bottom: 4px; margin-left: 4px;" />
+    <ui:Label text="Preview" display-tooltip-when-elided="true" style="-unity-font-style: bold; justify-content: flex-start; margin-left: 3px; margin-right: 3px; margin-bottom: 3px; margin-top: 3px;" />
+    <ui:VisualElement class="field__indented" style="flex-direction: row; justify-content: flex-start; flex-grow: 0; flex-shrink: 0;">
+        <ui:Button text="Play" display-tooltip-when-elided="true" name="play" style="flex-grow: 1; flex-shrink: 0; flex-basis: auto; border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 0; margin-right: 0;" />
+        <ui:Button text="Pause" display-tooltip-when-elided="true" name="pause" style="flex-basis: auto; flex-grow: 1; padding-right: 0; padding-left: 0; margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; border-top-right-radius: 0; margin-right: 0; border-bottom-right-radius: 0; border-left-width: 0; border-right-width: 0;" />
+        <ui:Button text="Reset" display-tooltip-when-elided="true" name="reset" style="flex-direction: column; flex-grow: 1; flex-basis: auto; border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 0; margin-left: 0; margin-right: 0;" />
+    </ui:VisualElement>
+    <ui:VisualElement class="field__indented" style="flex-direction: row; flex-shrink: 0; margin-top: 3px;">
+        <ui:Slider picking-mode="Ignore" value="0" high-value="1" show-input-field="false" name="normalized-progress" style="margin-bottom: 0; margin-top: 2px; flex-grow: 1;" />
+        <ui:Label text="Time:" display-tooltip-when-elided="true" style="-unity-text-align: middle-left; margin-left: 4px;" />
+        <uie:FloatField value="0" name="elapsed-time" style="-unity-text-align: upper-left; align-items: stretch; justify-content: flex-start; width: 40px;" />
+    </ui:VisualElement>
+</ui:UXML>

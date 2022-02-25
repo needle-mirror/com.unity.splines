@@ -45,8 +45,18 @@ namespace UnityEditor.Splines
             m_RotationY = m_Rotation.Q<FloatField>("unity-y-input");
             m_RotationZ = m_Rotation.Q<FloatField>("unity-z-input");
 
-            m_Position.RegisterValueChangedCallback((evt) => target.localPosition = evt.newValue);
-            m_Rotation.RegisterValueChangedCallback((evt) => target.localRotation = Quaternion.Euler(evt.newValue));
+            m_Position.RegisterValueChangedCallback((evt) =>
+            {
+                IgnoreKnotCallbacks(true);
+                target.localPosition = evt.newValue;
+                IgnoreKnotCallbacks(false);
+            });
+            m_Rotation.RegisterValueChangedCallback((evt) =>
+            {
+                IgnoreKnotCallbacks(true);
+                target.localRotation = Quaternion.Euler(evt.newValue);
+                IgnoreKnotCallbacks(false);
+            });
         }
 
         public override void Update()

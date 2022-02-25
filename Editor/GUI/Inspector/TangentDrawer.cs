@@ -34,8 +34,20 @@ namespace UnityEditor.Splines
             
             CreateTangentFields();
             
-            m_Magnitude.RegisterValueChangedCallback((evt) => UpdateTangentMagnitude(evt.newValue));
-            m_Direction.RegisterValueChangedCallback((evt) => target.localPosition = evt.newValue);
+            m_Magnitude.RegisterValueChangedCallback((evt) =>
+            {
+                UpdateTangentMagnitude(evt.newValue);
+                m_Direction.SetValueWithoutNotify(target.localPosition);
+                RoundFloatFieldsValues();
+            });
+
+            m_Direction.RegisterValueChangedCallback((evt) =>
+            {
+                IgnoreKnotCallbacks(true);
+                target.localPosition = evt.newValue;
+                IgnoreKnotCallbacks(false);
+                m_Magnitude.SetValueWithoutNotify(Round(math.length(target.localPosition)));
+            });
         }
 
         public override void Update()
@@ -88,7 +100,9 @@ namespace UnityEditor.Splines
             if(math.length(target.localPosition) > 0)
                 direction = math.normalize(target.localPosition);
 
+            IgnoreKnotCallbacks(true);
             target.localPosition = value * direction;
+            IgnoreKnotCallbacks(false);
         }
 
         void RoundFloatFieldsValues()

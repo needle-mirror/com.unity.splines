@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
-using UnityEngine;
-using UnityEngine.Splines;
+using UnityEngine.Splines; 
 
 namespace UnityEditor.Splines
 {
@@ -16,31 +15,8 @@ namespace UnityEditor.Splines
         
         public override void GetLocalTangents(EditableKnot knot, out float3 localTangentIn, out float3 localTangentOut)
         {
-            var previousKnot = knot.GetPrevious();
-            var nextKnot = knot.GetNext();
-
-            if (previousKnot == null && nextKnot == null)
-            {
-                localTangentIn = knot.ToSplineSpaceTangent(-math.forward() / 3.0f);
-                localTangentOut = -localTangentIn;
-            }
-            else
-            {
-                localTangentIn = previousKnot != null
-                    ? SplineUtility.GetLinearTangent(knot.localPosition, previousKnot.localPosition)
-                    : float3.zero;
-                localTangentOut = nextKnot != null
-                    ? SplineUtility.GetLinearTangent(knot.localPosition, nextKnot.localPosition)
-                    : float3.zero;
-            }
-
-            if (!closed)
-            {
-                if (knot.index == 0 && math.length(localTangentIn) == 0f)
-                    localTangentIn = -localTangentOut;
-                else if (knot.index == knotCount - 1 && math.length(localTangentOut) == 0f)
-                    localTangentOut = -localTangentIn;
-            }
+            localTangentIn = float3.zero;
+            localTangentOut = float3.zero;
         }
         
         public override CurveData GetPreviewCurveForEndKnot(float3 point, float3 normal, float3 tangentOut)
@@ -64,9 +40,8 @@ namespace UnityEditor.Splines
                 var editKnot = GetKnot(i);
                 var position = editKnot.localPosition;
                 GetLocalTangents(editKnot, out var tangentIn, out var tangentOut);
-                var knotRotationInv = math.inverse(editKnot.localRotation);
 
-                var knot = new BezierKnot(position, math.rotate(knotRotationInv, tangentIn), math.rotate(knotRotationInv, tangentOut), editKnot.localRotation);
+                var knot = new BezierKnot(position, tangentIn, tangentOut, editKnot.localRotation);
                 results.Add(knot);
             }
         }

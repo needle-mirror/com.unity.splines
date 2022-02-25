@@ -381,8 +381,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 446194}
-  - component: {fileID: 2438250438088192890}
   - component: {fileID: 1347446188544567311}
+  - component: {fileID: 7945503836093442440}
   m_Layer: 9
   m_Name: Tank
   m_TagString: Untagged
@@ -407,52 +407,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2438250438088192890
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 173472}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9eac6ceedc2724f27893c14cb52f1fc7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SplineContainer: {fileID: 0}
-  m_CarToAnimate: {fileID: 0}
-  m_DefaultSpeed: 6
-  m_Speed:
-    m_IndexUnit: 0
-    m_DataPoints: []
-  m_DefaultTilt: {x: 0, y: 1, z: 0}
-  m_Tilt:
-    m_IndexUnit: 0
-    m_DataPoints: []
-  m_DefaultDrift: 0
-  m_Drift:
-    m_IndexUnit: 0
-    m_DataPoints: []
-  m_LookAtPoints:
-    m_IndexUnit: 0
-    m_DataPoints:
-    - m_Time: 0
-      m_Value:
-        x: -7.496065
-        y: -15.294918
-    - m_Time: 12.742932
-      m_Value:
-        x: -10.170481
-        y: -1.7631149
-    - m_Time: 30.9594
-      m_Value:
-        x: 20.117758
-        y: 4.892893
-    - m_Time: 75.47425
-      m_Value:
-        x: 17.91823
-        y: 33.19242
-  m_LookTransform: {fileID: 494770}
 --- !u!114 &1347446188544567311
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -465,6 +419,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e3af2c81f946c984ead177f24f06763b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &7945503836093442440
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 173472}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 29a074d529cf945029ef7cf40540c9df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Target: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_LoopMode: 1
+  m_Method: 0
+  m_Duration: 1
+  m_MaxSpeed: 10
+  m_EasingMode: 0
+  m_AlignmentMode: 1
+  m_ObjectForwardAxis: 2
+  m_ObjectUpAxis: 1
 --- !u!1 &192314
 GameObject:
   m_ObjectHideFlags: 0
