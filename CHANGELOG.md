@@ -5,9 +5,26 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2022-03-29
+
+### Changes
+
+- Added new icons for Spline UI elements.
+- Modified knot handles so they are hidden if the `EditorTool` is not a `SplineTool`. 
+
+
+### Bug fixes
+
+- [1403386] Fixing SplineData Inspector triggering to SplineData.changed events.
+- [1403359] Fixed issue where `SplineExtrude` component would not update mesh after an undo operation.
+- Fixed `SplineUtility.Evaluate` not evaluating the up vector correctly.
+- Fixed InvalidOperationException thrown when Spline is created with a locked Inspector.
+- [1384448] Fixed incorrect Rect Selection when using Shift or CTRL/CMD modifiers.
+- [1384457] Fixed an issue where an exception was thrown when drawing a spline and rotating the scene view.
+
 ## [1.0.0] - 2022-02-25
 
-## Changes
+### Changes
 
 - New icons set for Spline-related items.
 - `SplineContainer` inspector is now more user-friendly.
@@ -23,7 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.0.0-pre.9] - 2022-01-26
 
-## Changes 
+### Changes 
 
 - Adding new API to interact with SplineData Handles
 - Adding a `SplineInstantiate` component and updating associated samples.

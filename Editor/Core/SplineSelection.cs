@@ -155,7 +155,7 @@ namespace UnityEditor.Splines
             return null;
         }
 
-        public static void GetSelectedElements(List<ISplineElement> elements)
+        public static void GetSelectedElements(ICollection<ISplineElement> elements)
         {
             elements.Clear();
             foreach (var rawElement in selection)
@@ -166,7 +166,7 @@ namespace UnityEditor.Splines
             }
         }
 
-        public static void GetSelectedElements(IEnumerable<Object> targets, List<ISplineElement> elements)
+        public static void GetSelectedElements(IEnumerable<Object> targets, ICollection<ISplineElement> elements)
         {
             elements.Clear();
             GetSelectedElementsInternal(targets, s_ElementBuffer);

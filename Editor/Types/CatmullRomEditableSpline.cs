@@ -15,13 +15,13 @@ namespace UnityEditor.Splines
             {
                 var tangentOut = splineCR.GetTangentOut(index);
                 var normalRotation = math.nlerp(previous.rotation, next.rotation, t);
-                rotation = quaternion.LookRotation(tangentOut, math.rotate(normalRotation, math.up()));
+                rotation = quaternion.LookRotationSafe(tangentOut, math.rotate(normalRotation, math.up()));
                 
                 tangentOut = splineCR.GetTangentOut(previous.index);
-                previous.rotation = quaternion.LookRotation(tangentOut, math.rotate(previous.rotation, math.up()));
+                previous.rotation = quaternion.LookRotationSafe(tangentOut, math.rotate(previous.rotation, math.up()));
                 
                 tangentOut = splineCR.GetTangentOut(next.index);
-                next.rotation = quaternion.LookRotation(tangentOut, math.rotate(next.rotation, math.up()));
+                next.rotation = quaternion.LookRotationSafe(tangentOut, math.rotate(next.rotation, math.up()));
             }
         }
     }
@@ -45,14 +45,14 @@ namespace UnityEditor.Splines
             if (knot.spline is CatmullRomEditableSpline splineCR)
             {
                 var tangentOut = Vector3.ProjectOnPlane(Quaternion.FromToRotation(math.up(), normal) * splineCR.GetTangentOut(knot.index), normal);
-                knot.rotation = quaternion.LookRotation(math.normalize(tangentOut), normal);
+                knot.rotation = quaternion.LookRotationSafe(math.normalize(tangentOut), normal);
                 
                 if (knot.index != 0)
                 {
                     knot.spline.GetPreviousKnot(knot.index, out var prevKnot);
                     var prevNormal = math.rotate(prevKnot.rotation, math.up());
                     tangentOut = Vector3.ProjectOnPlane(Quaternion.FromToRotation(math.up(), prevNormal) * splineCR.GetTangentOut(prevKnot.index), prevNormal);
-                    prevKnot.rotation = quaternion.LookRotation(math.normalize(tangentOut), prevNormal);
+                    prevKnot.rotation = quaternion.LookRotationSafe(math.normalize(tangentOut), prevNormal);
                 }
             }
         }
@@ -114,7 +114,7 @@ namespace UnityEditor.Splines
             if (knotCount == 0)
             { 
                 m_PreviewKnotB.position = point;
-                m_PreviewKnotB.rotation = quaternion.LookRotation(Quaternion.FromToRotation(math.up(), normal) * math.forward(), normal);
+                m_PreviewKnotB.rotation = quaternion.LookRotationSafe(Quaternion.FromToRotation(math.up(), normal) * math.forward(), normal);
 
                 m_PreviewKnotA.Copy(m_PreviewKnotB);
             }
@@ -127,10 +127,10 @@ namespace UnityEditor.Splines
                 
                 var prevNormal = math.rotate(lastKnot.rotation, math.up());
                 var tangentOut = Vector3.ProjectOnPlane(Quaternion.FromToRotation(math.up(), normal) * GetTangentOut(m_PreviewKnotB, lastKnot, null), normal);
-                m_PreviewKnotB.rotation = quaternion.LookRotation(math.normalize(tangentOut), normal);
+                m_PreviewKnotB.rotation = quaternion.LookRotationSafe(math.normalize(tangentOut), normal);
                 
                 tangentOut = Vector3.ProjectOnPlane(Quaternion.FromToRotation(math.up(), prevNormal) * GetTangentOut(lastKnot, lastKnot.GetPrevious(), m_PreviewKnotB), prevNormal);
-                m_PreviewKnotA.rotation = quaternion.LookRotation(math.normalize(tangentOut), prevNormal);
+                m_PreviewKnotA.rotation = quaternion.LookRotationSafe(math.normalize(tangentOut), prevNormal);
             }
 
             return new CurveData(m_PreviewKnotA, m_PreviewKnotB);

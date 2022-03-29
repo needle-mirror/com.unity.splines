@@ -1,10 +1,12 @@
 using System;
 using UnityEditor.Splines.Editor.GUI;
 using UnityEngine;
+using UnityEngine.Internal;
 using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    [ExcludeFromDocs]
     [CustomPropertyDrawer(typeof(SplineData<>))]
     public class SplineDataPropertyDrawer : PropertyDrawer
     {
@@ -27,8 +29,8 @@ namespace UnityEditor.Splines
                 return height;
             
             //Adding space for the object field
-            height += EditorGUIUtility.singleLineHeight  + EditorGUIUtility.standardVerticalSpacing ;
-            height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("m_IndexUnit"))  + EditorGUIUtility.standardVerticalSpacing ;
+            height += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
+            height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("m_IndexUnit")) + EditorGUIUtility.standardVerticalSpacing;
             
             var datapointsProperty = property.FindPropertyRelative("m_DataPoints");
             height += EditorGUIUtility.singleLineHeight;
@@ -82,14 +84,12 @@ namespace UnityEditor.Splines
                     else
                         SplineDataConversionWindow.DoConfirmWindow(property, indexProperty, fieldInfo, property.serializedObject.targetObject as Component, newPathUnit);
                 }
-
+                 
                 SplineUIManager.ReserveSpace(EditorGUIUtility.standardVerticalSpacing, ref position);
 
                 dataPointsProperty.isExpanded = EditorGUI.Foldout(SplineUIManager.ReserveSpace(EditorGUIUtility.singleLineHeight, ref position), dataPointsProperty.isExpanded, new GUIContent("Data Points"));
                 if(dataPointsProperty.isExpanded)
                     SplineDataUIManager.instance.GetDataPointsReorderableList(property, dataPointsProperty, fieldInfo, pathUnit).DoList(position);
-                
-                EditorGUI.indentLevel--;
             }
             EditorGUI.EndProperty();
         }

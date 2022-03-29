@@ -34,6 +34,7 @@ namespace UnityEditor.Splines
 
 		static SplineHandlesOptions s_SplineHandlesOptions = SplineHandlesOptions.None;
 		static bool s_UseCustomSplineHandles = false;
+		static bool s_IsSplineTool = true;
 
 	    readonly SplineElementRectSelector m_RectSelector = new SplineElementRectSelector();
         readonly List<IEditableSpline> m_Splines = new List<IEditableSpline>();
@@ -74,9 +75,12 @@ namespace UnityEditor.Splines
         /// <param name="window"></param>
 	    public override void OnToolGUI(EditorWindow window)
 	    {
-	        m_RectSelector.OnGUI(m_Splines);
+		    if(!s_IsSplineTool)
+				return;
+		    
+		    m_RectSelector.OnGUI(m_Splines);
 
-	        if(!s_UseCustomSplineHandles)
+		    if(!s_UseCustomSplineHandles)
 				SplineHandles.DrawSplineHandles(m_Splines, s_SplineHandlesOptions);
 	        
             HandleSelectionFraming();
@@ -102,6 +106,7 @@ namespace UnityEditor.Splines
 		        m_WasActiveAfterDeserialize = false;
 
 	        OnSelectionChanged();
+	        ToolManager.activeToolChanged += OnActiveToolChanged;
 	        Selection.selectionChanged += OnSelectionChanged;
 	        Spline.afterSplineWasModified += OnSplineWasModified;
 	        Undo.undoRedoPerformed += UndoRedoPerformed;
@@ -114,6 +119,7 @@ namespace UnityEditor.Splines
         /// </summary>
 	    public override void OnWillBeDeactivated()
 	    {
+		    ToolManager.activeToolChanged -= OnActiveToolChanged;
 	        Selection.selectionChanged -= OnSelectionChanged;
 	        Spline.afterSplineWasModified -= OnSplineWasModified;
 	        Undo.undoRedoPerformed -= UndoRedoPerformed;
@@ -123,7 +129,15 @@ namespace UnityEditor.Splines
             SplineSelection.ClearNoUndo(false);
         }
 
-	    void OnSplineWasModified(Spline spline) => UpdateSelection();
+        void OnActiveToolChanged()
+        {
+	        if(ToolManager.activeToolType == typeof(KnotPlacementTool))
+		        SplineSelection.Clear();
+
+	        s_IsSplineTool = typeof(SplineTool).IsAssignableFrom(ToolManager.activeToolType);
+        }
+
+        void OnSplineWasModified(Spline spline) => UpdateSelection();
 	    void OnSelectionChanged() => UpdateSelection();
 	    void UndoRedoPerformed() => UpdateSelection();
 	    

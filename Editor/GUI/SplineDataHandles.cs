@@ -6,6 +6,9 @@ using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    /// <summary>
+    /// Provides methods for drawing <see cref="SplineData"/> manipulation handles.
+    /// </summary>
     public static class SplineDataHandles
     {
         const float k_HandleSize = 0.15f;
@@ -26,11 +29,13 @@ namespace UnityEditor.Splines
         /// on the spline adds a new DataPoint in the SplineData. Left click on an existing DataPoint
         /// allows to move this point along the Spline while a right click on it allows to delete that DataPoint. 
         /// </summary>
-        /// <param name="spline">The Spline to use to interprete the SplineData.</param>
+        /// <param name="spline">The Spline to use to interpret the SplineData.</param>
         /// <param name="splineData">The SplineData for which the handles are drawn.</param>
         /// <typeparam name="TSpline">The Spline type.</typeparam>
         /// <typeparam name="TData">The type of data this data point stores.</typeparam>
-        public static void DataPointHandles<TSpline, TData>(this TSpline spline, SplineData<TData> splineData) 
+        public static void DataPointHandles<TSpline, TData>(
+            this TSpline spline, 
+            SplineData<TData> splineData) 
                 where TSpline : ISpline
         {
             var evt = Event.current;

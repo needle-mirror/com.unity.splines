@@ -20,13 +20,14 @@ namespace Unity.Splines.Examples
         public float m_DefaultSpeed = 10f;
         [Min(0f)]
         public float m_MaxSpeed = 30f;
+
         [SerializeField]
-        SplineData<float> m_Speed;
+        SplineData<float> m_Speed = new SplineData<float>();
         public SplineData<float> speed => m_Speed;
         
         public Vector3 m_DefaultTilt = Vector3.up;
         [SerializeField]
-        SplineData<float3> m_Tilt;
+        SplineData<float3> m_Tilt = new SplineData<float3>();
         public SplineData<float3> tilt => m_Tilt;
         
         [SerializeField]
@@ -126,7 +127,7 @@ namespace Unity.Splines.Examples
             
             m_CurrentOffset = (m_CurrentOffset + m_CurrentSpeed * Time.deltaTime / m_SplineLength) % 1f;
             
-            if (m_Speed != null && m_Speed.Count > 0)
+            if (m_Speed.Count > 0)
                 m_CurrentSpeed = m_Speed.Evaluate(m_Spline, m_CurrentOffset, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
             else
                 m_CurrentSpeed = m_DefaultSpeed;

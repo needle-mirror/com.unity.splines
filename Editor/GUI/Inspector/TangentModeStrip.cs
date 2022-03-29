@@ -10,7 +10,7 @@ namespace UnityEditor.Splines
         {
             EditorGUIUtility.TrTextContent("Linear", "Linear Tangents:\nTangents are pointing to the previous/next spline knot."),
             EditorGUIUtility.TrTextContent("Mirrored", "Mirrored Tangents:\nIf Knot or InTangent is selected, OutTangent will be mirrored on InTangent. Else, InTangent will be mirrored on OutTangent."),
-            EditorGUIUtility.TrTextContent("Continuous", "Continuous tangents:\nInTangent and OutTangent are always aligned."),
+            EditorGUIUtility.TrTextContent("Continuous", "Continuous Tangents:\nInTangent and OutTangent are always aligned."),
             EditorGUIUtility.TrTextContent("Broken", "Broken Tangents:\nInTangent and OutTangent are dissociated.")
         };
         readonly ButtonStripField m_ModeStrip;

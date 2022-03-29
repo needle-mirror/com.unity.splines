@@ -491,7 +491,7 @@ namespace UnityEditor.Splines
                 else
                     right = math.cross(forward, knotUp);
 
-                handleRotation = quaternion.LookRotation(forward, math.cross(right, forward));
+                handleRotation = quaternion.LookRotationSafe(forward, math.cross(right, forward));
             }
             else if (element is EditableKnot editableKnot)
                 handleRotation = editableKnot.rotation;

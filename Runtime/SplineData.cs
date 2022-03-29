@@ -60,7 +60,7 @@ namespace UnityEngine.Splines
 
         [SerializeField]
         PathIndexUnit m_IndexUnit = PathIndexUnit.Knot;
-
+        
         [SerializeField]
         List<DataPoint<T>> m_DataPoints = new List<DataPoint<T>>();
 
@@ -213,22 +213,21 @@ namespace UnityEngine.Splines
             var dataPoint = new DataPoint<T>() { Index = t };
             if(Count == 0)
                 return Add(dataPoint);
-            else if(Count == 1)
+            
+            if(Count == 1)
             {
                 dataPoint.Value = m_DataPoints[0].Value;
                 return Add(dataPoint);
             }
-            else
-            {
-                int index = m_DataPoints.BinarySearch(0, Count, dataPoint, k_DataPointComparer);
-                index = index < 0 ? ~index : index;
+            
+            int index = m_DataPoints.BinarySearch(0, Count, dataPoint, k_DataPointComparer);
+            index = index < 0 ? ~index : index;
 
-                dataPoint.Value = index == 0 ? m_DataPoints[0].Value : m_DataPoints[index-1].Value;
-                m_DataPoints.Insert(index, dataPoint);
-                SetDirty();
+            dataPoint.Value = index == 0 ? m_DataPoints[0].Value : m_DataPoints[index-1].Value;
+            m_DataPoints.Insert(index, dataPoint);
+            SetDirty();
 
-                return index;
-            }
+            return index;
         }
         
         /// <summary>
@@ -502,6 +501,7 @@ namespace UnityEngine.Splines
             return SplineUtility.GetNormalizedInterpolation(spline, t, m_IndexUnit);
         }
 
+        /// <inheritdoc cref="GetEnumerator"/>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>

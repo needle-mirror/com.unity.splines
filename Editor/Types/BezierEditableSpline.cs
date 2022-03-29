@@ -376,7 +376,7 @@ namespace UnityEditor.Splines
             nextKnot.tangentIn.localPosition = nextKnot.ToKnotSpaceTangent(rightCurve.Tangent1);
 
             var up = CurveUtility.EvaluateUpVector(curveToSplit, t, math.rotate(previous.localRotation, math.up()), math.rotate(next.localRotation, math.up()));
-            localRotation = quaternion.LookRotation(math.normalize(rightCurve.Tangent0), up);
+            localRotation = quaternion.LookRotationSafe(math.normalize(rightCurve.Tangent0), up);
 
             SetLocalTangents(this.ToKnotSpaceTangent(leftCurve.Tangent1), this.ToKnotSpaceTangent(rightCurve.Tangent0));
         }
@@ -446,12 +446,12 @@ namespace UnityEditor.Splines
                         
                         var toPreviousProj = Vector3.ProjectOnPlane(math.normalize(toPrevious), normal);
                         if (toPreviousProj.magnitude > 0f)
-                            endKnotRotation = quaternion.LookRotation(-math.normalize(toPreviousProj), normal);
+                            endKnotRotation = quaternion.LookRotationSafe(-math.normalize(toPreviousProj), normal);
                         else
                             endKnotRotation = Quaternion.FromToRotation(math.up(), normal);
                     }
                     else
-                        endKnotRotation = quaternion.LookRotation(math.normalize(tangentOut), normal);
+                        endKnotRotation = quaternion.LookRotationSafe(math.normalize(tangentOut), normal);
 
                     // When placing 2nd knot and if the first knot was placed without specifying a custom world tangent out,
                     // adjust 1st knot's rotation and point it in the direction of the 2nd knot
@@ -462,15 +462,15 @@ namespace UnityEditor.Splines
                         var previousTangentOutLen = math.length(previousKnot.tangentOut.localPosition);
 
                         if (previousTangentOutLen == 0 && toEndKnotProj.magnitude > 0f)
-                            prevKnotRotation = quaternion.LookRotation(math.normalize(toEndKnotProj), previousUp);
+                            prevKnotRotation = quaternion.LookRotationSafe(math.normalize(toEndKnotProj), previousUp);
                     }
                 }
                 else
                 {
                     if (tangentOutLen > 0f)
-                        endKnotRotation = quaternion.LookRotation(math.normalize(tangentOut), normal);
+                        endKnotRotation = quaternion.LookRotationSafe(math.normalize(tangentOut), normal);
                     else
-                        endKnotRotation = quaternion.LookRotation(Quaternion.FromToRotation(math.up(), normal) * math.forward(), normal);
+                        endKnotRotation = quaternion.LookRotationSafe(Quaternion.FromToRotation(math.up(), normal) * math.forward(), normal);
                 }
             }
         }

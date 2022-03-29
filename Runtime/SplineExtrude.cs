@@ -45,7 +45,7 @@ namespace UnityEngine.Splines
         bool m_RebuildRequested;
         float m_NextScheduledRebuild;
 
-        /// <summary>The Spline to extrude.</summary>
+        /// <summary>The SplineContainer of the <see cref="Spline"/> to extrude.</summary>
         public SplineContainer container
         {
             get => m_Container;
@@ -106,6 +106,7 @@ namespace UnityEngine.Splines
             set => m_Range = new Vector2(Mathf.Min(value.x, value.y), Mathf.Max(value.x, value.y));
         }
 
+        /// <summary>The Spline to extrude.</summary>
         public Spline spline
         {
             get
@@ -164,6 +165,9 @@ namespace UnityEngine.Splines
                 Rebuild();
         }
 
+        /// <summary>
+        /// Triggers the rebuild of a Spline's extrusion mesh and collider.
+        /// </summary>
         public void Rebuild()
         {
             if(m_Mesh == null && (m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
@@ -192,6 +196,11 @@ namespace UnityEngine.Splines
                     sphereCollider.radius = Mathf.Max(ext.x, ext.y, ext.z);
                 }
             }
+        }
+
+        void OnValidate()
+        {
+            Rebuild();
         }
 
         internal Mesh CreateMeshAsset()

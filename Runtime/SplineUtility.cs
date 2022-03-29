@@ -123,16 +123,7 @@ namespace UnityEngine.Splines
             var curve = spline.GetCurve(SplineToCurveT(spline, t, out var curveT));
             return CurveUtility.EvaluateTangent(curve, curveT);
         }
-
-        static float3 EvaluateUpVector<T>(this T spline, int knotIndex, float curveT) where T : ISpline
-        {
-            if (spline.Count < 1)
-                return float3.zero;
-
-            var rotationT = math.nlerp(spline[knotIndex].Rotation, spline[spline.NextIndex(knotIndex)].Rotation, curveT);
-            return math.rotate(rotationT, math.up());
-        }
-
+        
         /// <summary>
         /// Evaluate an up vector of a spline at a specific t
         /// </summary>
@@ -143,9 +134,17 @@ namespace UnityEngine.Splines
         public static float3 EvaluateUpVector<T>(this T spline, float t) where T : ISpline
         {
             if (spline.Count < 1)
-                return 0;
+                return float3.zero;
 
             var curveIndex = SplineToCurveT(spline, t, out var curveT);
+            return spline.EvaluateUpVector(curveIndex, curveT);
+        }
+
+        static float3 EvaluateUpVector<T>(this T spline, int curveIndex, float curveT) where T : ISpline
+        {
+            if (spline.Count < 1)
+                return float3.zero;
+            
             var curve = spline.GetCurve(curveIndex);
 
             var curveStartRotation = spline[curveIndex].Rotation;

@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "unity": "2022.1",
   "description": "Framework and tools for working with curves and splines.",
   "dependencies": {
@@ -24,15 +24,18 @@
   "testables": [
     "com.unity.test-framework.performance"
   ],
+  "upm": {
+    "changelog": "### Changes\r\n\r\n- Added new icons for Spline UI elements.\r\n- Modified knot handles so they are hidden if the `EditorTool` is not a `SplineTool`. \r\n\r\n\r\n### Bug fixes\r\n\r\n- [1403386] Fixing SplineData Inspector triggering to SplineData.changed events.\r\n- [1403359] Fixed issue where `SplineExtrude` component would not update mesh after an undo operation.\r\n- Fixed `SplineUtility.Evaluate` not evaluating the up vector correctly.\r\n- Fixed InvalidOperationException thrown when Spline is created with a locked Inspector.\r\n- [1384448] Fixed incorrect Rect Selection when using Shift or CTRL/CMD modifiers.\r\n- [1384457] Fixed an issue where an exception was thrown when drawing a spline and rotating the scene view."
+  },
   "relatedPackages": {
-    "com.unity.splines.tests": "1.0.0"
+    "com.unity.splines.tests": "1.0.1"
   },
   "upmCi": {
-    "footprint": "8d9739061f9f3532ed1d6cd2d558c3e3c99f46c6"
+    "footprint": "4f83d1fbdd4bdbaeab42f482721075a36d0fc627"
   },
   "repository": {
-    "url": "https://github.com/Unity-Technologies/com.unity.splines.git",
+    "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "cfec065f3e5acc215defff0fdf0dfc4f409db0c1"
+    "revision": "21a7f7dd6874cfedeff294e2599959473047a306"
   }
 }

@@ -181,18 +181,12 @@ namespace UnityEditor.Splines
                         evt.Use();
 
                         //Add/Remove from knotSelection
-                        if (evt.modifiers == EventModifiers.Command
-                            || evt.modifiers == EventModifiers.Control)
+                        if (EditorGUI.actionKey || evt.modifiers == EventModifiers.Shift)
                         {
                             if (SplineSelection.Contains(element))
                                 SplineSelection.Remove(element);
                             else
                                 SplineSelection.Add(element);
-                        }
-                        //Change active knot
-                        else if (evt.modifiers == EventModifiers.Shift)
-                        {
-                            SplineSelection.SetActive(element);
                         }
                         else
                         {
@@ -309,7 +303,7 @@ namespace UnityEditor.Splines
 
                                 var up = CurveUtility.EvaluateUpVector(bezierCurve, t, math.rotate(curve.a.rotation, math.up()), math.rotate(curve.b.rotation, math.up()));
                                 var tangentOut = CurveUtility.EvaluateTangent(bezierCurve, t);
-                                previewKnotRotation = quaternion.LookRotation(math.normalize(tangentOut), up);
+                                previewKnotRotation = quaternion.LookRotationSafe(math.normalize(tangentOut), up);
                             }
 
                             DrawKnotHandle(position, previewKnotRotation, false, controlID, false, activeSpline);
@@ -347,7 +341,6 @@ namespace UnityEditor.Splines
                     break;
             }
         }
-
 
         internal static void DrawKnotHandle(EditableKnot knot, List<int> tangentControlIDs = null, bool activeSpline = true)
         {
@@ -498,7 +491,7 @@ namespace UnityEditor.Splines
                 SplineHandleUtility.DrawLineWithWidth(startPos + toTangentNorm * length, startPos, width, tex);
             }
 
-            var rotation = TransformOperation.CalculateElementSpaceHandleRotation(tangent);
+            var rotation = TransformOperation.CalculateElementSpaceHandleRotation(math.length(tangent.localPosition) >0 ? tangent : tangent.owner);
             using (new Handles.DrawingScope(tangentColor, Matrix4x4.TRS(tangent.position, rotation, Vector3.one)))
             {
                 if (selected || hovered)

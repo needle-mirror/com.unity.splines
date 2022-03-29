@@ -42,6 +42,13 @@ namespace UnityEditor.Splines
         {
             s_ReorderableLists.Clear();
         }
+
+        static void SetSplineDataDirty(FieldInfo fieldInfo, SerializedProperty dataPointProperty)
+        {
+            var targetObject = fieldInfo.GetValue(dataPointProperty.serializedObject.targetObject);
+            var dirtyMethod = targetObject.GetType().GetMethod("SetDirty", BindingFlags.Instance | BindingFlags.NonPublic);
+            dirtyMethod?.Invoke(targetObject, null);
+        }
         
         public ReorderableList GetDataPointsReorderableList(SerializedProperty property, SerializedProperty dataPointProperty, FieldInfo fieldInfo, PathIndexUnit unit)
         {
@@ -64,11 +71,16 @@ namespace UnityEditor.Splines
             
             list.elementHeightCallback = (int index) =>
             {
-                return dataPointProperty.GetArrayElementAtIndex(index).isExpanded
+                return dataPointProperty.arraySize > 0 && dataPointProperty.GetArrayElementAtIndex(index).isExpanded
                     ? 3 * EditorGUIUtility.singleLineHeight + 2 * EditorGUIUtility.standardVerticalSpacing
                     : EditorGUIUtility.singleLineHeight;
             };
 
+            list.onChangedCallback = reorderableList =>
+            {
+                SetSplineDataDirty(fieldInfo, dataPointProperty);
+            };
+            
             list.drawElementCallback =
                 (Rect position, int listIndex, bool isActive, bool isFocused) =>
             {
@@ -98,10 +110,9 @@ namespace UnityEditor.Splines
                         
                         dataPointProperty.serializedObject.ApplyModifiedProperties();
                         var newIndex = ppte.FindPropertyRelative("m_Index").floatValue;
-                        
-                        var targetObject = fieldInfo.GetValue(dataPointProperty.serializedObject.targetObject);
+                 
+                        var targetObject = fieldInfo.GetValue(dataPointProperty.serializedObject.targetObject);       
                         var sortMethod = targetObject.GetType().GetMethod("ForceSort", BindingFlags.Instance | BindingFlags.NonPublic);
-                    
                         EditorApplication.delayCall += () =>
                         {
                             sortMethod?.Invoke(targetObject, null);
@@ -122,9 +133,9 @@ namespace UnityEditor.Splines
                     EditorGUI.BeginChangeCheck();
                     var valueProperty = ppte.FindPropertyRelative("m_Value");
                     EditorGUI.PropertyField(SplineUIManager.ReserveSpace(EditorGUI.GetPropertyHeight(valueProperty), ref position), valueProperty, new GUIContent("Data Value", L10n.Tr(k_DataValueTooltip)));
-                    
                     if(EditorGUI.EndChangeCheck())
                     {
+                        SetSplineDataDirty(fieldInfo, dataPointProperty);
                         if(!isActive)
                             list.index = listIndex;
                     }

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Internal;
 using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    [ExcludeFromDocs]
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public class CustomSplineDataHandle : Attribute
     {
@@ -38,6 +40,8 @@ namespace UnityEditor.Splines
         internal int[] m_ControlIDs;
         
         SplineDataHandleAttribute m_Attribute;
+        
+        [ExcludeFromDocs]
         public SplineDataHandleAttribute attribute => m_Attribute;
         
         /// <summary>

@@ -107,7 +107,7 @@ namespace UnityEditor.Splines
                     canCloseActiveSpline = m_Splines[i] == spline;
             }
             m_EndId = GUIUtility.GetControlID(FocusType.Passive);
-
+            
             DoClosingKnot(spline, canCloseActiveSpline);
 
             if (!spline.closed)
@@ -290,8 +290,12 @@ namespace UnityEditor.Splines
 
             if (!isClosingCurve)
             {
-                for (int i = 0; i < previewCurve.b.tangentCount; ++i)
-                    SplineHandles.DrawTangentHandle(previewCurve.b.GetTangent(i));
+                for(int i = 0; i < previewCurve.b.tangentCount; ++i)
+                {
+                    var tangent = previewCurve.b.GetTangent(i);
+                    if(math.length(tangent.localPosition) > 0)
+                        SplineHandles.DrawTangentHandle(tangent);
+                }
 
                 // In addition, display the normally hidden tangent out of the last knot.
                 // It gives an impression of an issue when it's hidden but the preview knot shows both tangents.

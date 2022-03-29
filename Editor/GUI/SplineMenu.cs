@@ -50,10 +50,17 @@ namespace UnityEditor.Splines
 
             Selection.activeObject = gameObject;
             ActiveEditorTracker.sharedTracker.RebuildIfNecessary();
-            ToolManager.SetActiveContext<SplineToolContext>();
-            ToolManager.SetActiveTool<KnotPlacementTool>();
+            //Ensuring trackers are rebuilt before changing to SplineContext
+            EditorApplication.delayCall += SetKnotPlacementTool;
         }
-        
+
+       static void SetKnotPlacementTool()
+        {
+            ToolManager.SetActiveContext<SplineToolContext>();
+            ToolManager.SetActiveTool<KnotPlacementTool>();            
+        }
+
+
         [MenuItem(k_MenuPath + "/Square", false, k_MenuPriority + 11)]
         static void CreateSquare(MenuCommand command)
         {
