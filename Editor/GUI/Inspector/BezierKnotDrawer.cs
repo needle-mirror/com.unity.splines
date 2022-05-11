@@ -1,157 +1,121 @@
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UIElements;
-
+using UnityEngine.Splines;
 #if !UNITY_2022_1_OR_NEWER
 using UnityEditor.UIElements;
 #endif
 
 namespace UnityEditor.Splines
 {
-    sealed class BezierKnotDrawer : KnotDrawer<BezierEditableKnot>
+    sealed class BezierKnotDrawer : ElementDrawer<SelectableKnot>
     {
-        const string k_TangentFoldoutStyle = "tangent-drawer";
-        
-        readonly TangentModeStrip m_Mode;
-        
-        readonly FloatField m_InMagnitude;
-        readonly Vector3Field m_In;
-        readonly FloatField m_InX;
-        readonly FloatField m_InY;
-        readonly FloatField m_InZ;
-        readonly FloatField m_OutMagnitude;
-        readonly Vector3Field m_Out;
-        readonly FloatField m_OutX;
-        readonly FloatField m_OutY;
-        readonly FloatField m_OutZ;
+        readonly Float3PropertyField<SelectableKnot> m_Position;
+        readonly Float3PropertyField<SelectableKnot> m_Rotation;
+        readonly TangentModeDropdown<SelectableKnot> m_Mode;
+        readonly BezierTangentModeDropdown<SelectableKnot> m_BezierMode;
+        readonly TangentPropertyField m_TangentIn;
+        readonly TangentPropertyField m_TangentOut;
 
         public BezierKnotDrawer()
         {
-            Add(m_Mode = new TangentModeStrip());
-            
-            ( m_InMagnitude, m_In ) = CreateTangentFoldout("Tangent In", "TangentIn");
-            m_InX = m_In.Q<FloatField>("unity-x-input");
-            m_InY = m_In.Q<FloatField>("unity-y-input");
-            m_InZ = m_In.Q<FloatField>("unity-z-input");
-            
-            ( m_OutMagnitude, m_Out ) = CreateTangentFoldout("Tangent Out", "TangentOut");
-            m_OutX = m_Out.Q<FloatField>("unity-x-input");
-            m_OutY = m_Out.Q<FloatField>("unity-y-input");
-            m_OutZ = m_Out.Q<FloatField>("unity-z-input");
-            
-            m_InMagnitude.RegisterValueChangedCallback((evt) =>
+            VisualElement row;
+            Add(row = new VisualElement(){name = "Vector3WithIcon"});
+            row.style.flexDirection = FlexDirection.Row;
+            row.Add(new VisualElement(){name = "PositionIcon"});
+            row.Add(m_Position = new Float3PropertyField<SelectableKnot>("",
+                (knot) => knot.LocalPosition, 
+                (knot, value) => knot.LocalPosition = value)
+                { name = "Position" });
+
+            m_Position.style.flexGrow = 1;
+
+            Add(row = new VisualElement(){name = "Vector3WithIcon"});
+            row.style.flexDirection = FlexDirection.Row;
+            row.Add(new VisualElement(){name = "RotationIcon"});
+            row.Add(m_Rotation = new Float3PropertyField<SelectableKnot>("",
+                (knot) => ((Quaternion)knot.LocalRotation).eulerAngles,
+                (knot, value) => knot.LocalRotation = Quaternion.Euler(value))
+                { name = "Rotation" });
+
+            m_Rotation.style.flexGrow = 1;
+
+            Add(new Separator());
+
+            Add(m_Mode = new TangentModeDropdown<SelectableKnot>());
+            m_Mode.changed += () =>
             {
-                UpdateTangentMagnitude(target.tangentIn, m_InMagnitude, evt.newValue, -1f);
-                m_In.SetValueWithoutNotify(target.tangentIn.localPosition);
-                m_Out.SetValueWithoutNotify(target.tangentOut.localPosition);
-                m_OutMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentOut.localPosition)));
-                RoundFloatFieldsValues();
-            });
-            
-            m_In.RegisterValueChangedCallback((evt) =>
+                m_BezierMode.Update(targets);
+                UpdateTangentsState();
+            };
+
+            Add(m_BezierMode = new BezierTangentModeDropdown<SelectableKnot>());
+            m_BezierMode.changed += () =>
             {
-                IgnoreKnotCallbacks(true);
-                target.tangentIn.localPosition = evt.newValue;
-                IgnoreKnotCallbacks(false);
-                m_InMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentIn.localPosition)));
-            });
+                m_Mode.Update(targets);
+                UpdateTangentsState();
+            };
+
+            Add(m_TangentIn = new TangentPropertyField("In", "TangentIn", BezierTangent.In));
+            Add(m_TangentOut = new TangentPropertyField("Out", "TangentOut", BezierTangent.Out));
+
+            //Update opposite to take into account some tangent modes
+            m_TangentIn.changed += () => m_TangentOut.Update(targets);
+            m_TangentOut.changed += () => m_TangentIn.Update(targets);
+
+            Add(new Separator());
+        }
+
+        public override string GetLabelForTargets()
+        {
+            if (targets.Count > 1)
+                return $"<b>({targets.Count}) Knots</b> selected";
             
-            m_OutMagnitude.RegisterValueChangedCallback((evt) =>
-            {
-                UpdateTangentMagnitude(target.tangentOut, m_OutMagnitude, evt.newValue, 1f);
-                m_Out.SetValueWithoutNotify(target.tangentOut.localPosition);
-                m_In.SetValueWithoutNotify(target.tangentIn.localPosition);
-                m_InMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentIn.localPosition)));
-                RoundFloatFieldsValues();
-            });
-            
-            m_Out.RegisterValueChangedCallback((evt) =>
-            {
-                IgnoreKnotCallbacks(true);
-                target.tangentOut.localPosition = evt.newValue;
-                IgnoreKnotCallbacks(false);
-                m_OutMagnitude.SetValueWithoutNotify(Round(math.length(target.tangentOut.localPosition)));
-            });
+            return $"<b>Knot {target.KnotIndex}</b> selected";
         }
 
         public override void Update()
         {
             base.Update();
+            
+            m_Position.Update(targets);
+            m_Rotation.Update(targets);
 
-            m_Mode.SetElement(target);
-            m_In.SetValueWithoutNotify(target.tangentIn.localPosition);
-            m_Out.SetValueWithoutNotify(target.tangentOut.localPosition);
-            m_InMagnitude.SetValueWithoutNotify(math.length(target.tangentIn.localPosition));
-            m_OutMagnitude.SetValueWithoutNotify(math.length(target.tangentOut.localPosition));
+            m_Mode.Update(targets);
+            m_BezierMode.Update(targets);
 
-            RoundFloatFieldsValues();
+            m_TangentIn.Update(targets);
+            m_TangentOut.Update(targets);
+            
             //Disabling edition when using linear tangents
-            EnableElements(target.mode);
+            UpdateTangentsState();
         }
 
-        void UpdateTangentMagnitude(EditableTangent tangent, FloatField magnitudeField, float value, float directionSign)
+        void UpdateTangentsState()
         {
-            if (value < 0f)
+            bool tangentsModifiable = true;
+            bool tangentsBroken = true;
+            bool tangentInSelectable = false;
+            bool tangentOutSelectable = false;
+            for (int i = 0; i < targets.Count; ++i)
             {
-                magnitudeField.SetValueWithoutNotify(0f);
-                value = 0f;
+                var mode = targets[i].Mode;
+                tangentsModifiable &= EditorSplineUtility.AreTangentsModifiable(mode);
+                tangentsBroken &= mode == TangentMode.Broken;
+                tangentInSelectable |= SplineSelectionUtility.IsSelectable(targets[i].TangentIn);
+                tangentOutSelectable |= SplineSelectionUtility.IsSelectable(targets[i].TangentOut);
             }
 
-            var direction = new float3(0, 0, directionSign);
-            if(math.length(tangent.localPosition) > 0)
-                direction = math.normalize(tangent.localPosition);
-         
-            IgnoreKnotCallbacks(true);
-            tangent.localPosition = value * direction;
-            IgnoreKnotCallbacks(false);
-        }
+            m_TangentIn.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
+            m_TangentOut.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
 
-        void RoundFloatFieldsValues()
-        {
-            m_InMagnitude.SetValueWithoutNotify(Round(m_InMagnitude.value));
-            m_InX.SetValueWithoutNotify(Round(m_InX.value));
-            m_InY.SetValueWithoutNotify(Round(m_InY.value));
-            m_InZ.SetValueWithoutNotify(Round(m_InZ.value));
-            m_OutMagnitude.SetValueWithoutNotify(Round(m_OutMagnitude.value));
-            m_OutX.SetValueWithoutNotify(Round(m_OutX.value));
-            m_OutY.SetValueWithoutNotify(Round(m_OutY.value));
-            m_OutZ.SetValueWithoutNotify(Round(m_OutZ.value));
-        }
+            if(tangentsModifiable)
+            {
+                m_TangentIn.vector3field.SetEnabled(tangentsBroken);
+                m_TangentOut.vector3field.SetEnabled(tangentsBroken);
+            }
 
-        void EnableElements(BezierEditableKnot.Mode mode)
-        {
-            var bezierTangent = mode != BezierEditableKnot.Mode.Linear;
-            var brokenTangents = mode == BezierEditableKnot.Mode.Broken;
-            m_InMagnitude.SetEnabled(bezierTangent);
-            m_OutMagnitude.SetEnabled(bezierTangent);
-            m_In.SetEnabled(brokenTangents);
-            m_Out.SetEnabled(brokenTangents);
-        }
-        
-        (FloatField,Vector3Field)  CreateTangentFoldout(string text, string vect3name)
-        {
-            //Create Elements
-            var foldoutRoot = new VisualElement();
-            foldoutRoot.AddToClassList(k_TangentFoldoutStyle);
-            
-            var foldout = new Foldout() { value = false };
-            var foldoutToggle = foldout.Q<Toggle>();
-            var magnitude = new FloatField(L10n.Tr(text), 3);
-            var vector3Field = new Vector3Field() { name = vect3name };
-                
-            //Build UI Hierarchy
-            Add(foldoutRoot);
-            foldoutRoot.Add(foldout);
-            foldoutToggle.Add(magnitude);
-            foldout.Add(vector3Field);
-
-            return (magnitude, vector3Field);
-        }
-
-        public override void OnTargetSet()
-        {
-            m_In.parent.SetEnabled(SplineSelectionUtility.IsSelectable(target.spline, target.index, target.tangentIn));
-            m_Out.parent.SetEnabled(SplineSelectionUtility.IsSelectable(target.spline, target.index, target.tangentOut));
+            m_TangentIn.SetEnabled(tangentInSelectable);
+            m_TangentOut.SetEnabled(tangentOutSelectable);
         }
     }
 }

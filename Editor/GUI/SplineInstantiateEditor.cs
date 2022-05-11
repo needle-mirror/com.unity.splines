@@ -196,12 +196,12 @@ class SplineInstantiateEditor : SplineComponentEditor
 
         m_SpacingType = m_Spacing.vector2Value.x == m_Spacing.vector2Value.y ? SpawnType.Exact : SpawnType.Random;
 
-        EditorSplineUtility.afterSplineWasModified += OnSplineModified;
+        EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
     }
 
     void OnDisable()
     {
-        EditorSplineUtility.afterSplineWasModified -= OnSplineModified;
+        EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;
     }
     
     void OnSplineModified(Spline spline)
@@ -243,8 +243,12 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorGUILayout.Separator();
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.Space();
-        if(GUILayout.Button(new GUIContent(k_Randomize, k_RandomizeTooltip), GUILayout.MaxWidth(100f)))
+        if (GUILayout.Button(new GUIContent(k_Randomize, k_RandomizeTooltip), GUILayout.MaxWidth(100f)))
+        {
+            Undo.RecordObjects(targets, "Changing SplineInstantiate seed");
             splineInstantiate.Randomize();
+        }
+
         if(GUILayout.Button(new GUIContent(k_Regenerate, k_RegenerateTooltip), GUILayout.MaxWidth(100f)))
             updateInstances = true;
         if(GUILayout.Button(new GUIContent(k_Clear, k_ClearTooltip), GUILayout.MaxWidth(100f)))

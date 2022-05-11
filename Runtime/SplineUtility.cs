@@ -1,5 +1,5 @@
 using System;
-using Unity.Collections;
+using System.Collections.Generic;
 using Unity.Mathematics;
 
 namespace UnityEngine.Splines
@@ -9,8 +9,8 @@ namespace UnityEngine.Splines
     /// </summary>
     public static class SplineUtility
     {
-        const int k_ResolutionSegmentCountMin = 6;
-        const int k_ResolutionSegmentCountMax = 1024;
+        const int k_SubdivisionCountMin = 6;
+        const int k_SubdivisionCountMax = 1024;
 
         /// <summary>
         /// The minimum resolution allowable when unrolling a curve to hit test while picking (selecting a spline with a cursor).
@@ -55,7 +55,6 @@ namespace UnityEngine.Splines
         /// higher resolution where a fine degree of accuracy is necessary and performance is less important.
         /// </summary>
         public const int DrawResolutionDefault = 10;
-
 
         /// <summary>
         /// Compute interpolated position, direction and upDirection at ratio t. Calling this method to get the
@@ -123,9 +122,9 @@ namespace UnityEngine.Splines
             var curve = spline.GetCurve(SplineToCurveT(spline, t, out var curveT));
             return CurveUtility.EvaluateTangent(curve, curveT);
         }
-        
+
         /// <summary>
-        /// Evaluate an up vector of a spline at a specific t
+        /// Evaluate the normal (up) vector of a spline.
         /// </summary>
         /// <param name="spline">The <seealso cref="NativeSpline"/> to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
@@ -144,7 +143,7 @@ namespace UnityEngine.Splines
         {
             if (spline.Count < 1)
                 return float3.zero;
-            
+
             var curve = spline.GetCurve(curveIndex);
 
             var curveStartRotation = spline[curveIndex].Rotation;
@@ -229,15 +228,6 @@ namespace UnityEngine.Splines
             return float3.zero;
         }
 
-        internal static float3 GetContinuousTangent(float3 otherTangent, float3 tangentToAlign)
-        {
-            // Mirror tangent but keep the same length
-            float3 dir = math.length(otherTangent) > 0 ? -math.normalize(otherTangent) : new float3(0,0,0);
-
-            float tangentToAlignLength = math.length(tangentToAlign);
-            return dir * tangentToAlignLength;
-        }
-
         /// <summary>
         /// Given a normalized interpolation (t) for a spline, calculate the curve index and curve-relative
         /// normalized interpolation.
@@ -273,7 +263,7 @@ namespace UnityEngine.Splines
 
                 if (tLength <= (start + curveLength))
                 {
-                    curveT =  useLUT ? 
+                    curveT =  useLUT ?
                         spline.GetCurveInterpolation(index, tLength - start) :
                         (tLength - start)/ curveLength;
                     return index;
@@ -328,6 +318,17 @@ namespace UnityEngine.Splines
         {
             using var nativeSpline = new NativeSpline(spline, transform);
             return nativeSpline.GetLength();
+        }
+
+        /// <summary>
+        /// Calculates the number of curves in a spline.
+        /// </summary>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <param name="spline"></param>
+        /// <returns>The number of curves in a spline.</returns>
+        public static int GetCurveCount<T>(this T spline) where T : ISpline
+        {
+            return math.max(0, spline.Count - (spline.Closed ? 0 : 1));
         }
 
         /// <summary>
@@ -404,19 +405,22 @@ namespace UnityEngine.Splines
             return ro + rd * dot;
         }
 
+        [Obsolete("Use "+nameof(GetSubdivisionCount)+" instead.", false)]
+        public static int GetSegmentCount(float length, int resolution) => GetSubdivisionCount(length,resolution);
+
         /// <summary>
-        /// Use this function to calculate the number of segments for a given spline length and resolution.
+        /// Use this function to calculate the number of subdivisions for a given spline length and resolution.
         /// </summary>
         /// <param name="length">A distance value in <see cref="PathIndexUnit"/>.</param>
-        /// <param name="resolution">A value used to calculate the number of segments for a length. This is calculated
-        /// as max(MIN_SEGMENTS, min(MAX_SEGMENTS, sqrt(length) * resolution)).
+        /// <param name="resolution">A value used to calculate the number of subdivisions for a length. This is calculated
+        /// as max(MIN_SUBDIVISIONS, min(MAX_SUBDIVISIONS, sqrt(length) * resolution)).
         /// </param>
         /// <returns>
-        /// The number of segments as calculated for given length and resolution.
+        /// The number of subdivisions as calculated for given length and resolution.
         /// </returns>
-        public static int GetSegmentCount(float length, int resolution)
+        public static int GetSubdivisionCount(float length, int resolution)
         {
-            return (int) math.max(k_ResolutionSegmentCountMin, math.min(k_ResolutionSegmentCountMax, math.sqrt(length) * resolution));
+            return (int) math.max(k_SubdivisionCountMin, math.min(k_SubdivisionCountMax, math.sqrt(length) * resolution));
         }
 
         struct Segment
@@ -546,7 +550,7 @@ namespace UnityEngine.Splines
 
             for (int i = 0, c = math.min(10, iterations); i < c; i++)
             {
-                int segments = GetSegmentCount(spline.GetLength() * segment.length, res);
+                int segments = GetSubdivisionCount(spline.GetLength() * segment.length, res);
                 segment = GetNearestPoint(spline, ro, rd, segment, out distance, out nearest, out t, segments);
             }
 
@@ -592,7 +596,7 @@ namespace UnityEngine.Splines
 
             for (int i = 0, c = math.min(10, iterations); i < c; i++)
             {
-                int segments = GetSegmentCount(spline.GetLength() * segment.length, res);
+                int segments = GetSubdivisionCount(spline.GetLength() * segment.length, res);
                 segment = GetNearestPoint(spline, point, segment, out distance, out nearest, out t, segments);
             }
 
@@ -684,7 +688,7 @@ namespace UnityEngine.Splines
 
             return ConvertNormalizedIndexUnit(spline, t, targetPathUnit);
         }
-        
+
         /// <summary>
         /// Given an interpolation value using a certain PathIndexUnit type, calculate the associated interpolation value in another targetPathUnit regarding a specific spline.
         /// </summary>
@@ -701,7 +705,7 @@ namespace UnityEngine.Splines
             {
                 if (targetPathUnit == PathIndexUnit.Normalized)
                     t = WrapInterpolation(t);
-                
+
                 return t;
             }
 
@@ -713,7 +717,7 @@ namespace UnityEngine.Splines
             switch(targetPathUnit)
             {
                 case PathIndexUnit.Knot:
-                    //LUT SHOULD NOT be used here as PathIndexUnit.KnotIndex is linear regarding the distance 
+                    //LUT SHOULD NOT be used here as PathIndexUnit.KnotIndex is linear regarding the distance
                     //(and thus not be interpreted using the LUT and the interpolated T)
                     int splineIndex = spline.SplineToCurveT(t, out float curveTime, false);
                     return splineIndex + curveTime;
@@ -728,7 +732,7 @@ namespace UnityEngine.Splines
         {
             return t % 1f == 0f ? math.clamp(t, 0f, 1f) : t - math.floor(t);
         }
-        
+
         /// <summary>
         /// Given an interpolation value in any PathIndexUnit type, calculate the normalized interpolation ratio value
         /// relative to a <see cref="Spline"/>.
@@ -752,11 +756,17 @@ namespace UnityEngine.Splines
             }
         }
 
-        internal static int PreviousIndex<T>(this T spline, int index) where T : ISpline
+        public static int PreviousIndex<T>(this T spline, int index) where T : ISpline
             => PreviousIndex(index, spline.Count, spline.Closed);
 
-        internal static int NextIndex<T>(this T spline, int index) where T : ISpline
+        public static int NextIndex<T>(this T spline, int index) where T : ISpline
             => NextIndex(index, spline.Count, spline.Closed);
+
+        public static BezierKnot Next<T>(this T spline, int index) where T : ISpline
+            => spline[NextIndex(spline, index)];
+
+        public static BezierKnot Previous<T>(this T spline, int index) where T : ISpline
+            => spline[PreviousIndex(spline, index)];
 
         internal static int PreviousIndex(int index, int count, bool wrap)
         {
@@ -768,9 +778,67 @@ namespace UnityEngine.Splines
             return wrap ? (index + 1) % count : math.min(index + 1, count - 1);
         }
 
-        internal static float3 GetLinearTangent(float3 point, float3 to)
+        internal static float3 GetExplicitLinearTangent(float3 point, float3 to)
         {
             return (to - point) / 3.0f;
+        }
+
+        // Typically a linear tangent is stored as a zero length vector. When a tangent is user controlled, we need to
+        // extrude out the tangent to something a user can grab rather than leaving the tangent on top of the knot.
+        internal static float3 GetExplicitLinearTangent(BezierKnot from, BezierKnot to)
+        {
+            var tin = to.Position - from.Position;
+            return math.mul(math.inverse(from.Rotation), tin * .33f);
+        }
+
+        /// <summary>
+        /// Calculates a tangent from the previous and next knot positions.
+        /// </summary>
+        /// <param name="previous">The position of the previous <see cref="BezierKnot"/>.</param>
+        /// <param name="next">The position of the next <see cref="BezierKnot"/>.</param>
+        /// <returns>Returns a tangent calculated from the previous and next knot positions.</returns>
+        public static float3 GetCatmullRomTangent(float3 previous, float3 next)
+        {
+            return 0.5f * (next - previous) / 3.0f;
+        }
+
+        /// <summary>
+        /// Gets a <see cref="BezierKnot"/> with its tangents and rotation calculated using the previous and next knot positions.
+        /// </summary>
+        /// <param name="position">The position of the knot.</param>
+        /// <param name="previous">The knot that immediately precedes the requested knot.</param>
+        /// <param name="next">The knot that immediately follows the requested knot.</param>
+        /// <returns>A <see cref="BezierKnot"/> with tangent and rotation values calculated from the previous and next knot positions.</returns>
+        public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next)
+        {
+            return GetAutoSmoothKnot(position, previous, next, math.up());
+        }
+
+        /// <summary>
+        /// Gets a <see cref="BezierKnot"/> with its tangents and rotation calculated using the previous and next knot positions.
+        /// </summary>
+        /// <param name="position">The position of the knot.</param>
+        /// <param name="previous">The knot that immediately precedes the requested knot.</param>
+        /// <param name="next">The knot that immediately follows the requested knot.</param>
+        /// <param name="normal">The normal vector of the knot.</param>
+        /// <returns>A <see cref="BezierKnot"/> with tangent and rotation values calculated from the previous and next knot positions.</returns>
+        public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next, float3 normal)
+        {
+            var tan = GetCatmullRomTangent(previous, next);
+            var dir = new float3(0, 0, math.length(tan));
+            return new BezierKnot(position, -dir, dir, GetKnotRotation(tan, normal));
+        }
+
+        internal static quaternion GetKnotRotation(float3 tangent, float3 normal)
+        {
+            if (math.lengthsq(tangent) == 0f)
+                tangent = math.rotate(Quaternion.FromToRotation(math.up(), normal), math.forward());
+
+            float3 up = Mathf.Approximately(math.abs(math.dot(tangent, normal)), 1f)
+                ? math.cross(tangent, math.right())
+                : Vector3.ProjectOnPlane(normal, tangent).normalized;
+
+            return quaternion.LookRotationSafe(tangent, up);
         }
 
         /// <summary>
@@ -778,7 +846,7 @@ namespace UnityEngine.Splines
         /// knot positions and transform position.
         /// </summary>
         /// <param name="container">The target spline.</param>
-        /// <param name="position">The </param>
+        /// <param name="position">The point in world space to move the pivot to.</param>
         public static void SetPivot(SplineContainer container, Vector3 position)
         {
             var transform = container.transform;
@@ -787,6 +855,111 @@ namespace UnityEngine.Splines
             var spline = container.Spline;
             for (int i = 0, c = spline.Count; i < c; i++)
                 spline[i] = spline[i] - delta;
+        }
+
+        /// <summary>
+        /// Creates a new spline and adds it to the SplineContainer.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <return>Returns the spline that was created and added to the container.</return>
+        public static Spline AddSpline<T>(this T container) where T : ISplineContainer
+        {
+            var splines = new List<Spline>(container.Splines);
+            var spline = new Spline();
+            splines.Add(spline);
+            container.Splines = splines;
+            return spline;
+        }
+
+        /// Removes a spline from a SplineContainer.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="splineIndex">The index of the spline to remove from the SplineContainer.</param>
+        /// <return>Returns true if the spline was removed from the container.</return>
+        public static bool RemoveSplineAt<T>(this T container, int splineIndex) where T : ISplineContainer
+        {
+            if (splineIndex < 0 || splineIndex >= container.Splines.Count)
+                return false;
+
+            var splines = new List<Spline>(container.Splines);
+            splines.RemoveAt(splineIndex);
+            container.KnotLinkCollection.SplineRemoved(splineIndex);
+
+            container.Splines = splines;
+            return true;
+        }
+
+        /// <summary>
+        /// Removes a spline from a SplineContainer.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="spline">The spline to remove from the SplineContainer.</param>
+        /// <return>Returns true if the spline was removed from the container.</return>
+        public static bool RemoveSpline<T>(this T container, Spline spline) where T : ISplineContainer
+        {
+            var splines = new List<Spline>(container.Splines);
+            var index = splines.IndexOf(spline);
+            if (index < 0)
+                return false;
+
+            splines.RemoveAt(index);
+            container.KnotLinkCollection.SplineRemoved(index);
+
+            container.Splines = splines;
+            return true;
+        }
+
+        internal static bool IsIndexValid<T>(T container, SplineKnotIndex index) where T : ISplineContainer
+        {
+            return index.Knot >= 0 && index.Knot < container.Splines[index.Spline].Count &&
+                index.Spline < container.Splines.Count && index.Knot < container.Splines[index.Spline].Count;
+        }
+
+        /// <summary>
+        /// Synchronizes the position of all knots linked to the knot at `index`.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="index">The `SplineKnotIndex` of the knot to use to synchronize the positions.</param>
+        public static void SetLinkedKnotPosition<T>(this T container, SplineKnotIndex index) where T : ISplineContainer
+        {
+            if (!container.KnotLinkCollection.TryGetKnotLinks(index, out var knots))
+                return;
+
+            var splines = container.Splines;
+            var position = splines[index.Spline][index.Knot].Position;
+
+            foreach (var i in knots)
+            {
+                if (!IsIndexValid(container, i))
+                    return;
+
+                var knot = splines[i.Spline][i.Knot];
+                knot.Position = position;
+                splines[i.Spline].SetKnotNoNotify(i.Knot, knot);
+            }
+        }
+
+        /// <summary>
+        /// Links two knots in a SplineContainer. The two knots can be on different splines, but both must be in the referenced SplineContainer.
+        /// If these knots are linked to other knots, all existing links are kept and updated.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="knotA">The first knot to link.</param>
+        /// <param name="knotB">The second knot to link.</param>
+        public static void LinkKnots<T>(this T container, SplineKnotIndex knotA,  SplineKnotIndex knotB) where T : ISplineContainer
+        {
+            container.KnotLinkCollection.Link(knotA, knotB);
+        }
+
+        /// <summary>
+        /// Unlinks several knots from a SplineContainer. A knot in `knots` disconnects from other knots it was linked to.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="knots">The knot to unlink.</param>
+        public static void UnlinkKnots<T>(this T container, IReadOnlyList<SplineKnotIndex> knots) where T : ISplineContainer
+        {
+            foreach (var knot in knots)
+                container.KnotLinkCollection.Unlink(knot);
         }
     }
 }

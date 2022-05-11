@@ -16,9 +16,12 @@ namespace UnityEngine.Splines
     /// </remarks>
     public struct NativeSpline : ISpline, IDisposable
     {
+        [ReadOnly]
         NativeArray<BezierKnot> m_Knots;
+
         // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
         // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
+        [ReadOnly]
         NativeArray<DistanceToInterpolation> m_SegmentLengthsLookupTable;
         bool m_Closed;
         float m_Length;
@@ -62,8 +65,7 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <returns>An IEnumerator that is used to iterate the <see cref="BezierKnot"/> collection.</returns>
         public IEnumerator<BezierKnot> GetEnumerator() => m_Knots.GetEnumerator();
-            
-        /// <inheritdoc cref="GetEnumerator"/>
+
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>

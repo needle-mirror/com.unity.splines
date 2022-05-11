@@ -1,26 +1,30 @@
 using System;
+using UnityEngine.Splines;
 using System.Collections.Generic;
-using System.Linq;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines
 {
     sealed class ElementInspector : VisualElement, IDisposable
     {
+        public static bool ignoreKnotCallbacks = true;
+
         static readonly string k_NoSelectionMessage = L10n.Tr("No element selected");
-        static readonly string k_MultiSelectNoAllowedMessage = L10n.Tr(" - not supported");
-
+        
+        readonly Label m_KnotIdentifierLabel;
         readonly Label m_ErrorMessage;
+        readonly SplineActionButtons m_SplineActionButtons;
+        readonly VisualElement m_SplineDrawerRoot;
 
-        Type m_InspectedType;
-        EditableKnot m_TargetKnot;
         IElementDrawer m_ElementDrawer;
+        readonly CommonElementDrawer m_CommonElementDrawer = new CommonElementDrawer();
+        readonly BezierKnotDrawer m_BezierKnotDrawer = new BezierKnotDrawer();
+        readonly TangentDrawer m_TangentDrawer = new TangentDrawer();
 
         static StyleSheet s_CommonStyleSheet;
         static StyleSheet s_ThemeStyleSheet;
-        
-        bool m_InspectorDirty;
-        public bool ignoreKnotCallbacks { get; set; }
+        static StyleSheet s_ButtonStripStyleSheet;
 
         public ElementInspector()
         {
@@ -28,77 +32,81 @@ namespace UnityEditor.Splines
                 s_CommonStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/com.unity.splines/Editor/Stylesheets/SplineInspectorCommon.uss");
             if (s_ThemeStyleSheet == null)
                 s_ThemeStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"Packages/com.unity.splines/Editor/Stylesheets/SplineInspector{(EditorGUIUtility.isProSkin ? "Dark" : "Light")}.uss");
+            if (s_ButtonStripStyleSheet == null)
+                s_ButtonStripStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/com.unity.splines/Editor/Stylesheets/ButtonStripField.uss");
 
             styleSheets.Add(s_CommonStyleSheet);
             styleSheets.Add(s_ThemeStyleSheet);
+            styleSheets.Add(s_ButtonStripStyleSheet);
+            
+            Add(m_KnotIdentifierLabel = new Label());
+            m_KnotIdentifierLabel.style.height = 24;
+            m_KnotIdentifierLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
 
-            m_ErrorMessage = new Label();
-            Add(m_ErrorMessage);
+            Add(m_ErrorMessage = new Label { name = "ErrorMessage"});
+            Add(m_SplineDrawerRoot = new VisualElement());
+            Add(m_SplineActionButtons = new SplineActionButtons());
 
-            EditableKnot.knotModified += OnKnotModified;
-            EditorApplication.update += UpdateIfDirty;
+            Spline.Changed += OnKnotModified;
         }
 
         public void Dispose()
         {
-            EditableKnot.knotModified -= OnKnotModified;
+            Spline.Changed -= OnKnotModified;
         }
 
-        void OnKnotModified(EditableKnot knot)
+        void OnKnotModified(Spline spline, int index, SplineModification modification)
         {
-            if (!ignoreKnotCallbacks && m_TargetKnot == knot)
-                m_InspectorDirty = true;
+            if (modification == SplineModification.KnotModified && !ignoreKnotCallbacks && m_ElementDrawer != null && m_ElementDrawer.HasKnot(spline, index))
+                m_ElementDrawer.Update();
         }
 
-        void UpdateIfDirty()
+        public void UpdateSelection(IReadOnlyList<SplineInfo> selectedSplines)
         {
-            if(m_InspectorDirty)
+            UpdateDrawerForElements(selectedSplines);
+            
+            if (SplineSelection.Count < 1 || m_ElementDrawer == null)
             {
-                m_ElementDrawer?.Update();
-                m_InspectorDirty = false;
-            }
-        }
-
-        public void SetElement(ISplineElement element, int selectCount)
-        {
-            UpdateDrawerForElementType(selectCount > 1 ? null : element?.GetType());
-
-            if (selectCount > 1)
-                ShowErrorMessage(BuildMultiSelectError(selectCount)+k_MultiSelectNoAllowedMessage);
-            else if (element == null || m_ElementDrawer == null)
                 ShowErrorMessage(k_NoSelectionMessage);
+                m_KnotIdentifierLabel.style.display = DisplayStyle.None;
+                m_SplineActionButtons.style.display = DisplayStyle.None;
+            }
             else
             {
-                if (element is EditableKnot knot)
-                    m_TargetKnot = knot;
-                else if (element is EditableTangent tangent)
-                    m_TargetKnot = tangent.owner;
-
                 HideErrorMessage();
-                m_ElementDrawer.SetTarget(element);
+                m_ElementDrawer.PopulateTargets(selectedSplines);
                 m_ElementDrawer.Update();
+                m_KnotIdentifierLabel.text = m_ElementDrawer.GetLabelForTargets();
+                m_KnotIdentifierLabel.style.display = DisplayStyle.Flex;
+                m_SplineActionButtons.style.display = DisplayStyle.Flex;
             }
+
+            m_SplineActionButtons.RefreshSelection(selectedSplines);
         }
 
-        string BuildMultiSelectError(int selectCount)
+        void UpdateDrawerForElements(IReadOnlyList<SplineInfo> selectedSplines)
         {
-            string message = "(" + selectCount + ") ";
-            var selectionList = new List<ISplineElement>();
-            SplineSelection.GetSelectedElements(selectionList);
-            var isLookingForKnots = selectionList.FirstOrDefault() is EditableKnot;
-            foreach(var element in selectionList)
-            {
-                if(isLookingForKnots && element is EditableKnot)
-                    continue;
-                if(!isLookingForKnots && element is EditableTangent)
-                    continue;
+            bool hasKnot = SplineSelection.HasAny<SelectableKnot>(selectedSplines);
+            bool hasTangent = SplineSelection.HasAny<SelectableTangent>(selectedSplines);
 
-                message += "Elements selected";
-                return message;
-            }
+            IElementDrawer targetDrawer;
+            if (hasKnot && hasTangent)
+                targetDrawer = m_CommonElementDrawer; 
+            else if (hasKnot)
+                targetDrawer = m_BezierKnotDrawer;
+            else if (hasTangent)
+                targetDrawer = m_TangentDrawer;
+            else
+                targetDrawer = null;
 
-            message += isLookingForKnots ? "Knots selected" : "Tangents selected";
-            return message;
+            if (targetDrawer == m_ElementDrawer)
+                return;
+            
+            m_SplineDrawerRoot.Clear();
+            if (targetDrawer != null)
+                m_SplineDrawerRoot.Add((VisualElement) targetDrawer);
+
+            m_ElementDrawer = targetDrawer;
         }
 
         void ShowErrorMessage(string error)
@@ -110,31 +118,6 @@ namespace UnityEditor.Splines
         void HideErrorMessage()
         {
             m_ErrorMessage.style.display = DisplayStyle.None;
-        }
-
-        void UpdateDrawerForElementType(Type targetType)
-        {
-            if (m_InspectedType == targetType)
-                return;
-
-            if (m_ElementDrawer != null)
-                ((VisualElement)m_ElementDrawer).RemoveFromHierarchy();
-
-            if (targetType == null)
-                m_ElementDrawer = null;
-            else if (typeof(BezierEditableKnot).IsAssignableFrom(targetType))
-                m_ElementDrawer = new BezierKnotDrawer();
-            else if (typeof(EditableKnot).IsAssignableFrom(targetType))
-                m_ElementDrawer = new KnotDrawer();
-            else if (typeof(EditableTangent).IsAssignableFrom(targetType))
-                m_ElementDrawer = new TangentDrawer();
-            else
-                m_ElementDrawer = null;
-
-            if (m_ElementDrawer != null)
-                Add((VisualElement)m_ElementDrawer);
-
-            m_InspectedType = targetType;
         }
     }
 }

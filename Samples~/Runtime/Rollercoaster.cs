@@ -5,25 +5,34 @@ using Unity.Splines.Examples;
 using UnityEngine;
 using UnityEngine.Splines;
 
-[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class Rollercoaster : MonoBehaviour, ISplineProvider
+namespace Unity.Splines.Examples
 {
-	[SerializeField]
-	RollercoasterTrack m_Track;
+    [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+    public class Rollercoaster : MonoBehaviour, ISplineContainer
+    {
+        [SerializeField]
+        RollercoasterTrack m_Track;
 
-	[SerializeField]
-	Transform m_Cart;
+        [SerializeField]
+        Transform m_Cart;
 
-	[SerializeField]
-	float m_Speed = .314f;
-	
-	public IEnumerable<Spline> Splines => new[] { m_Track };
+        [SerializeField]
+        float m_Speed = .314f;
 
-	void Update()
-	{
-		var trs = transform;
-		var t = math.frac(Time.time * m_Speed);
-		m_Cart.position = trs.TransformPoint(m_Track.EvaluatePosition(t));
-		m_Cart.rotation = Quaternion.LookRotation(trs.TransformDirection(m_Track.EvaluateTangent(t)));
-	}
+        void Update()
+        {
+            var trs = transform;
+            var t = math.frac(Time.time * m_Speed);
+            m_Cart.position = trs.TransformPoint(m_Track.EvaluatePosition(t));
+            m_Cart.rotation = Quaternion.LookRotation(trs.TransformDirection(m_Track.EvaluateTangent(t)));
+        }
+
+        public IReadOnlyList<Spline> Splines
+        {
+            get => new[] { m_Track };
+            set => throw new NotImplementedException();
+        }
+
+        public KnotLinkCollection KnotLinkCollection { get; }
+    }
 }

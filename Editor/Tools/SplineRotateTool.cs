@@ -7,17 +7,15 @@ namespace UnityEditor.Splines
 {
     [CustomEditor(typeof(SplineRotateTool))]
     class SplineRotateToolSettings : SplineToolSettings { }
-    
+
 #if UNITY_2021_2_OR_NEWER
-    [EditorTool("Spline Rotate", typeof(ISplineProvider), typeof(SplineToolContext))]
+    [EditorTool("Spline Rotate", typeof(ISplineContainer), typeof(SplineToolContext))]
 #else
-    [EditorTool("Spline Rotate", typeof(ISplineProvider))]
+    [EditorTool("Spline Rotate", typeof(ISplineContainer))]
 #endif
     sealed class SplineRotateTool : SplineTool
     {
         public override GUIContent toolbarIcon => PathIcons.splineRotateTool;
-
-        internal override SplineHandlesOptions handlesOptions => SplineHandlesOptions.ManipulationDefault;
 
         Quaternion m_CurrentRotation = Quaternion.identity;
         Vector3 m_RotationCenter = Vector3.zero;
@@ -34,16 +32,17 @@ namespace UnityEditor.Splines
                 TransformOperation.pivotFreeze = TransformOperation.PivotFreeze.None;
                 TransformOperation.UpdateHandleRotation();
             }
-            
+
             if (Event.current.type == EventType.Layout)
                 TransformOperation.UpdatePivotPosition(true);
-            
+
             if(TransformOperation.canManipulate)
             {
                 EditorGUI.BeginChangeCheck();
                 var rotation = Handles.DoRotationHandle(m_CurrentRotation, m_RotationCenter);
                 if(EditorGUI.EndChangeCheck())
                 {
+                    EditorSplineUtility.RecordSelection($"Rotate Spline Elements ({SplineSelection.Count})");
                     TransformOperation.ApplyRotation(rotation * Quaternion.Inverse(m_CurrentRotation), m_RotationCenter);
                     m_CurrentRotation = rotation;
                 }
@@ -55,8 +54,6 @@ namespace UnityEditor.Splines
                     m_RotationCenter = TransformOperation.pivotPosition;
                 }
             }
-
-            SplineConversionUtility.ApplyEditableSplinesIfDirty(targets);
         }
     }
 }

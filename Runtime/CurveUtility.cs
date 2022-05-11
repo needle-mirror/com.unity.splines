@@ -214,7 +214,7 @@ namespace UnityEngine.Splines
         internal static float3 EvaluateUpVector(BezierCurve curve, float t, float3 startUp, float3 endUp)
         {
             // Ensure we have workable tangents by linearizing ones that are of zero length
-            var linearTangentLen = math.length(SplineUtility.GetLinearTangent(curve.P0, curve.P3));
+            var linearTangentLen = math.length(SplineUtility.GetExplicitLinearTangent(curve.P0, curve.P3));
             var linearTangentOut = math.normalize(curve.P3 - curve.P0) * linearTangentLen;
             if (Mathf.Approximately(math.length(curve.P0 - curve.P1), 0f))
                 curve.P1 = curve.P0 + linearTangentOut;

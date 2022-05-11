@@ -6,9 +6,6 @@ using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
-    /// <summary>
-    /// Provides methods for drawing <see cref="SplineData"/> manipulation handles.
-    /// </summary>
     public static class SplineDataHandles
     {
         const float k_HandleSize = 0.15f;
@@ -29,13 +26,15 @@ namespace UnityEditor.Splines
         /// on the spline adds a new DataPoint in the SplineData. Left click on an existing DataPoint
         /// allows to move this point along the Spline while a right click on it allows to delete that DataPoint. 
         /// </summary>
-        /// <param name="spline">The Spline to use to interpret the SplineData.</param>
+        /// <param name="spline">The Spline to use to interprete the SplineData.</param>
         /// <param name="splineData">The SplineData for which the handles are drawn.</param>
+        /// <param name="useDefaultValueOnAdd">Either to use default value or closer DataPoint value when adding new DataPoint.</param>
         /// <typeparam name="TSpline">The Spline type.</typeparam>
         /// <typeparam name="TData">The type of data this data point stores.</typeparam>
         public static void DataPointHandles<TSpline, TData>(
             this TSpline spline, 
-            SplineData<TData> splineData) 
+            SplineData<TData> splineData,
+            bool useDefaultValueOnAdd = false) 
                 where TSpline : ISpline
         {
             var evt = Event.current;
@@ -52,7 +51,7 @@ namespace UnityEditor.Splines
 
             //Only activating the tooling when close enough from the spline
             if(m_ShowAddHandle)
-                DataPointAddHandle(id, spline, splineData, m_Position, m_T);
+                DataPointAddHandle(id, spline, splineData, m_Position, m_T, useDefaultValueOnAdd);
 
             //Remove DataPoint functionality
             TryRemoveDataPoint(splineData);
@@ -80,7 +79,8 @@ namespace UnityEditor.Splines
             TSpline spline, 
             SplineData<TData> splineData, 
             float3 pos, 
-            float t) 
+            float t, 
+            bool useDefaultValueOnAdd = false) 
             where TSpline : ISpline
         {
             Event evt = Event.current;
@@ -113,7 +113,7 @@ namespace UnityEditor.Splines
                             spline, t,
                             splineData.PathIndexUnit);
                         
-                        s_NewDataPointIndex = splineData.AddDataPointWithDefaultValue(index);
+                        s_NewDataPointIndex = splineData.AddDataPointWithDefaultValue(index, useDefaultValueOnAdd);
                         evt.Use();
                     }
                     break;

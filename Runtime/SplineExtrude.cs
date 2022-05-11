@@ -46,7 +46,10 @@ namespace UnityEngine.Splines
         float m_NextScheduledRebuild;
 
         /// <summary>The SplineContainer of the <see cref="Spline"/> to extrude.</summary>
-        public SplineContainer container
+        [Obsolete("Use Container instead.", false)]
+        public SplineContainer container => Container;
+        /// <summary>The SplineContainer of the <see cref="Spline"/> to extrude.</summary>
+        public SplineContainer Container
         {
             get => m_Container;
             set => m_Container = value;
@@ -56,42 +59,63 @@ namespace UnityEngine.Splines
         /// Enable to regenerate the extruded mesh when the target Spline is modified. Disable this option if the Spline
         /// will not be modified at runtime.
         /// </summary>
-        public bool rebuildOnSplineChange
+        [Obsolete("Use RebuildOnSplineChange instead.", false)]
+        public bool rebuildOnSplineChange => RebuildOnSplineChange;
+        /// <summary>
+        /// Enable to regenerate the extruded mesh when the target Spline is modified. Disable this option if the Spline
+        /// will not be modified at runtime.
+        /// </summary>
+        public bool RebuildOnSplineChange
         {
             get => m_RebuildOnSplineChange;
             set => m_RebuildOnSplineChange = value;
         }
 
         /// <summary>The maximum number of times per-second that the mesh will be rebuilt.</summary>
-        public int rebuildFrequency
+        [Obsolete("Use RebuildFrequency instead.", false)]
+        public int rebuildFrequency => RebuildFrequency;
+        /// <summary>The maximum number of times per-second that the mesh will be rebuilt.</summary>
+        public int RebuildFrequency
         {
             get => m_RebuildFrequency;
             set => m_RebuildFrequency = Mathf.Max(value, 1);
         }
 
         /// <summary>How many sides make up the radius of the mesh.</summary>
-        public int sides
+        [Obsolete("Use Sides instead.", false)]
+        public int sides => Sides;
+        /// <summary>How many sides make up the radius of the mesh.</summary>
+        public int Sides
         {
             get => m_Sides;
             set => m_Sides = Mathf.Max(value, 3);
         }
 
         /// <summary>How many edge loops comprise the one unit length of the mesh.</summary>
-        public float segmentsPerUnit
+        [Obsolete("Use SegmentsPerUnit instead.", false)]
+        public float segmentsPerUnit => SegmentsPerUnit;
+        /// <summary>How many edge loops comprise the one unit length of the mesh.</summary>
+        public float SegmentsPerUnit
         {
             get => m_SegmentsPerUnit;
             set => m_SegmentsPerUnit = Mathf.Max(value, .0001f);
         }
 
         /// <summary>Whether the start and end of the mesh is filled. This setting is ignored when spline is closed.</summary>
-        public bool capped
+        [Obsolete("Use Capped instead.", false)]
+        public bool capped => Capped;
+        /// <summary>Whether the start and end of the mesh is filled. This setting is ignored when spline is closed.</summary>
+        public bool Capped
         {
             get => m_Capped;
             set => m_Capped = value;
         }
 
         /// <summary>The radius of the extruded mesh.</summary>
-        public float radius
+        [Obsolete("Use Radius instead.", false)]
+        public float radius => Radius;
+        /// <summary>The radius of the extruded mesh.</summary>
+        public float Radius
         {
             get => m_Radius;
             set => m_Radius = Mathf.Max(value, .00001f);
@@ -100,14 +124,22 @@ namespace UnityEngine.Splines
         /// <summary>
         /// The section of the Spline to extrude.
         /// </summary>
-        public Vector2 range
+        [Obsolete("Use Range instead.", false)]
+        public Vector2 range => Range;
+        /// <summary>
+        /// The section of the Spline to extrude.
+        /// </summary>
+        public Vector2 Range
         {
             get => m_Range;
             set => m_Range = new Vector2(Mathf.Min(value.x, value.y), Mathf.Max(value.x, value.y));
         }
 
         /// <summary>The Spline to extrude.</summary>
-        public Spline spline
+        [Obsolete("Use Spline instead.", false)]
+        public Spline spline => Spline;
+        /// <summary>The Spline to extrude.</summary>
+        public Spline Spline
         {
             get
             {
@@ -152,11 +184,24 @@ namespace UnityEngine.Splines
             if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
                 Debug.LogError("SplineExtrude.createMeshInstance is disabled, but there is no valid mesh assigned. " +
                     "Please create or assign a writable mesh asset.");
-
-            if (m_RebuildOnSplineChange)
-                m_Spline.changed += () => m_RebuildRequested = true;
-
+            
             Rebuild();
+        }
+
+        void OnEnable()
+        {
+            Spline.Changed += OnSplineChanged;
+        }
+
+        void OnDisable()
+        {
+            Spline.Changed -= OnSplineChanged;
+        }
+
+        void OnSplineChanged(Spline spline, int knotIndex, SplineModification modificationType)
+        {
+            if (m_Container != null && m_Container.Spline == spline && m_RebuildOnSplineChange)
+                m_RebuildRequested = true;
         }
 
         void Update()
@@ -173,9 +218,9 @@ namespace UnityEngine.Splines
             if(m_Mesh == null && (m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
                 return;
 
-            float span = Mathf.Abs(range.y - range.x);
-            int segments = Mathf.Max((int)Mathf.Ceil(spline.GetLength() * span * m_SegmentsPerUnit), 1);
-            SplineMesh.Extrude(spline, m_Mesh, m_Radius, m_Sides, segments, m_Capped, m_Range);
+            float span = Mathf.Abs(Range.y - Range.x);
+            int segments = Mathf.Max((int)Mathf.Ceil(Spline.GetLength() * span * m_SegmentsPerUnit), 1);
+            SplineMesh.Extrude(Spline, m_Mesh, m_Radius, m_Sides, segments, m_Capped, m_Range);
             m_NextScheduledRebuild = Time.time + 1f / m_RebuildFrequency;
 
             if (m_UpdateColliders)

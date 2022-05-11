@@ -1,17 +1,21 @@
-#Linear {
+.tangent-linear {
 	background-image: url("../Resources/Icons/d_Tangent_Linear.png");
 }
 
-#Continuous {
+.tangent-continuous {
 	background-image: url("../Resources/Icons/d_Tangent_Continuous.png");
 }
 
-#Mirrored {
+.tangent-mirrored {
 	background-image: url("../Resources/Icons/d_Tangent_Mirrored.png");
 }
 
-#Broken {
+.tangent-broken {
 	background-image: url("../Resources/Icons/d_Tangent_Broken.png");
+}
+
+.tangent-autosmooth {
+	background-image: url("../Resources/Icons/d_AutoSmoothKnot.png");
 }
 
 #PositionIcon {

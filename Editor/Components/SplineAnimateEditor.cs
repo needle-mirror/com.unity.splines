@@ -34,7 +34,7 @@ namespace UnityEditor.Splines
         void OnEnable()
         {
             m_SplineAnimate = target as SplineAnimate;
-            m_SplineAnimate.onUpdated += OnSplineAnimateUpdated;
+            m_SplineAnimate.Updated += OnSplineAnimateUpdated;
             m_TargetProperty = serializedObject.FindProperty("m_Target");
             m_MethodProperty = serializedObject.FindProperty("m_Method");
             m_DurationProperty = serializedObject.FindProperty("m_Duration");
@@ -48,12 +48,12 @@ namespace UnityEditor.Splines
 
         void OnDisable()
         {
-            if (m_SplineAnimate != null && m_SplineAnimate.splineContainer != null)
+            if (m_SplineAnimate != null && m_SplineAnimate.Container != null)
             {
                 if (!EditorApplication.isPlaying)
                     m_SplineAnimate.Restart(false);
 
-                m_SplineAnimate.onUpdated -= OnSplineAnimateUpdated;
+                m_SplineAnimate.Updated -= OnSplineAnimateUpdated;
             }
 
             EditorApplication.update -= OnEditorUpdate;
@@ -61,10 +61,10 @@ namespace UnityEditor.Splines
 
         void OnEditorUpdate()
         {
-            if (m_SplineAnimate == null || m_SplineAnimate.splineContainer == null)
+            if (m_SplineAnimate == null || m_SplineAnimate.Container == null)
                 return;
             
-            if (m_SplineAnimate.isPlaying && !EditorApplication.isPlaying)
+            if (m_SplineAnimate.IsPlaying && !EditorApplication.isPlaying)
                 m_SplineAnimate.Update();
 
             RefreshProgressFields();
@@ -84,17 +84,17 @@ namespace UnityEditor.Splines
             m_Root.styleSheets.Add(s_ThemeStyleSheet);
             
             var splineField = m_Root.Q<PropertyField>("spline-container");
-            splineField.RegisterValueChangeCallback((_) => { m_SplineAnimate.splineContainer = m_TargetProperty.objectReferenceValue as SplineContainer; });
+            splineField.RegisterValueChangeCallback((_) => { m_SplineAnimate.Container = m_TargetProperty.objectReferenceValue as SplineContainer; });
 
             var methodField = m_Root.Q<PropertyField>("method");
             methodField.RegisterValueChangeCallback((_) => { RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex); });
             RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex);
             
             var durationField = m_Root.Q<PropertyField>("duration");
-            durationField.RegisterValueChangeCallback((_) => { m_SplineAnimate.duration = m_DurationProperty.floatValue; });
+            durationField.RegisterValueChangeCallback((_) => { m_SplineAnimate.Duration = m_DurationProperty.floatValue; });
             
             var speedField = m_Root.Q<PropertyField>("max-speed");
-            speedField.RegisterValueChangeCallback((_) => { m_SplineAnimate.maxSpeed = m_SpeedProperty.floatValue; });
+            speedField.RegisterValueChangeCallback((_) => { m_SplineAnimate.MaxSpeed = m_SpeedProperty.floatValue; });
             
             m_ObjectForwardField = m_Root.Q<EnumField>("object-forward");
             m_ObjectForwardField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectForwardProperty, m_ObjectUpProperty));
@@ -143,13 +143,13 @@ namespace UnityEditor.Splines
                 return;
 
             m_ProgressSlider.SetValueWithoutNotify(m_SplineAnimate.GetLoopInterpolation());
-            m_ElapsedTimeField.SetValueWithoutNotify(m_SplineAnimate.elapsedTime);
+            m_ElapsedTimeField.SetValueWithoutNotify(m_SplineAnimate.ElapsedTime);
         }
 
         void OnProgressSliderChange(float progress)
         {
             m_SplineAnimate.Pause();
-            m_SplineAnimate.normalizedTime = progress;
+            m_SplineAnimate.NormalizedTime = progress;
 
             RefreshProgressFields();
         }
@@ -157,7 +157,7 @@ namespace UnityEditor.Splines
         void OnElapsedTimeFieldChange(float elapsedTime)
         {
             m_SplineAnimate.Pause();
-            m_SplineAnimate.elapsedTime = elapsedTime;
+            m_SplineAnimate.ElapsedTime = elapsedTime;
 
             RefreshProgressFields();
         }
@@ -186,9 +186,9 @@ namespace UnityEditor.Splines
 
         void OnPlayClicked()
         {
-            if (!m_SplineAnimate.isPlaying)
+            if (!m_SplineAnimate.IsPlaying)
             {
-                if (m_SplineAnimate.normalizedTime == 1f)
+                if (m_SplineAnimate.NormalizedTime == 1f)
                     m_SplineAnimate.Restart(true);
                 else
                     m_SplineAnimate.Play();

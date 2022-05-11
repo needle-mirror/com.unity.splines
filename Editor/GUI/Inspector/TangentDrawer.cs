@@ -1,5 +1,6 @@
+using System.Collections.Generic;
 using Unity.Mathematics;
-using UnityEngine;
+using UnityEngine.Splines;
 using UnityEngine.UIElements;
 
 #if !UNITY_2022_1_OR_NEWER
@@ -8,77 +9,93 @@ using UnityEditor.UIElements;
 
 namespace UnityEditor.Splines
 {
-    sealed class TangentDrawer : ElementDrawer<EditableTangent>
+    sealed class TangentDrawer : ElementDrawer<SelectableTangent>
     {
         const string k_TangentDrawerStyle = "tangent-drawer";
         const string k_TangentLabelStyle = "tangent-label";
         const string k_TangentFillerStyle = "tangent-filler";
-        
-        readonly Label m_TangentLabel;
-        readonly TangentModeStrip m_Mode;
+        const string k_TangentMagnitudeFloatFieldStyle = "tangent-magnitude-floatfield";
+
+        static readonly List<float> s_LengthBuffer = new List<float>(0);
+        static readonly SplineGUIUtility.EqualityComparer<float> s_MagnitudeComparer = (a, b) => a.Equals(b);
+
+        readonly TangentModeDropdown<SelectableTangent> m_Mode;
+        readonly BezierTangentModeDropdown<SelectableTangent> m_BezierMode;
 
         FloatField m_Magnitude;
         Label m_DirectionLabel;
-        Vector3Field m_Direction;
-        FloatField m_DirectionX;
-        FloatField m_DirectionY;
-        FloatField m_DirectionZ;
+        Float3PropertyField<SelectableTangent> m_Direction;
 
         public TangentDrawer()
         {
             AddToClassList(k_TangentDrawerStyle);
-            Add(m_TangentLabel = new Label());
-            m_TangentLabel.style.height = 24;
-            m_TangentLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            Add(m_Mode = new TangentModeStrip());
+
+            Add(m_Mode = new TangentModeDropdown<SelectableTangent>());
+            m_Mode.changed += () =>
+            {
+                m_BezierMode.Update(targets);
+                EnableElements();
+            };
+            Add(m_BezierMode = new BezierTangentModeDropdown<SelectableTangent>());
+            m_BezierMode.changed += () =>
+            {
+                m_Mode.Update(targets);
+                EnableElements();
+            };
             
             CreateTangentFields();
-            
+
             m_Magnitude.RegisterValueChangedCallback((evt) =>
             {
+                Undo.RecordObject(target.SplineInfo.Target, SplineInspectorOverlay.SplineChangeUndoMessage);
                 UpdateTangentMagnitude(evt.newValue);
-                m_Direction.SetValueWithoutNotify(target.localPosition);
-                RoundFloatFieldsValues();
+                var tangent = target;
+                m_Direction.SetValueWithoutNotify(tangent.LocalPosition);
             });
 
-            m_Direction.RegisterValueChangedCallback((evt) =>
-            {
-                IgnoreKnotCallbacks(true);
-                target.localPosition = evt.newValue;
-                IgnoreKnotCallbacks(false);
-                m_Magnitude.SetValueWithoutNotify(Round(math.length(target.localPosition)));
-            });
+            Add(new Separator());
+        }
+
+        public override string GetLabelForTargets()
+        {
+            if (targets.Count > 1)
+                return $"<b>({targets.Count}) Tangents</b> selected";
+
+            var inOutLabel = target.TangentIndex == 0 ? "In" : "Out";
+            return $"Tangent <b>{inOutLabel}</b> selected (<b>Knot {target.KnotIndex}</b>)";
         }
 
         public override void Update()
         {
             base.Update();
+            
+            m_Mode.Update(targets);
+            m_BezierMode.Update(targets);
 
-            m_TangentLabel.text = GetTangentLabel();
-            m_Mode.SetElement(target);
-            m_Magnitude.SetValueWithoutNotify(math.length(target.localPosition));
-            m_Direction.SetValueWithoutNotify(target.localPosition);
-
-            RoundFloatFieldsValues();
-            //Disabling edition when using linear, mirrored or continuous tangents
-            EnableElements(m_Mode.GetMode());
+            UpdateMagnitudeField(targets);
+            m_Direction.Update(targets);
+            
+            EnableElements();
         }
 
         void CreateTangentFields()
         {
-            m_Magnitude = new FloatField("Magnitude",6);
+            m_Magnitude = new FloatField("Magnitude", 3);
+            var field = m_Magnitude.Q<VisualElement>("unity-text-input");
+            field.AddToClassList(k_TangentMagnitudeFloatFieldStyle);
 
             m_DirectionLabel = new Label("Direction");
             m_DirectionLabel.AddToClassList(k_TangentLabelStyle);
-            
+
             var filler = new VisualElement();
             filler.AddToClassList(k_TangentFillerStyle);
 
-            m_Direction = new Vector3Field(){name = "direction"};
-            m_DirectionX = m_Direction.Q<FloatField>("unity-x-input");
-            m_DirectionY = m_Direction.Q<FloatField>("unity-y-input");
-            m_DirectionZ = m_Direction.Q<FloatField>("unity-z-input");
-            
+            Add(m_Direction = new Float3PropertyField<SelectableTangent>("",
+                    (tangent) => tangent.LocalDirection,
+                    (tangent, value) => tangent.LocalDirection = value)
+                { name = "direction" });
+            m_Direction.changed += () => { UpdateMagnitudeField(targets); };
+
             //Build UI Hierarchy
             Add(m_Magnitude);
             Add(m_DirectionLabel);
@@ -86,40 +103,50 @@ namespace UnityEditor.Splines
             filler.Add(m_Direction);
         }
 
-        string GetTangentLabel()
+        void UpdateMagnitudeField(IReadOnlyList<SelectableTangent> tangents)
         {
-            var inOutLabel = target.tangentIndex == 0 ? "In" : "Out";
-            string label = "Tangent "+inOutLabel+" selected (Knot "+target.owner.index+")";
-            return label;
+            s_LengthBuffer.Clear();
+            for (int i = 0; i < tangents.Count; ++i)
+                s_LengthBuffer.Add(math.length(tangents[i].LocalPosition));
+
+            m_Magnitude.showMixedValue = SplineGUIUtility.HasMultipleValues(s_LengthBuffer, s_MagnitudeComparer);
+            if (!m_Magnitude.showMixedValue)
+                m_Magnitude.SetValueWithoutNotify(s_LengthBuffer[0]);
         }
 
         void UpdateTangentMagnitude(float value)
         {
-            var direction = new float3(0, 0, 1);
+            ElementInspector.ignoreKnotCallbacks = true;
+            for (int i = 0; i < targets.Count; ++i)
+            {
+                var direction = new float3(0, 0, 1);
+
+                var tangent = targets[i];
+                if (math.length(tangent.LocalPosition) > 0)
+                    direction = math.normalize(tangent.LocalPosition);
+
+                tangent.LocalPosition = value * direction;
+            }
+            ElementInspector.ignoreKnotCallbacks = false;
+        }
+
+        void EnableElements()
+        {
+            bool tangentsModifiable = true;
+            bool tangentsBroken = true;
+            for (int i = 0; i < targets.Count; ++i)
+            {
+                var mode = targets[i].Owner.Mode;
+                tangentsModifiable &= EditorSplineUtility.AreTangentsModifiable(mode);
+                tangentsBroken &= mode == TangentMode.Broken;
+            }
             
-            if(math.length(target.localPosition) > 0)
-                direction = math.normalize(target.localPosition);
+            m_DirectionLabel.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
+            m_Direction.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
+            m_Magnitude.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
 
-            IgnoreKnotCallbacks(true);
-            target.localPosition = value * direction;
-            IgnoreKnotCallbacks(false);
-        }
-
-        void RoundFloatFieldsValues()
-        {
-            m_Magnitude.SetValueWithoutNotify(Round(m_Magnitude.value));
-            m_DirectionX.SetValueWithoutNotify(Round(m_DirectionX.value));
-            m_DirectionY.SetValueWithoutNotify(Round(m_DirectionY.value));
-            m_DirectionZ.SetValueWithoutNotify(Round(m_DirectionZ.value));
-        }
-
-        void EnableElements(BezierEditableKnot.Mode mode)
-        {
-            var bezierTangent = m_Mode.GetMode() != BezierEditableKnot.Mode.Linear;
-            var brokenMode = m_Mode.GetMode() == BezierEditableKnot.Mode.Broken;
-            m_Magnitude.SetEnabled(bezierTangent);
-            m_DirectionLabel.SetEnabled(brokenMode);
-            m_Direction.SetEnabled(brokenMode);
+            if(tangentsModifiable)
+                m_Direction.SetEnabled(tangentsBroken);
         }
     }
 }

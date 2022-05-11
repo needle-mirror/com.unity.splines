@@ -11,14 +11,14 @@ namespace Unity.Splines.Examples
         protected bool DrawDataPoints(ISpline spline, SplineData<DataType> splineData)
         {
             var inUse = false;
-            for(int dataFrameIndex = 0; dataFrameIndex < splineData.Count; dataFrameIndex++)
+            for (int dataFrameIndex = 0; dataFrameIndex < splineData.Count; dataFrameIndex++)
             {
                 var dataPoint = splineData[dataFrameIndex];
 
                 var normalizedT = SplineUtility.GetNormalizedInterpolation(spline, dataPoint.Index, splineData.PathIndexUnit);
                 spline.Evaluate(normalizedT, out var position, out var tangent, out var up);
-                
-                if(DrawDataPoint(position, tangent, up, dataPoint.Value, out var result))
+
+                if (DrawDataPoint(position, tangent, up, dataPoint.Value, out var result))
                 {
                     dataPoint.Value = result;
                     splineData[dataFrameIndex] = dataPoint;

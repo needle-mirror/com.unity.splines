@@ -1,41 +1,37 @@
-using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.Splines;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines
 {
     interface IElementDrawer
     {
-        void SetTarget(ISplineElement element);
+        bool HasKnot(Spline spline, int index);
+        void PopulateTargets(IReadOnlyList<SplineInfo> splines);
         void Update();
-        void OnTargetSet();
+        string GetLabelForTargets(); 
     }
 
     abstract class ElementDrawer<T> : VisualElement, IElementDrawer where T : ISplineElement
     {
-        const int k_FloatFieldsDigits = 3;
-        
-        public T target { get; private set; }
+        public List<T> targets { get; } = new List<T>();
+        public T target => targets[0];
 
         public virtual void Update() {}
+        public virtual string GetLabelForTargets() => string.Empty;
 
-        public void SetTarget(ISplineElement element)
+        public bool HasKnot(Spline spline, int index)
         {
-            target = (T) element;
-            OnTargetSet();
-        }
-        
-        public static float Round(float value)
-        {
-            float mult = Mathf.Pow(10.0f, k_FloatFieldsDigits);
-            return Mathf.Round(value * mult) / mult;
+            foreach (var t in targets)
+                if (t.SplineInfo.Spline == spline && t.KnotIndex == index)
+                    return true;
+
+            return false;
         }
 
-        public virtual void OnTargetSet() { }
-
-        protected void IgnoreKnotCallbacks(bool ignore)
+        public void PopulateTargets(IReadOnlyList<SplineInfo> splines)
         {
-            if (parent is ElementInspector inspector)
-                inspector.ignoreKnotCallbacks = ignore;
+            SplineSelection.GetElements(splines, targets);
         }
     }
 }

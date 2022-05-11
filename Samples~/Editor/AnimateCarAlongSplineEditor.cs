@@ -2,11 +2,14 @@ using Unity.Splines.Examples;
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(AnimateCarAlongSpline))]
-public class AnimateCarAlongSplineEditor : Editor
+namespace Unity.Splines.Examples
 {
-    void OnEnable()
+    [CustomEditor(typeof(AnimateCarAlongSpline))]
+    public class AnimateCarAlongSplineEditor : UnityEditor.Editor
     {
-        ((AnimateCarAlongSpline)target).Initialize();
+        void OnEnable()
+        {
+            ((AnimateCarAlongSpline)target).Initialize();
+        }
     }
 }

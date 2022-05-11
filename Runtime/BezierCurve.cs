@@ -110,6 +110,20 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
+        /// Multiply the curve positions by a matrix.
+        /// </summary>
+        /// <param name="matrix">The matrix to multiply.</param>
+        /// <returns>A new BezierCurve multiplied by matrix.</returns>
+        public BezierCurve Transform(float4x4 matrix)
+        {
+            return new BezierCurve(
+                math.transform(matrix, P0),
+                math.transform(matrix, P1),
+                math.transform(matrix, P2),
+                math.transform(matrix, P3));
+        }
+
+        /// <summary>
         /// Create a BezierCurve from a start and end point plus tangent directions.
         /// </summary>
         /// <param name="pointA">Starting position of the curve.</param>

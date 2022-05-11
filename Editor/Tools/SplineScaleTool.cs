@@ -7,17 +7,15 @@ namespace UnityEditor.Splines
 {
     [CustomEditor(typeof(SplineScaleTool))]
     class SplineScaleToolSettings : SplineToolSettings { }
-    
+
 #if UNITY_2021_2_OR_NEWER
-    [EditorTool("Spline Scale Tool", typeof(ISplineProvider), typeof(SplineToolContext))]
+    [EditorTool("Spline Scale Tool", typeof(ISplineContainer), typeof(SplineToolContext))]
 #else
-    [EditorTool("Spline Scale Tool", typeof(ISplineProvider))]
+    [EditorTool("Spline Scale Tool", typeof(ISplineContainer))]
 #endif
     sealed class SplineScaleTool : SplineTool
     {
         public override GUIContent toolbarIcon => PathIcons.splineScaleTool;
-
-        internal override SplineHandlesOptions handlesOptions => SplineHandlesOptions.ManipulationDefault;
 
         Vector3 m_currentScale = Vector3.one;
 
@@ -28,10 +26,10 @@ namespace UnityEditor.Splines
                 if (handleOrientation == HandleOrientation.Element || handleOrientation == HandleOrientation.Parent)
                     TransformOperation.pivotFreeze |= TransformOperation.PivotFreeze.Rotation;
             }
-            
+
             if (Event.current.type == EventType.Layout)
                 TransformOperation.UpdatePivotPosition(true);
-            
+
             if (Event.current.type == EventType.MouseDown)
             {
                 TransformOperation.RecordMouseDownState();
@@ -50,10 +48,12 @@ namespace UnityEditor.Splines
                 EditorGUI.BeginChangeCheck();
                 m_currentScale = Handles.DoScaleHandle(m_currentScale, TransformOperation.pivotPosition,
                     TransformOperation.handleRotation, HandleUtility.GetHandleSize(TransformOperation.pivotPosition));
-                if(EditorGUI.EndChangeCheck())
+                if (EditorGUI.EndChangeCheck())
+                {
+                    EditorSplineUtility.RecordSelection($"Scale Spline Elements ({SplineSelection.Count})");
                     TransformOperation.ApplyScale(m_currentScale);
+                }
             }
-            SplineConversionUtility.ApplyEditableSplinesIfDirty(targets);
         }
     }
 }

@@ -30,24 +30,26 @@ namespace Unity.Splines.Examples
         float m_TextureScale = 1f;
 
         WidthSplineData m_WidthData;
-        
+
         WidthSplineData widthData
         {
             get
             {
-                if(m_WidthData == null)
+                if (m_WidthData == null)
                     m_WidthData = GetComponent<WidthSplineData>();
-                if(m_WidthData == null)
+                if (m_WidthData == null)
                     m_WidthData = gameObject.AddComponent<WidthSplineData>();
 
-                if(m_WidthData.container == null)
-                    m_WidthData.container = m_Spline;
+                if (m_WidthData.Container == null)
+                    m_WidthData.Container = m_Spline;
 
                 return m_WidthData;
             }
         }
-        
-        public Spline spline
+
+        [Obsolete("Use LoftSpline instead.", false)]
+        public Spline spline => LoftSpline;
+        public Spline LoftSpline
         {
             get
             {
@@ -62,7 +64,9 @@ namespace Unity.Splines.Examples
             }
         }
 
-        public Mesh mesh
+        [Obsolete("Use LoftMesh instead.", false)]
+        public Mesh mesh => LoftMesh;
+        public Mesh LoftMesh
         {
             get
             {
@@ -75,7 +79,9 @@ namespace Unity.Splines.Examples
             }
         }
 
-        public int segmentsPerMeter => Mathf.Min(10, Mathf.Max(1, m_SegmentsPerMeter));
+        [Obsolete("Use SegmentsPerMeter instead.", false)]
+        public int segmentsPerMeter => SegmentsPerMeter;
+        public int SegmentsPerMeter => Mathf.Min(10, Mathf.Max(1, m_SegmentsPerMeter));
 
         List<Vector3> m_Positions = new List<Vector3>();
         List<Vector3> m_Normals = new List<Vector3>();
@@ -85,31 +91,31 @@ namespace Unity.Splines.Examples
         public void OnEnable()
         {
             //Avoid to point to an existing instance when duplicating the GameObject
-            if(m_Mesh != null)
+            if (m_Mesh != null)
                 m_Mesh = null;
 
-            if(m_WidthData == null)
+            if (m_WidthData == null)
                 m_WidthData = GetComponent<WidthSplineData>();
-            if(m_WidthData == null)
+            if (m_WidthData == null)
                 m_WidthData = gameObject.AddComponent<WidthSplineData>();
-            
+
             Loft();
-#if UNITY_EDITOR            
-            EditorSplineUtility.afterSplineWasModified += OnAfterSplineWasModified;
+#if UNITY_EDITOR
+            EditorSplineUtility.AfterSplineWasModified += OnAfterSplineWasModified;
             EditorSplineUtility.RegisterSplineDataChanged<float>(OnAfterSplineDataWasModified);
             Undo.undoRedoPerformed += Loft;
 #endif
         }
-        
+
         public void OnDisable()
         {
 #if UNITY_EDITOR
-            EditorSplineUtility.afterSplineWasModified -= OnAfterSplineWasModified;
+            EditorSplineUtility.AfterSplineWasModified -= OnAfterSplineWasModified;
             EditorSplineUtility.UnregisterSplineDataChanged<float>(OnAfterSplineDataWasModified);
             Undo.undoRedoPerformed -= Loft;
 #endif
-            
-            if(m_Mesh != null)
+
+            if (m_Mesh != null)
 #if  UNITY_EDITOR
                 DestroyImmediate(m_Mesh);
 #else
@@ -119,30 +125,30 @@ namespace Unity.Splines.Examples
 
         void OnAfterSplineWasModified(Spline s)
         {
-            if(s == spline)
+            if (s == LoftSpline)
                 Loft();
         }
-        
+
         void OnAfterSplineDataWasModified(SplineData<float> splineData)
         {
-            if (splineData == m_WidthData.width)
+            if (splineData == m_WidthData.Width)
                 Loft();
         }
-        
+
         public void Loft()
         {
-            if (spline == null || spline.Count < 2)
+            if (LoftSpline == null || LoftSpline.Count < 2)
                 return;
-            
-            mesh.Clear();
 
-            float length = spline.GetLength();
+            LoftMesh.Clear();
+
+            float length = LoftSpline.GetLength();
 
             if (length < 1)
                 return;
 
-            int segments = (int)(segmentsPerMeter * length);
-            int vertexCount = segments * 2, triangleCount = (spline.Closed ? segments : segments - 1) * 6;
+            int segments = (int)(SegmentsPerMeter * length);
+            int vertexCount = segments * 2, triangleCount = (LoftSpline.Closed ? segments : segments - 1) * 6;
 
             m_Positions.Clear();
             m_Normals.Clear();
@@ -157,18 +163,18 @@ namespace Unity.Splines.Examples
             for (int i = 0; i < segments; i++)
             {
                 var index = i / (segments - 1f);
-                var control = SplineUtility.EvaluatePosition(spline, index);
-                var dir = SplineUtility.EvaluateTangent(spline, index);
-                var up = SplineUtility.EvaluateUpVector(spline, index);
+                var control = SplineUtility.EvaluatePosition(LoftSpline, index);
+                var dir = SplineUtility.EvaluateTangent(LoftSpline, index);
+                var up = SplineUtility.EvaluateUpVector(LoftSpline, index);
 
                 var scale = transform.lossyScale;
                 //var tangent = math.normalize((float3)math.mul(math.cross(up, dir), new float3(1f / scale.x, 1f / scale.y, 1f / scale.z)));
                 var tangent = math.normalize(math.cross(up, dir)) * new float3(1f / scale.x, 1f / scale.y, 1f / scale.z);
 
-                var w = widthData.m_DefaultWidth;
-                if(widthData.width != null && widthData.Count > 0)
+                var w = widthData.Width.DefaultValue;
+                if (widthData.Width != null && widthData.Count > 0)
                 {
-                    w = widthData.width.Evaluate(spline, index, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
+                    w = widthData.Width.Evaluate(LoftSpline, index, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
                     w = math.clamp(w, .001f, 10000f);
                 }
 
@@ -190,12 +196,12 @@ namespace Unity.Splines.Examples
                 m_Indices.Add((n + 1) % vertexCount);
             }
 
-            mesh.SetVertices(m_Positions);
-            mesh.SetNormals(m_Normals);
-            mesh.SetUVs(0, m_Textures);
-            mesh.subMeshCount = 1;
-            mesh.SetIndices(m_Indices, MeshTopology.Triangles, 0);
-            mesh.UploadMeshData(false);
+            LoftMesh.SetVertices(m_Positions);
+            LoftMesh.SetNormals(m_Normals);
+            LoftMesh.SetUVs(0, m_Textures);
+            LoftMesh.subMeshCount = 1;
+            LoftMesh.SetIndices(m_Indices, MeshTopology.Triangles, 0);
+            LoftMesh.UploadMeshData(false);
 
             GetComponent<MeshFilter>().sharedMesh = m_Mesh;
         }

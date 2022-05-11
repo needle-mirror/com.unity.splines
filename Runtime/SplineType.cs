@@ -1,3 +1,5 @@
+using System;
+
 namespace UnityEngine.Splines
 {
     /// <summary>
@@ -7,6 +9,7 @@ namespace UnityEngine.Splines
     /// Internally all <see cref="Spline"/> objects are saved as series of cubic curves. In the editor Splines can be
     /// manipulated in a lower order form.
     /// </remarks>
+    [Obsolete("Replaced by " + nameof(Spline.GetTangentMode) + " and " + nameof(Spline.SetTangentMode) + ".")]
     public enum SplineType : byte
     {
         /// <summary>
@@ -23,5 +26,23 @@ namespace UnityEngine.Splines
         /// A series of connected straight line segments.
         /// </summary>
         Linear
+    }
+
+    static class SplineTypeUtility
+    {
+#pragma warning disable 618
+        internal static TangentMode GetTangentMode(this SplineType splineType)
+        {
+            switch (splineType)
+            {
+                case SplineType.Bezier:
+                    return TangentMode.Mirrored;
+                case SplineType.Linear:
+                    return TangentMode.Linear;
+                default:
+                    return TangentMode.AutoSmooth;
+            }
+        }
+#pragma warning restore 618
     }
 }

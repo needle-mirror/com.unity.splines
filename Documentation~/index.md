@@ -1,11 +1,30 @@
-# Splines
+# About Splines
 
-<br/><img src="images/splines-splash.png" alt="Spline Splash" width="450"/>
+Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.
 
-The Spline package is split into two parts :
-* Editor spline representation and tools that can be plugged into any data representation by creating a converter.
-* Basic spline implementation that should cover most use cases.
+The Splines package contains:
 
-For an introduction to the Spline package, see [Getting started with Splines](getting-started-with-splines.md).
+* The tools to create and manipulate splines in the Unity Editor.
+* The framework to customize the standard spline editing tools in this package.
+* A standard data format and storage model for commonly used splines. 
+* Samples of implementations that address common spline use cases, such as creating a road, animating a GameObject's position and rotation along a spline, instantiating prefabs along a spline to create environments, and more.
 
+## Compatibility with Unity versions
 
+Splines is compatible with Unity version 2022.1 and later.
+
+## Install Splines
+ 
+Before you can use Splines, you must install the Splines package from the Package Manager. 
+
+To install this package, follow the instructions in the [Package Manager documentation](https://docs.unity3d.com/Manual/upm-ui-install.html).
+
+## Import Splines samples 
+
+The Splines package contains sample scenes that demonstrate different use cases for splines. 
+
+To import Splines' sample scenes:
+1. Go to **Window** > **Package Manager** to open the Package Manager. 
+1. In the Package Manager, select **Splines**.
+1. Expand the **Samples** section.
+1. Next to **Spline Examples**, select **Import**. 

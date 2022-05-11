@@ -3,19 +3,21 @@
 // make sure the XML doc file is present and located next to the scraped dll
 namespace UnityEditor.Splines
 {
-    [System.AttributeUsage(4, Inherited = false)] public class CustomSplineDataHandle : System.Attribute
+    [System.AttributeUsage(4, Inherited = false)] [System.Obsolete(@"Use SplineDataHandles.DataPointHandles instead and EditorTools to interact with SplineData.", false)] public class CustomSplineDataHandle : System.Attribute
     {
         public CustomSplineDataHandle(System.Type type) {}
     }
 
     public static class EditorSplineUtility
     {
-        public static event System.Action<UnityEngine.Splines.Spline> afterSplineWasModified;
+        [System.Obsolete(@"Use AfterSplineWasModified instead.", false)] public static event System.Action<UnityEngine.Splines.Spline> afterSplineWasModified;
+        public static event System.Action<UnityEngine.Splines.Spline> AfterSplineWasModified;
+        public static UnityEngine.Splines.TangentMode DefaultTangentMode { get; }
         public static void RegisterSplineDataChanged<T>(System.Action<UnityEngine.Splines.SplineData<T>> action);
         public static void UnregisterSplineDataChanged<T>(System.Action<UnityEngine.Splines.SplineData<T>> action);
     }
 
-    public abstract class SplineDataHandle<T> : UnityEditor.Splines.ISplineDataHandle
+    [System.Obsolete(@"Use SplineDataHandles.DataPointHandles instead and EditorTools to interact with SplineData.", false)] public abstract class SplineDataHandle<T> : UnityEditor.Splines.ISplineDataHandle
     {
         public virtual UnityEngine.Splines.SplineDataHandleAttribute attribute { get; }
         public int[] controlIDs { get; }
@@ -24,14 +26,18 @@ namespace UnityEditor.Splines
         public virtual void DrawSplineData(UnityEngine.Splines.SplineData<T> splineData, UnityEngine.Splines.Spline spline, UnityEngine.Matrix4x4 localToWorld, UnityEngine.Color color);
     }
 
-    [UnityEditor.CustomPropertyDrawer(typeof(UnityEngine.Splines.SplineData<>))] public class SplineDataPropertyDrawer : UnityEditor.PropertyDrawer
+    [System.Runtime.CompilerServices.Extension] public static class SplineDataHandles
     {
-        public SplineDataPropertyDrawer() {}
-        public virtual float GetPropertyHeight(UnityEditor.SerializedProperty property, UnityEngine.GUIContent label);
-        public virtual void OnGUI(UnityEngine.Rect position, UnityEditor.SerializedProperty property, UnityEngine.GUIContent label);
+        [System.Runtime.CompilerServices.Extension] public static void DataPointHandles<TSpline, TData>(TSpline spline, UnityEngine.Splines.SplineData<TData> splineData, bool useDefaultValueOnAdd = False) where TSpline : UnityEngine.Splines.ISpline;
     }
 
-    [UnityEditor.EditorTools.EditorToolContext(@"Spline", typeof(UnityEngine.Splines.ISplineProvider))] [UnityEngine.Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineContext.png")] public sealed class SplineToolContext : UnityEditor.EditorTools.EditorToolContext
+    public static class SplineGizmoUtility
+    {
+        public static void DrawGizmos(UnityEngine.Splines.ISplineContainer container);
+        [System.Obsolete(@"Use the overload that uses ISplineContainer")] public static void DrawGizmos(UnityEngine.Splines.ISplineProvider provider);
+    }
+
+    [UnityEditor.EditorTools.EditorToolContext(@"Spline", typeof(UnityEngine.Splines.ISplineContainer))] [UnityEngine.Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineContext.png")] public sealed class SplineToolContext : UnityEditor.EditorTools.EditorToolContext
     {
         public SplineToolContext() {}
         protected virtual System.Type GetEditorToolType(UnityEditor.Tool tool);

@@ -1,9 +1,9 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "1.0.1",
+  "version": "2.0.0-pre.2",
   "unity": "2022.1",
-  "description": "Framework and tools for working with curves and splines.",
+  "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
     "com.unity.settings-manager": "1.0.3",
     "com.unity.mathematics": "1.2.1",
@@ -24,18 +24,18 @@
   "testables": [
     "com.unity.test-framework.performance"
   ],
-  "upm": {
-    "changelog": "### Changes\r\n\r\n- Added new icons for Spline UI elements.\r\n- Modified knot handles so they are hidden if the `EditorTool` is not a `SplineTool`. \r\n\r\n\r\n### Bug fixes\r\n\r\n- [1403386] Fixing SplineData Inspector triggering to SplineData.changed events.\r\n- [1403359] Fixed issue where `SplineExtrude` component would not update mesh after an undo operation.\r\n- Fixed `SplineUtility.Evaluate` not evaluating the up vector correctly.\r\n- Fixed InvalidOperationException thrown when Spline is created with a locked Inspector.\r\n- [1384448] Fixed incorrect Rect Selection when using Shift or CTRL/CMD modifiers.\r\n- [1384457] Fixed an issue where an exception was thrown when drawing a spline and rotating the scene view."
+  "_upm": {
+    "changelog": "### Added\r\n\r\n- Added the ability to edit multiple spline elements in the element inspector.\r\n- Added functionality to join knots from different splines.\r\n- Added functionality to reverse the flow of a spline.\r\n\r\n### Changed\r\n\r\n- Added a dropdown menu to select tangent modes to the Element Inspector.\r\n- Updated the `Draw Splines Tool` to display only one tangent when a new knot is created.\r\n- Simplified tangents in the `Draw Splines Tool` by removing the interactable handle . \r\n- Renamed `Knot Placement Tool` to `Draw Splines Tool`.\r\n- Modified the `Draw Splines Tool` to account for multiple splines.\r\n\r\n### Fixed\r\n\r\n- Fixed SplineInspector knot removal not keeping metadata consistent (KnotLinks).\r\n- Fixed an issue that caused auto-smoothed tangents to show in the `Draw Splines Tool` and be selectable by rect selection. \r\n- Added `ReadOnly` to knot's and length's `NativeArray` to fix IndexOutOfRangeException on `NativeSpline`. \r\n- Fixed tangents when closing the spline to keep user-defined values.\r\n- Fixed index error in the `Spline.SendSizeChangeEvent` method.\r\n- Fixed a case where inserting a knot would not update adjacent knots with \"auto-smooth\" tangent mode."
   },
   "relatedPackages": {
-    "com.unity.splines.tests": "1.0.1"
+    "com.unity.splines.tests": "2.0.0-pre.2"
   },
   "upmCi": {
-    "footprint": "4f83d1fbdd4bdbaeab42f482721075a36d0fc627"
+    "footprint": "bdd4ca2a405c31ac0c0f2eab751c9b04304eefef"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "21a7f7dd6874cfedeff294e2599959473047a306"
+    "revision": "46a98f5614bafff392adcc8aa7e942d80e33014e"
   }
 }

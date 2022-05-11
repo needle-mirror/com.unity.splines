@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
@@ -17,16 +18,18 @@ namespace Unity.Splines.Examples
     {
         struct SpawnPoint
         {
-            public float3 pos;
-            public float3 right;
-            public float3 up;
+            public float3 Pos;
+            public float3 Right;
+            public float3 Up;
         }
 
-        [SerializeField] 
+        [SerializeField]
         SplineContainer m_SplineContainer;
-        public SplineContainer splineContainer => m_SplineContainer;
-        
-        [SerializeField] 
+        [Obsolete("Use Container instead.", false)]
+        public SplineContainer splineContainer => Container;
+        public SplineContainer Container => m_SplineContainer;
+
+        [SerializeField]
         Transform m_SpawnContainer;
         [SerializeField]
         int m_MaxIterations;
@@ -34,63 +37,65 @@ namespace Unity.Splines.Examples
         [Header("Spawning")]
         [SerializeField]
         List<GameObject> m_Prefabs;
-        [SerializeField] 
+        [SerializeField]
         float m_SpawnSpacing;
-        [SerializeField] 
+        [SerializeField]
         [Range(0, 1)]
         float m_SpawnChance;
         [SerializeField]
         List<GameObject> m_BorderPrefabs;
-        [SerializeField] 
+        [SerializeField]
         float m_BorderSpawnSpacing;
         [SerializeField]
         [Range(0, 1)]
         float m_BorderSpawnChance;
         [SerializeField]
         SplineData<float> m_SpawnBorderData;
-        public SplineData<float> spawnBorderData => m_SpawnBorderData;
-        
+        [Obsolete("Use SpawnBorderData instead.", false)]
+        public SplineData<float> spawnBorderData => SpawnBorderData;
+        public SplineData<float> SpawnBorderData => m_SpawnBorderData;
+
         [Header("Randomization")]
-        [SerializeField] 
+        [SerializeField]
         int m_RandomSeed;
-        [SerializeField] 
+        [SerializeField]
         Vector2 m_RotationRandomRange;
-        
+
         int m_Iterations;
         List<Vector2> m_SplineSegments = new List<Vector2>();
         List<Vector2> m_ParentPointSegments = new List<Vector2>();
-        
+
         const int k_SegmentsPerCurve = 10;
-        
+
         void OnEnable()
         {
 #if UNITY_EDITOR
-            EditorSplineUtility.afterSplineWasModified += OnSplineModified;
-            m_SpawnBorderData.changed += OnSpawnBorderDataChanged;
+            EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
+            m_SpawnBorderData.Changed += OnSpawnBorderDataChanged;
 #endif
         }
 
         void OnDisable()
         {
 #if UNITY_EDITOR
-            EditorSplineUtility.afterSplineWasModified -= OnSplineModified;
-            m_SpawnBorderData.changed -= OnSpawnBorderDataChanged;
+            EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;
+            m_SpawnBorderData.Changed -= OnSpawnBorderDataChanged;
 #endif
         }
 
         void OnValidate()
-        { 
+        {
 #if UNITY_EDITOR
-            if (m_SplineContainer != null && !EditorApplication.isPlayingOrWillChangePlaymode) 
+            if (m_SplineContainer != null && !EditorApplication.isPlayingOrWillChangePlaymode)
                 EditorApplication.delayCall += () => OnSplineModified(m_SplineContainer.Spline);
 #endif
         }
-        
+
         void CleanUp()
         {
             if (m_SpawnContainer == null)
                 return;
-            
+
             for (int i = m_SpawnContainer.childCount - 1; i >= 0; --i)
             {
                 var child = m_SpawnContainer.GetChild(i);
@@ -130,7 +135,7 @@ namespace Unity.Splines.Examples
             {
                 // Here we do not need to manually transform the output vectors as all SplineContainer's evaluation methods transform the results to world space.
                 splineContainer.Evaluate(splineTime, out var _, out var dir, out var up);
-                
+
                 // Spline's evaluation methods return results in spline space therfore manual transforming to world space is required.
                 var pos = splineXform.TransformPoint(spline.GetPointAtLinearDistance(splineTime, spawnSpacing, out splineTime));
                 var right = splineXform.TransformDirection(Vector3.ProjectOnPlane(math.cross(math.normalize(dir), up), up));
@@ -144,7 +149,7 @@ namespace Unity.Splines.Examples
                 else if (spawnOnBorder)
                     SpawnRandomPrefab(m_BorderPrefabs, pos, -right, up, spawnChance);
 
-                points.Add(new SpawnPoint() { pos = pos, right = right, up = up });
+                points.Add(new SpawnPoint() { Pos = pos, Right = right, Up = up });
             }
 
             m_Iterations = 1;
@@ -158,21 +163,21 @@ namespace Unity.Splines.Examples
 
             // Backup parent points
             var parentPoints = new List<SpawnPoint>(points);
-            
+
             // Offset all child points along right vector
             for (int i = 0; i < points.Count; i++)
             {
                 var splinePoint = points[i];
                 var nextIdx = (i == points.Count - 1 ? 0 : i + 1);
                 var nextPoint = points[nextIdx];
-                var right = (float3) Vector3.Slerp(splinePoint.right, nextPoint.right, 0.5f);
-                var up = (float3) Vector3.Slerp(splinePoint.up, nextPoint.up, 0.5f);
-                var pos = math.lerp(splinePoint.pos, nextPoint.pos, 0.5f);
+                var right = (float3)Vector3.Slerp(splinePoint.Right, nextPoint.Right, 0.5f);
+                var up = (float3)Vector3.Slerp(splinePoint.Up, nextPoint.Up, 0.5f);
+                var pos = math.lerp(splinePoint.Pos, nextPoint.Pos, 0.5f);
 
-                splinePoint.pos = pos + right * spawnSpacing;
-                splinePoint.right = right;
-                splinePoint.up = up;
-                
+                splinePoint.Pos = pos + right * spawnSpacing;
+                splinePoint.Right = right;
+                splinePoint.Up = up;
+
                 points[i] = splinePoint;
             }
 
@@ -184,8 +189,8 @@ namespace Unity.Splines.Examples
             {
                 var discardPoint = false;
                 var pointWithinBorder = false;
-                var pointSplineSpace = m_SplineContainer.transform.InverseTransformPoint(points[i].pos);
-                
+                var pointSplineSpace = m_SplineContainer.transform.InverseTransformPoint(points[i].Pos);
+
                 // Check against border
                 var dist = SplineUtility.GetNearestPoint(m_SplineContainer.Spline, pointSplineSpace, out var _, out var splineTime);
                 var spawnOffset = m_SpawnBorderData.Evaluate(m_SplineContainer.Spline, splineTime, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
@@ -195,7 +200,7 @@ namespace Unity.Splines.Examples
                 // Check against child points
                 for (int spawnedPointIdx = spawnedPoints.Count - 1; spawnedPointIdx >= 0; --spawnedPointIdx)
                 {
-                    if (math.length(points[i].pos - spawnedPoints[spawnedPointIdx].pos) < spawnSpacing)
+                    if (math.length(points[i].Pos - spawnedPoints[spawnedPointIdx].Pos) < spawnSpacing)
                     {
                         discardPoint = true;
                         pointsToRemove.Add(i);
@@ -203,18 +208,18 @@ namespace Unity.Splines.Examples
                         break;
                     }
                 }
-                
+
                 // Check against parent points
                 if (!discardPoint)
                 {
                     var nextIdx = i == points.Count - 1 ? 0 : i + 1;
                     while (i != nextIdx)
                     {
-                        if (math.length(points[i].pos - parentPoints[nextIdx].pos) < spawnSpacing * 0.9f)
+                        if (math.length(points[i].Pos - parentPoints[nextIdx].Pos) < spawnSpacing * 0.9f)
                         {
                             discardPoint = true;
                             pointsToRemove.Add(i);
-                            
+
                             break;
                         }
 
@@ -227,11 +232,11 @@ namespace Unity.Splines.Examples
                 {
                     m_ParentPointSegments.Clear();
                     foreach (var parentPoint in parentPoints)
-                        m_ParentPointSegments.Add(new Vector2(parentPoint.pos.x, parentPoint.pos.z));
+                        m_ParentPointSegments.Add(new Vector2(parentPoint.Pos.x, parentPoint.Pos.z));
 
-                    discardPoint = !PointInsidePolygon(new Vector2(points[i].pos.x, points[i].pos.z), m_ParentPointSegments);
+                    discardPoint = !PointInsidePolygon(new Vector2(points[i].Pos.x, points[i].Pos.z), m_ParentPointSegments);
                 }
-                
+
                 // Ensure point is roughly within spline bounds
                 if (!discardPoint)
                     discardPoint = !PointInsidePolygon(new Vector2(pointSplineSpace.x, pointSplineSpace.z), m_SplineSegments);
@@ -241,10 +246,10 @@ namespace Unity.Splines.Examples
                     if (!pointWithinBorder)
                     {
                         if (!spawnOnBorder)
-                            SpawnRandomPrefab(m_Prefabs, points[i].pos, -points[i].right, points[i].up, spawnChance);
+                            SpawnRandomPrefab(m_Prefabs, points[i].Pos, -points[i].Right, points[i].Up, spawnChance);
                     }
                     else if (spawnOnBorder)
-                        SpawnRandomPrefab(m_BorderPrefabs, points[i].pos, -points[i].right, points[i].up, spawnChance);
+                        SpawnRandomPrefab(m_BorderPrefabs, points[i].Pos, -points[i].Right, points[i].Up, spawnChance);
                     spawnedPoints.Add(points[i]);
                 }
             }
@@ -263,7 +268,7 @@ namespace Unity.Splines.Examples
         {
             if (Random.Range(0f, 1f) > spawnChance)
                 return;
-            
+
             var prefab = prefabs[Random.Range(0, prefabs.Count)];
             var go = Instantiate(prefab, position, quaternion.identity);
             go.transform.rotation = Quaternion.LookRotation(forward, up) * Quaternion.AngleAxis(Random.Range(m_RotationRandomRange.x, m_RotationRandomRange.y), Vector3.up);
@@ -294,14 +299,14 @@ namespace Unity.Splines.Examples
                 }
             }
         }
-        
+
         bool PointInsidePolygon(Vector2 point, List<Vector2> polygon)
         {
             Vector2 p1, p2;
             p1 = polygon[0];
             var counter = 0;
             for (int i = 1; i <= polygon.Count; i++)
-            { 
+            {
                 p2 = polygon[i % polygon.Count];
                 if (point.y > Mathf.Min(p1.y, p2.y))
                 {

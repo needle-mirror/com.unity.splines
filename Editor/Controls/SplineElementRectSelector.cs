@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
@@ -12,7 +14,7 @@ namespace UnityEditor.Splines
             Add,
             Subtract
         }
-        
+
         static class Styles
         {
             public static readonly GUIStyle selectionRect = GUI.skin.FindStyle("selectionRect");
@@ -26,7 +28,7 @@ namespace UnityEditor.Splines
         static readonly List<ISplineElement> s_SplineElementsBuffer = new List<ISplineElement>();
         static readonly HashSet<ISplineElement> s_PreRectSelectionElements = new HashSet<ISplineElement>();
 
-        public void OnGUI(IReadOnlyList<IEditableSpline> paths)
+        public void OnGUI(IReadOnlyList<SplineInfo> splines)
         {
             int id = GUIUtility.GetControlID(FocusType.Passive);
             Event evt = Event.current;
@@ -40,8 +42,8 @@ namespace UnityEditor.Splines
 
                         if (m_Mode != Mode.None)
                         {
-                            // If we've started rect select in Add or Subtract modes, then if we were in a Replace 
-                            // mode just before (i.e. the shift or action has been released temporarily), 
+                            // If we've started rect select in Add or Subtract modes, then if we were in a Replace
+                            // mode just before (i.e. the shift or action has been released temporarily),
                             // we need to bring back the pre rect selection elements into current selection.
                             if (m_InitialMode != Mode.Replace && RefreshSelectionMode())
                             {
@@ -53,9 +55,9 @@ namespace UnityEditor.Splines
                                     foreach (var element in s_PreRectSelectionElements)
                                         SplineSelection.Add(element);
                                 }
-                                
+
                                 m_Rect = GetRectFromPoints(m_StartPos, evt.mousePosition);
-                                UpdateSelection(m_Rect, paths);
+                                UpdateSelection(m_Rect, splines);
                             }
                         }
                     }
@@ -77,7 +79,7 @@ namespace UnityEditor.Splines
                         m_StartPos = evt.mousePosition;
                         m_Rect = new Rect(Vector3.zero, Vector2.zero);
 
-                        BeginSelection(paths);
+                        BeginSelection(splines);
                         GUIUtility.hotControl = id;
                         evt.Use();
                     }
@@ -89,7 +91,7 @@ namespace UnityEditor.Splines
                         m_Rect = GetRectFromPoints(m_StartPos, evt.mousePosition);
                         evt.Use();
 
-                        UpdateSelection(m_Rect, paths);
+                        UpdateSelection(m_Rect, splines);
                     }
                     break;
 
@@ -99,17 +101,17 @@ namespace UnityEditor.Splines
                         GUIUtility.hotControl = 0;
                         evt.Use();
 
-                        EndSelection(m_Rect, paths);
+                        EndSelection(m_Rect, splines);
                     }
                     break;
             }
         }
 
-        protected virtual void BeginSelection(IReadOnlyList<IEditableSpline> paths)
+        protected virtual void BeginSelection(IReadOnlyList<SplineInfo> splines)
         {
             RefreshSelectionMode();
             m_InitialMode = m_Mode;
-            
+
             s_SplineElementsCompareSet.Clear();
             s_SplineElementsBuffer.Clear();
             if (m_Mode == Mode.Replace)
@@ -118,18 +120,18 @@ namespace UnityEditor.Splines
                 s_PreRectSelectionElements.Clear();
             }
             else
-                SplineSelection.GetSelectedElements(s_PreRectSelectionElements);
+                SplineSelection.GetElements(splines, s_PreRectSelectionElements);
         }
 
-        protected virtual void UpdateSelection(Rect rect, IReadOnlyList<IEditableSpline> paths)
+        protected virtual void UpdateSelection(Rect rect, IReadOnlyList<SplineInfo> splines)
         {
             //Get all elements in rect
             s_SplineElementsBuffer.Clear();
-            for (int i = 0; i < paths.Count; ++i)
+            for (int i = 0; i < splines.Count; ++i)
             {
-                IEditableSpline spline = paths[i];
-                for (int j = 0; j < spline.knotCount; ++j)
-                    GetElementSelection(rect, spline, j, s_SplineElementsBuffer);
+                var splineData = splines[i];
+                for (int j = 0; j < splineData.Spline.Count; ++j)
+                    GetElementSelection(rect, splineData, j, s_SplineElementsBuffer);
             }
 
             foreach (var splineElement in s_SplineElementsBuffer)
@@ -141,19 +143,19 @@ namespace UnityEditor.Splines
                     var canAdd = m_Mode == Mode.Replace ? true : !s_PreRectSelectionElements.Contains(splineElement);
                     if (!wasInRectLastFrame && canAdd)
                         SplineSelection.Add(splineElement);
-                } 
+                }
                 else if (m_Mode == Mode.Subtract && !wasInRectLastFrame)
                 {
                     SplineSelection.Remove(splineElement);
                 }
             }
-            
+
             //Remaining spline elements from last frame are removed from selection (or added if mode is subtract)
             foreach (var splineElement in s_SplineElementsCompareSet)
             {
                 if (m_Mode == Mode.Replace || m_Mode == Mode.Add)
                 {
-                    // If we're in Add mode, don't remove elements that were in select prior to rect selection 
+                    // If we're in Add mode, don't remove elements that were in select prior to rect selection
                     if (m_Mode == Mode.Add && s_PreRectSelectionElements.Contains(splineElement))
                         continue;
                     SplineSelection.Remove(splineElement);
@@ -161,7 +163,7 @@ namespace UnityEditor.Splines
                 else if (m_Mode == Mode.Subtract && s_PreRectSelectionElements.Contains(splineElement))
                     SplineSelection.Add(splineElement);
             }
-            
+
             //Move current elements buffer to hash set for next frame compare
             s_SplineElementsCompareSet.Clear();
             foreach (var splineElement in s_SplineElementsBuffer)
@@ -182,25 +184,34 @@ namespace UnityEditor.Splines
             return m_Mode != modeBefore;
         }
 
-        void GetElementSelection(Rect rect, IEditableSpline spline, int index, List<ISplineElement> results)
+        void GetElementSelection(Rect rect, SplineInfo splineInfo, int index, List<ISplineElement> results)
         {
-            var knot = spline.GetKnot(index);
-            Vector3 screenSpace = HandleUtility.WorldToGUIPointWithDepth(knot.position);
+            var knot = splineInfo.Spline[index];
+            var localToWorld = splineInfo.LocalToWorld;
+            var worldKnot = knot.Transform(localToWorld);
+            Vector3 screenSpace = HandleUtility.WorldToGUIPointWithDepth(worldKnot.Position);
 
             if (screenSpace.z > 0 && rect.Contains(screenSpace))
-                results.Add(knot);
+                results.Add(new SelectableKnot(splineInfo, index));
 
-            for(int tangentIndex = 0; tangentIndex < knot.tangentCount; tangentIndex++)
+            var tangentIn = new SelectableTangent(splineInfo, index, BezierTangent.In);
+            if (SplineSelectionUtility.IsSelectable(tangentIn))
             {
-                var tangent = knot.GetTangent(tangentIndex);
-                screenSpace = HandleUtility.WorldToGUIPointWithDepth(tangent.position);
+                screenSpace = HandleUtility.WorldToGUIPointWithDepth(worldKnot.Position + math.rotate(worldKnot.Rotation, worldKnot.TangentIn));
+                if (screenSpace.z > 0 && rect.Contains(screenSpace))
+                    results.Add(tangentIn);
+            }
 
-                if (SplineSelectionUtility.IsSelectable(spline, index, tangent) && screenSpace.z > 0 && rect.Contains(screenSpace))
-                    results.Add(tangent);
+            var tangentOut = new SelectableTangent(splineInfo, index, BezierTangent.Out);
+            if (SplineSelectionUtility.IsSelectable(tangentOut))
+            {
+                screenSpace = HandleUtility.WorldToGUIPointWithDepth(worldKnot.Position + math.rotate(worldKnot.Rotation, worldKnot.TangentOut));
+                if (screenSpace.z > 0 && rect.Contains(screenSpace))
+                    results.Add(tangentOut);
             }
         }
 
-        protected virtual void EndSelection(Rect rect, IReadOnlyList<IEditableSpline> paths)
+        protected virtual void EndSelection(Rect rect, IReadOnlyList<SplineInfo> splines)
         {
             m_Mode = m_InitialMode = Mode.None;
         }

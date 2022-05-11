@@ -1,29 +1,48 @@
+using System;
+using System.Collections.Generic;
 using UnityEditor.EditorTools;
 using UnityEditor.Overlays;
 using UnityEngine;
+using UnityEngine.Splines;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines
 {
     [Icon("UnityEditor.InspectorWindow")]
-    [Overlay(typeof(SceneView), "unity-spline-inspector", "Spline Inspector", "SplineInspector")]
+    [Overlay(typeof(SceneView), "unity-spline-inspector", "Element Inspector", "SplineInspector")]
     sealed class SplineInspectorOverlay : Overlay, ITransientOverlay
     {
-        static VisualTreeAsset s_VisualTree;
+        internal static readonly string SplineChangeUndoMessage = L10n.Tr("Apply Changes to Spline");
+        public static void ForceUpdate()
+        {
+            s_ForceUpdateRequested?.Invoke();
+        }
 
-        public bool visible => ToolManager.activeContextType == typeof(SplineToolContext);
-        
+        static event Action s_ForceUpdateRequested;
+        static bool s_FirstUpdateSinceDomainReload = true;
+        static VisualTreeAsset s_VisualTree;
+        static IReadOnlyList<SplineInfo> m_SelectedSplines;
+        internal static void SetSelectedSplines(IReadOnlyList<SplineInfo> splines)
+        {
+            m_SelectedSplines = splines;
+            if (s_FirstUpdateSinceDomainReload)
+            {
+                s_FirstUpdateSinceDomainReload = false;
+                ForceUpdate();
+            }
+        }
+
+        public bool visible => ToolManager.activeContextType == typeof(SplineToolContext) && ToolManager.activeToolType != typeof(KnotPlacementTool);
+
         ElementInspector m_ElementInspector;
 
         public override VisualElement CreatePanelContent()
         {
             VisualElement root = new VisualElement();
+            root.Add(m_ElementInspector = new ElementInspector());
 
-            m_ElementInspector = new ElementInspector();
             UpdateInspector();
 
-            root.Add(m_ElementInspector);
-            
             return root;
         }
 
@@ -31,14 +50,16 @@ namespace UnityEditor.Splines
         {
             displayedChanged += OnDisplayedChange;
             SplineSelection.changed += UpdateInspector;
-            SplineConversionUtility.splineTypeChanged += UpdateInspector;
+            s_ForceUpdateRequested += UpdateInspector;
+            Undo.undoRedoPerformed += OnUndoRedoPerformed;
         }
 
         public override void OnWillBeDestroyed()
         {
             displayedChanged -= OnDisplayedChange;
             SplineSelection.changed -= UpdateInspector;
-            SplineConversionUtility.splineTypeChanged -= UpdateInspector;
+            s_ForceUpdateRequested -= UpdateInspector;
+            Undo.undoRedoPerformed -= OnUndoRedoPerformed;
         }
 
         void OnDisplayedChange(bool displayed)
@@ -48,7 +69,15 @@ namespace UnityEditor.Splines
 
         void UpdateInspector()
         {
-            m_ElementInspector?.SetElement(SplineSelection.GetActiveElement(), SplineSelection.count);
+            if (m_SelectedSplines == null)
+                return;
+            
+            m_ElementInspector?.UpdateSelection(m_SelectedSplines);
+        }
+
+        void OnUndoRedoPerformed()
+        {
+            ForceUpdate();
         }
     }
 }

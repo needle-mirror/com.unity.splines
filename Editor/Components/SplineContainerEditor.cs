@@ -7,6 +7,7 @@ namespace UnityEditor.Splines
     class SplineContainerEditor : UnityEditor.Editor
     {
         SerializedProperty m_SplineProperty;
+        SerializedProperty splinesProperty => m_SplineProperty ??= serializedObject.FindProperty("m_Splines");
 
         static GUIStyle s_HelpLabelStyle;
         static GUIContent s_HelpLabelContent;
@@ -17,8 +18,6 @@ namespace UnityEditor.Splines
 
         public void OnEnable()
         {
-            m_SplineProperty = serializedObject.FindProperty("m_Spline");
-            
             if(s_HelpLabelContent == null)
                 s_HelpLabelContent = EditorGUIUtility.TrTextContent(k_ComponentMessage);
                 
@@ -43,8 +42,8 @@ namespace UnityEditor.Splines
             EditorGUILayout.EndVertical();
             EditorGUILayout.EndHorizontal();
             
-            EditorGUILayout.PropertyField(m_SplineProperty);
-
+            EditorGUILayout.PropertyField(splinesProperty);
+            
             serializedObject.ApplyModifiedProperties();
         }
     }

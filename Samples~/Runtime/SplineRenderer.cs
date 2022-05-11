@@ -19,7 +19,22 @@ namespace Unity.Splines.Examples
         {
             m_Spline = GetComponent<SplineContainer>().Spline;
             m_Line = GetComponent<LineRenderer>();
-            m_Spline.changed += () => m_Dirty = true;
+        }
+
+        void OnEnable()
+        {
+            Spline.Changed += OnSplineChanged;
+        }
+
+        void OnDisable()
+        {
+            Spline.Changed -= OnSplineChanged;
+        }
+
+        void OnSplineChanged(Spline spline, int knotIndex, SplineModification modificationType)
+        {
+            if (m_Spline == spline)
+                m_Dirty = true;
         }
 
         void Update()
@@ -32,15 +47,15 @@ namespace Unity.Splines.Examples
                 m_Line.loop = m_Spline.Closed;
                 m_Line.positionCount = m_Segments;
             }
-            
+
             if (!m_Dirty)
                 return;
-            
+
             m_Dirty = false;
 
             for (int i = 0; i < m_Segments; i++)
                 m_Points[i] = m_Spline.EvaluatePosition(i / (m_Segments - 1f));
-            
+
             m_Line.SetPositions(m_Points);
         }
     }

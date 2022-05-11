@@ -1,6 +1,8 @@
 using System;
+using UnityEditor.SettingsManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Splines;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
@@ -20,7 +22,7 @@ namespace UnityEditor.Splines
             Handles.color = m_PrevColor;
         }
     }
-    
+
     struct ZTestScope : IDisposable
     {
         readonly CompareFunction m_Original;
@@ -30,22 +32,74 @@ namespace UnityEditor.Splines
             m_Original = Handles.zTest;
             Handles.zTest = function;
         }
-        
+
         public void Dispose()
         {
             Handles.zTest = m_Original;
         }
     }
-        
+
     static class SplineHandleUtility
     {
+        [UserSetting]
+        internal static UserSetting<Color> s_LineNormalFrontColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalInFrontColor", Color.white, SettingsScope.User);
+
+        [UserSetting]
+        internal static UserSetting<Color> s_LineNormalBehindColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalBehindColor", new Color(0.98f, 0.62f, 0.62f, 0.4f), SettingsScope.User);
+
+        [UserSetting]
+        internal static UserSetting<Color> s_KnotColor = new UserSetting<Color>(PathSettings.instance, "Handles.KnotDefaultColor", new Color(.4f, 1f, .95f, 1f), SettingsScope.User);
+
+        [UserSetting]
+        internal static UserSetting<Color> s_TangentColor = new UserSetting<Color>(PathSettings.instance, "Handles.TangentDefaultColor", Color.black, SettingsScope.User);
+
+        [UserSettingBlock("Handles")]
+        static void HandleColorPreferences(string searchContext)
+        {
+            s_LineNormalFrontColor.value = SettingsGUILayout.SettingsColorField("Curve Color", s_LineNormalFrontColor, searchContext);
+            s_LineNormalBehindColor.value = SettingsGUILayout.SettingsColorField("Curve Color Behind Surface", s_LineNormalBehindColor, searchContext);
+            s_KnotColor.value = SettingsGUILayout.SettingsColorField("Knot Color", s_KnotColor, searchContext);
+            s_TangentColor.value = SettingsGUILayout.SettingsColorField("Tangent Color", s_TangentColor, searchContext);
+        }
+
+        public static Color lineBehindColor => s_LineNormalBehindColor;
+        public static Color lineColor => s_LineNormalFrontColor;
+        public static Color knotColor => s_KnotColor;
+        public static Color tangentColor => s_TangentColor;
+
+        public const float pickingDistance = 8f;
+        public const float handleWidthDefault = 2f;
+        public const float handleWidthHover = 4f;
+        public const float aliasedLineSizeMultiplier = 0.5f;
+        public const float sizeFactor = 0.15f;
+        public const float knotDiscRadiusFactorDefault = 0.06f;
+        public const float knotDiscRadiusFactorHover = 0.07f;
+        public const float knotDiscRadiusFactorSelected = 0.085f;
+
+        public static readonly Texture2D thickTangentLineAATex = Resources.Load<Texture2D>(k_TangentLineAATexPath);
+
+        const string k_TangentLineAATexPath = "Textures/TangentLineAATex";
         const int k_MaxDecimals = 15;
         const int k_SegmentsPointCount = 30;
         static readonly Vector3[] s_ClosestPointArray = new Vector3[k_SegmentsPointCount];
+        static readonly Vector3[] s_AAWireDiscBuffer = new Vector3[18];
         const float k_KnotPickingDistance = 18f;
-        
-        static readonly Vector3[] s_LineBuffer = new Vector3[2]; 
-        
+
+        static readonly Vector3[] s_LineBuffer = new Vector3[2];
+        public static SelectableTangent lastHoveredTangent { get; private set; }
+        public static int lastHoveredTangentID { get; private set; }
+
+        internal static bool IsLastHoveredTangent(SelectableTangent tangent)
+        {
+            return tangent.Equals(lastHoveredTangent);
+        }
+
+        internal static void SetLastHoveredTangent(SelectableTangent tangent, int controlId)
+        {
+            lastHoveredTangentID = controlId;
+            lastHoveredTangent = tangent;
+        }
+
         internal static Ray TransformRay(Ray ray, Matrix4x4 matrix)
         {
             return new Ray(matrix.MultiplyPoint3x4(ray.origin), matrix.MultiplyVector(ray.direction));
@@ -58,39 +112,39 @@ namespace UnityEditor.Splines
             var right = Tools.handleRotation * Vector3.right;
             var up = Tools.handleRotation * Vector3.up;
             var forward = Tools.handleRotation * Vector3.forward;
-            
-            var snappedDelta = 
-                Snapping.Snap(Vector3.Dot(delta, right), EditorSnapSettings.move[0]) * right + 
-                Snapping.Snap(Vector3.Dot(delta, up), EditorSnapSettings.move[1]) * up + 
+
+            var snappedDelta =
+                Snapping.Snap(Vector3.Dot(delta, right), EditorSnapSettings.move[0]) * right +
+                Snapping.Snap(Vector3.Dot(delta, up), EditorSnapSettings.move[1]) * up +
                 Snapping.Snap(Vector3.Dot(delta, forward), EditorSnapSettings.move[2]) * forward;
             return previousPosition + snappedDelta;
         }
-        
+
         static Vector3 SnapToGrid(Vector3 position)
         {
-            //todo Temporary version, waiting for a trunk PR to land to move to the commented version:
-//#if UNITY_2022_2_OR_NEWER
-            // if(EditorSnapSettings.gridSnapActive)
-            //     return Snapping.Snap(position, EditorSnapSettings.gridSize, SnapAxis.All);
-//#else
+#if UNITY_2022_2_OR_NEWER
+            return EditorSnapSettings.gridSnapActive ?
+                   Snapping.Snap(position, EditorSnapSettings.gridSize) :
+                   position;
+#else
             GameObject tmp = new GameObject();
             tmp.hideFlags = HideFlags.HideAndDontSave;
             var trs = tmp.transform;
             trs.position = position;
-            Handles.SnapToGrid(new []{trs});
+            Handles.SnapToGrid(new[] { trs });
             var snapped = trs.position;
             Object.DestroyImmediate(tmp);
 
             return snapped;
-//#endif
+#endif
         }
-        
+
         internal static bool GetPointOnSurfaces(Vector2 mousePosition, out Vector3 point, out Vector3 normal)
         {
 #if UNITY_2020_1_OR_NEWER
-            if(HandleUtility.PlaceObject(mousePosition, out point, out normal))
+            if (HandleUtility.PlaceObject(mousePosition, out point, out normal))
             {
-                if(EditorSnapSettings.gridSnapEnabled)
+                if (EditorSnapSettings.gridSnapEnabled)
                     point = SnapToGrid(point);
                 return true;
             }
@@ -113,10 +167,10 @@ namespace UnityEditor.Splines
             {
                 normal = constraint.normal;
                 point = ray.origin + ray.direction * distance;
-                
-                if(EditorSnapSettings.gridSnapEnabled)
+
+                if (EditorSnapSettings.gridSnapEnabled)
                     point = SnapToGrid(point);
-                
+
                 return true;
             }
 
@@ -128,15 +182,15 @@ namespace UnityEditor.Splines
         {
             s_LineBuffer[0] = a;
             s_LineBuffer[1] = b;
-         
+
             Handles.DrawAAPolyLine(lineAATex, width, s_LineBuffer);
         }
 
         public static float DistanceToKnot(Vector3 position)
         {
-            return DistanceToCircle(position, k_KnotPickingDistance); 
+            return DistanceToCircle(position, k_KnotPickingDistance);
         }
-        
+
         public static float DistanceToCircle(Vector3 point, float radius)
         {
             Vector3 screenPos = HandleUtility.WorldToGUIPointWithDepth(point);
@@ -145,7 +199,7 @@ namespace UnityEditor.Splines
 
             return Mathf.Max(0, Vector2.Distance(screenPos, Event.current.mousePosition) - radius);
         }
-        
+
         internal static Vector3 RoundBasedOnMinimumDifference(Vector3 position)
         {
             var minDiff = GetMinDifference(position);
@@ -154,19 +208,24 @@ namespace UnityEditor.Splines
             position.z = RoundBasedOnMinimumDifference(position.z, minDiff.z);
             return position;
         }
-        
+
         internal static Vector3 GetMinDifference(Vector3 position)
         {
             return Vector3.one * (HandleUtility.GetHandleSize(position) / 80f);
         }
-        
+
         internal static float RoundBasedOnMinimumDifference(float valueToRound, float minDifference)
         {
             var numberOfDecimals = Mathf.Clamp(-Mathf.FloorToInt(Mathf.Log10(Mathf.Abs(minDifference))), 0, k_MaxDecimals);
             return (float)Math.Round(valueToRound, numberOfDecimals, MidpointRounding.AwayFromZero);
         }
-        
-        public static void GetNearestPointOnCurve(CurveData curve, out Vector3 position, out float t)
+
+        public static void GetNearestPointOnCurve(BezierCurve curve, out Vector3 position, out float t)
+        {
+            GetNearestPointOnCurve(curve, out position, out t, out _);
+        }
+
+        public static void GetNearestPointOnCurve(BezierCurve curve, out Vector3 position, out float t, out float distance)
         {
             Vector3 closestA = Vector3.zero;
             Vector3 closestB = Vector3.zero;
@@ -207,26 +266,36 @@ namespace UnityEditor.Splines
             float lengthAB = (closestB - closestA).magnitude;
             float lengthAToClosest = (position - closestA).magnitude;
             t = percentA + percentPerSegment * (lengthAToClosest / lengthAB);
+            distance = closestDist;
         }
-        
-        internal static void GetCurveSegments(CurveData curve, Vector3[] results)
+
+        internal static void GetCurveSegments(BezierCurve curve, Vector3[] results)
         {
-            if (!curve.IsValid())
-                throw new ArgumentException(nameof(curve));
-
-            if (results == null)
-                throw new ArgumentNullException(nameof(results));
-
-            if (results.Length < 2)
-                throw new ArgumentException("Get curve segments requires a results array of at least two points", nameof(results));
-
-            var segmentCount = results.Length - 1;
-            float segmentPercentage = 1f / segmentCount;
-            var path = curve.a.spline;
-            for (int i = 0; i <= segmentCount; ++i)
+            float segmentPercentage = 1f / (results.Length - 1);
+            for (int i = 0; i < k_SegmentsPointCount; ++i)
             {
-                results[i] = path.GetPointOnCurve(curve, i * segmentPercentage);
+                results[i] = CurveUtility.EvaluatePosition(curve, i * segmentPercentage);
             }
+        }
+
+        internal static void DrawAAWireDisc(Vector3 position, Vector3 normal, float radius, float thickness)
+        {
+            // Right vector calculation here is identical to Handles.DrawWireDisc
+            Vector3 right = Vector3.Cross(normal, Vector3.up);
+            if ((double)right.sqrMagnitude < 1.0 / 1000.0)
+                right = Vector3.Cross(normal, Vector3.right);
+
+            var angleStep = 360f / (s_AAWireDiscBuffer.Length - 1);
+            for (int i = 0; i < s_AAWireDiscBuffer.Length - 1; i++)
+            {
+                s_AAWireDiscBuffer[i] = position + right * radius;
+                right = Quaternion.AngleAxis(angleStep, normal) * right;
+            }
+
+            s_AAWireDiscBuffer[s_AAWireDiscBuffer.Length - 1] = s_AAWireDiscBuffer[0];
+
+            var tex = thickness > 2f ? thickTangentLineAATex : null;
+            Handles.DrawAAPolyLine(tex, thickness, s_AAWireDiscBuffer);
         }
     }
 }

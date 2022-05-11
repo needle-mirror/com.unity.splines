@@ -14,11 +14,19 @@
 
 .button-strip .button-strip-button.button-strip-button--checked {
 	background-color: var(--unity-overlay-buttons-on-color);
-} 
+}
 
 .button-strip-button--left,
 .button-strip-button--middle {
 	margin-right: 2px;
+}
+
+.button-strip-button--left-spacer {
+	margin-left: 1px;
+}
+
+.button-strip-button--right-spacer {
+	margin-right: 1px;
 }
 
 .button-strip-button--middle {

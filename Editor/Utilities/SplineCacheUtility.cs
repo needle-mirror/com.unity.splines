@@ -13,7 +13,7 @@ namespace UnityEditor.Splines
         [InitializeOnLoadMethod]
         static void Initialize()
         {
-            EditorSplineUtility.afterSplineWasModified += delegate(Spline spline)
+            EditorSplineUtility.AfterSplineWasModified += delegate(Spline spline)
             {
                 if(s_SplineCacheTable.ContainsKey(spline))
                     s_SplineCacheTable[spline] = null;
@@ -21,10 +21,9 @@ namespace UnityEditor.Splines
             
             Spline.afterSplineWasModified += (Spline s) => ClearCache();
             Undo.undoRedoPerformed +=  ClearCache;
-            SplineConversionUtility.splinesUpdated += ClearCache;
         }
 
-        static void ClearCache()
+        internal static void ClearCache()
         {
             s_SplineCacheTable.Clear();
         }

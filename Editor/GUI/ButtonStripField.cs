@@ -102,7 +102,7 @@ namespace UnityEditor.Splines
                     button.AddToClassList(k_LeftButtonClass);
                 else if (i == count - 1)
                     button.AddToClassList(k_RightButtonClass);
-                else 
+                else
                     button.AddToClassList(k_MiddleButtonClass);
 
                 m_ButtonStrip.Add(button);

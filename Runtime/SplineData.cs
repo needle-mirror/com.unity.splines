@@ -60,6 +60,9 @@ namespace UnityEngine.Splines
 
         [SerializeField]
         PathIndexUnit m_IndexUnit = PathIndexUnit.Knot;
+
+        [SerializeField]
+        T m_DefaultValue;
         
         [SerializeField]
         List<DataPoint<T>> m_DataPoints = new List<DataPoint<T>>();
@@ -91,7 +94,17 @@ namespace UnityEngine.Splines
             get => m_IndexUnit;
             set => m_IndexUnit = value;
         }
-
+        
+        /// <summary>
+        /// Default value to use when a new DataPoint is automatically added.
+        /// </summary>
+        /// <seealso cref="PathIndexUnit"/>
+        public T DefaultValue
+        {
+            get => m_DefaultValue;
+            set => m_DefaultValue = value;
+        }
+        
         /// <summary>
         /// How many data points the SplineData collection contains.
         /// </summary>
@@ -110,7 +123,17 @@ namespace UnityEngine.Splines
         /// Prefer to use <see cref="UnityEditor.Splines.EditorSplineUtility.RegisterSplineDataChanged"/> when working with
         /// splines in the editor.
         /// </remarks>
+        [Obsolete("Use Changed instead.", false)]
         public event Action changed;
+        /// <summary>
+        /// Invoked any time a SplineData is modified.
+        /// </summary>
+        /// <remarks>
+        /// In the editor this can be invoked many times per-frame.
+        /// Prefer to use <see cref="UnityEditor.Splines.EditorSplineUtility.RegisterSplineDataChanged"/> when working with
+        /// splines in the editor.
+        /// </remarks>
+        public event Action Changed;
 
 #if UNITY_EDITOR
         bool m_Dirty = false;
@@ -153,6 +176,7 @@ namespace UnityEngine.Splines
         void SetDirty()
         {
             changed?.Invoke();
+            Changed?.Invoke();
 
 #if UNITY_EDITOR
             if(m_Dirty)
@@ -205,13 +229,16 @@ namespace UnityEngine.Splines
         /// <param name="t">
         /// The interpolant relative to Spline. How this value is interpreted is dependent on <see cref="get_PathIndexUnit"/>.
         /// </param>
+        /// <param name="useDefaultValue">
+        /// If true will use <see cref="m_DefaultValue"/> to set the value, otherwise will interpolate the value regarding the closest DataPoints.
+        /// </param>
         /// <returns>
         /// The index of the inserted dataPoint.
         /// </returns>
-        public int AddDataPointWithDefaultValue(float t)
+        public int AddDataPointWithDefaultValue(float t, bool useDefaultValue = false)
         {
-            var dataPoint = new DataPoint<T>() { Index = t };
-            if(Count == 0)
+            var dataPoint = new DataPoint<T>(t, m_DefaultValue);
+            if(Count == 0 || useDefaultValue)
                 return Add(dataPoint);
             
             if(Count == 1)
@@ -405,11 +432,11 @@ namespace UnityEngine.Splines
         /// <param name="index">The DataPoint index.</param>
         /// <param name="value">The value to set.</param>
         /// <remarks>
-        /// Using this method will search the DataPoint list and invoke the <see cref="changed"/>
+        /// Using this method will search the DataPoint list and invoke the <see cref="Changed"/>
         /// callback every time. This may be inconvenient when setting multiple DataPoints during the same frame.
         /// In this case, consider calling <see cref="SetDataPointNoSort"/> for each DataPoint, followed by
         /// a single call to <see cref="SortIfNecessary"/>. Note that the call to <see cref="SortIfNecessary"/> is
-        /// optional and can be omitted if DataPoint sorting is not required and the <see cref="changed"/> callback
+        /// optional and can be omitted if DataPoint sorting is not required and the <see cref="Changed"/> callback
         /// should not be invoked.
         /// </remarks>
         public void SetDataPoint(int index, DataPoint<T> value)
@@ -428,7 +455,7 @@ namespace UnityEngine.Splines
         /// <param name="value">The value to set.</param>
         /// <remarks>
         /// Use this method as an altenative to <see cref="SetDataPoint"/> when manual control
-        /// over DataPoint sorting and the <see cref="changed"/> callback is required.
+        /// over DataPoint sorting and the <see cref="Changed"/> callback is required.
         /// See also <see cref="SortIfNecessary"/>.
         /// </remarks>
         public void SetDataPointNoSort(int index, DataPoint<T> value)
@@ -446,8 +473,8 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <remarks>
         /// Call this after a single or series of calls to <see cref="SetDataPointNoSort"/>.
-        /// This will trigger DataPoint sort and invoke the <see cref="changed"/> callback.
-        /// This method has two main use cases: to prevent frequent <see cref="changed"/> callback
+        /// This will trigger DataPoint sort and invoke the <see cref="Changed"/> callback.
+        /// This method has two main use cases: to prevent frequent <see cref="Changed"/> callback
         /// calls within the same frame and to reduce multiple DataPoints list searches
         /// to a single sort in performance critical paths.
         /// </remarks>
@@ -501,7 +528,6 @@ namespace UnityEngine.Splines
             return SplineUtility.GetNormalizedInterpolation(spline, t, m_IndexUnit);
         }
 
-        /// <inheritdoc cref="GetEnumerator"/>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>

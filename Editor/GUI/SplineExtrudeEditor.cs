@@ -51,12 +51,12 @@ namespace UnityEditor.Splines
 			m_Components = targets.Select(x => x as SplineExtrude).Where(y => y != null).ToArray();
 			m_AnyMissingMesh = m_Components.Any(x => x.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh == null);
 
-			EditorSplineUtility.afterSplineWasModified += OnSplineModified;
+			EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
 		}
 
 		void OnDisable()
 		{
-			EditorSplineUtility.afterSplineWasModified -= OnSplineModified;
+			EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;
 		}
 
 		void OnSplineModified(Spline spline)
@@ -66,7 +66,7 @@ namespace UnityEditor.Splines
 
 			foreach (var extrude in m_Components)
 			{
-				if (extrude.container != null && extrude.container.Spline == spline)
+				if (extrude.Container != null && extrude.Container.Spline == spline)
 					extrude.Rebuild();
 			}
 		}

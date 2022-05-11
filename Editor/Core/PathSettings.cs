@@ -28,4 +28,14 @@ namespace UnityEditor.Splines
             return provider;
         }
     }
+    
+    /// <summary>
+    /// The wrapper to define user preferences through Settings Manager.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    class Pref<T> : UserSetting<T>
+    {
+        public Pref(string key, T value)
+            : base(PathSettings.instance, key, value, SettingsScope.User) { }
+    }
 }

@@ -1,24 +1,15 @@
 using System;
 using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
-using UnityEngine.Splines;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
 {
-    interface ISplineElement
-    {
-        float3 position { get; set; }
-        float3 localPosition { get; set; }
-    }
-
     static class SplineSelection
     {
         public static event Action changed;
 
-        static readonly List<SelectableSplineElement> s_ElementBuffer = new List<SelectableSplineElement>();
-        static HashSet<Object> s_ObjectBuffer = new HashSet<Object>();
+        static readonly HashSet<Object> s_ObjectSet = new HashSet<Object>();
 
         static SelectionContext context => SelectionContext.instance;
         static List<SelectableSplineElement> selection => context.selection;
@@ -27,9 +18,11 @@ namespace UnityEditor.Splines
 
         static SplineSelection()
         {
-            context.version = 0; 
+            context.version = 0;
 
             Undo.undoRedoPerformed += OnUndoRedoPerformed;
+            EditorSplineUtility.knotInserted += OnKnotInserted;
+            EditorSplineUtility.knotRemoved += OnKnotRemoved;
         }
 
         static void OnUndoRedoPerformed()
@@ -57,192 +50,107 @@ namespace UnityEditor.Splines
                 NotifySelectionChanged();
         }
 
-        static bool GetKnotFromElement(SelectableSplineElement element, out EditableKnot knot)
+        public static int Count => selection.Count;
+
+        public static bool HasAny<T>(IReadOnlyList<SplineInfo> targets)
+            where T : struct, ISplineElement
         {
-            var paths = EditableSplineManager.GetEditableSplines(element.target, false);
+            for (int i = 0; i < Count; ++i)
+                for (int j = 0; j < targets.Count; ++j)
+                    if (TryGetElement(selection[i], targets[j], out T _))
+                        return true;
 
-            if (paths == null || element.pathIndex >= paths.Count)
-            {
-                knot = null;
-                return false;
-            }
-
-            var path = paths[element.pathIndex];
-            if (element.knotIndex < 0 || element.knotIndex >= path.knotCount)
-            {
-                knot = null;
-                return false;
-            }
-
-            knot = path.GetKnot(element.knotIndex);
-            return true;
+            return false;
         }
 
-        static bool GetTangentFromElement(SelectableSplineElement element, out EditableTangent tangent)
+        public static ISplineElement GetActiveElement(IReadOnlyList<SplineInfo> targets)
         {
-            if (!GetKnotFromElement(element, out EditableKnot knot))
-            {
-                tangent = null;
-                return false;
-            }
-
-            tangent = knot.GetTangent(element.tangentIndex);
-            return tangent != null;
-        }
-
-        public static void GetSelectedKnots(List<EditableKnot> knots)
-        {
-            knots.Clear();
-            foreach (var element in selection)
-                if (element.isKnot && GetKnotFromElement(element, out EditableKnot knot))
-                    knots.Add(knot);
-        }
-
-        public static void GetSelectedKnots(IEnumerable<Object> targets, List<EditableKnot> knots)
-        {
-            knots.Clear();
-            GetSelectedElementsInternal(targets, s_ElementBuffer);
-            foreach (var element in s_ElementBuffer)
-                if (element.isKnot && GetKnotFromElement(element, out EditableKnot knot))
-                    knots.Add(knot);
-        }
-
-        public static void GetSelectedTangents(List<EditableTangent> tangents)
-        {
-            tangents.Clear();
-            foreach (var element in selection)
-                if (element.isTangent && GetTangentFromElement(element, out EditableTangent tangent))
-                    tangents.Add(tangent);
-        }
-
-        public static void GetSelectedTangents(IEnumerable<Object> targets, List<EditableTangent> tangents)
-        {
-            tangents.Clear();
-            GetSelectedElementsInternal(targets, s_ElementBuffer);
-            foreach (var element in s_ElementBuffer)
-                if (element.isTangent && GetTangentFromElement(element, out EditableTangent tangent))
-                    tangents.Add(tangent);
-        }
-
-        public static int count => selection.Count;
-
-        static ISplineElement ToSplineElement(SelectableSplineElement rawElement)
-        {
-            if (rawElement.isKnot)
-            {
-                if (GetKnotFromElement(rawElement, out EditableKnot knot))
-                    return knot;
-            }
-            else if (rawElement.isTangent)
-            {
-                if (GetTangentFromElement(rawElement, out EditableTangent tangent))
-                    return tangent;
-            }
-
+            for (int i = 0; i < Count; ++i)
+                for (int j = 0; j < targets.Count; ++j)
+                    if (TryGetElement(selection[i], targets[j], out ISplineElement result))
+                        return result;
             return null;
         }
 
-        public static ISplineElement GetActiveElement()
-        {
-            //Get first valid element
-            foreach (var rawElement in selection)
-            {
-                var element = ToSplineElement(rawElement);
-                if (element != null)
-                    return element;
-            }
-
-            return null;
-        }
-
-        public static void GetSelectedElements(ICollection<ISplineElement> elements)
-        {
-            elements.Clear();
-            foreach (var rawElement in selection)
-            {
-                var element = ToSplineElement(rawElement);
-                if (element != null)
-                    elements.Add(element);
-            }
-        }
-
-        public static void GetSelectedElements(IEnumerable<Object> targets, ICollection<ISplineElement> elements)
-        {
-            elements.Clear();
-            GetSelectedElementsInternal(targets, s_ElementBuffer);
-            foreach (var rawElement in s_ElementBuffer)
-            {
-                var element = ToSplineElement(rawElement);
-                if (element != null)
-                    elements.Add(element);
-            }
-        }
-
-        static void GetSelectedElementsInternal(IEnumerable<Object> targets, List<SelectableSplineElement> results)
+        public static void GetElements<T>(IReadOnlyList<SplineInfo> targets, ICollection<T> results)
+            where T : ISplineElement
         {
             results.Clear();
-            foreach (var element in selection)
-                foreach(var target in targets)
+            for (int i = 0; i < Count; ++i)
+                for (int j = 0; j < targets.Count; ++j)
+                    if (TryGetElement(selection[i], targets[j], out T result))
+                        results.Add(result);
+        }
+
+        static bool TryGetElement<T>(SelectableSplineElement element, SplineInfo splineInfo, out T value)
+            where T : ISplineElement
+        {
+            if (element.target == splineInfo.Container as Object)
+            {
+                if (element.targetIndex == splineInfo.Index)
                 {
-                    if(target != null && element.target == target)
+                    if (element.tangentIndex >= 0)
                     {
-                        results.Add(element);
-                        break;
+                        var tangent = new SelectableTangent(splineInfo, element.knotIndex, element.tangentIndex);
+                        if (tangent.IsValid() && tangent is T t)
+                        {
+                            value = t;
+                            return true;
+                        }
+
+                        value = default;
+                        return false;
+                    }
+
+                    var knot = new SelectableKnot(splineInfo, element.knotIndex);
+                    if (knot.IsValid() && knot is T k)
+                    {
+                        value = k;
+                        return true;
                     }
                 }
-        }
-        
-        public static bool IsActiveElement(ISplineElement element)
-        {
-            switch (element)
-            {
-                case EditableKnot knot: return IsActiveElement(knot);
-                case EditableTangent tangent: return IsActiveElement(tangent);
-                default: return false;
             }
+
+            value = default;
+            return false;
         }
 
-        public static bool IsActiveElement(EditableKnot knot)
+        static Object[] s_SelectedTargetsBuffer = new Object[0];
+        internal static Object[] GetAllSelectedTargets()
         {
-            return IsActiveElement(new SelectableSplineElement(knot));
-        }
-
-        public static bool IsActiveElement(EditableTangent tangent)
-        {
-            return IsActiveElement(new SelectableSplineElement(tangent));
-        }
-
-        static bool IsActiveElement(SelectableSplineElement element)
-        {
-            return selection.Count > 0 && selection[0].Equals(element);
-        }
-
-        public static void SetActive(ISplineElement element)
-        {
-            switch (element)
+            s_ObjectSet.Clear();
+            foreach (var element in selection)
             {
-                case EditableKnot knot:
-                    SetActive(knot);
-                    break;
-                case EditableTangent tangent:
-                    SetActive(tangent);
-                    break;
+                s_ObjectSet.Add(element.target);
             }
+            Array.Resize(ref s_SelectedTargetsBuffer, s_ObjectSet.Count);
+            s_ObjectSet.CopyTo(s_SelectedTargetsBuffer);
+            return s_SelectedTargetsBuffer;
         }
 
-        public static void SetActive(EditableKnot knot)
+        public static bool IsActive<T>(T element)
+            where T : ISplineElement
         {
-            SetActiveElement(new SelectableSplineElement(knot));
+            if (selection.Count == 0)
+                return false;
+
+            return IsEqual(element, selection[0]);
         }
 
-        public static void SetActive(EditableTangent tangent)
+        static bool IsEqual<T>(T element, SelectableSplineElement selectionData)
+            where T : ISplineElement
         {
-            SetActiveElement(new SelectableSplineElement(tangent));
+            int tangentIndex = element is SelectableTangent tangent ? tangent.TangentIndex : -1;
+            return element.SplineInfo.Target == selectionData.target
+                   && element.SplineInfo.Index == selectionData.targetIndex
+                   && element.KnotIndex == selectionData.knotIndex
+                   && tangentIndex == selectionData.tangentIndex;
         }
 
-        static void SetActiveElement(SelectableSplineElement element)
+        public static void SetActive<T>(T element)
+            where T : ISplineElement
         {
-            int index = selection.IndexOf(element);
+            var index = IndexOf(element);
             if (index == 0)
                 return;
 
@@ -250,10 +158,11 @@ namespace UnityEditor.Splines
 
             if (index > 0)
                 selection.RemoveAt(index);
-            
-            selection.Insert(0, element);
 
-            if(element.target is Component component)
+            var e = new SelectableSplineElement(element);
+            selection.Insert(0, e);
+
+            if(e.target is Component component)
             {
                 //Set the active unity object so the spline is the first target
                 Object[] unitySelection = Selection.objects;
@@ -272,110 +181,59 @@ namespace UnityEditor.Splines
             NotifySelectionChanged();
         }
 
-        public static void Add(ISplineElement element)
+        public static void Set<T>(T element)
+            where T : ISplineElement
         {
-            switch (element)
-            {
-                case EditableKnot knot:
-                    Add(knot);
-                    break;
-                case EditableTangent tangent:
-                    Add(tangent);
-                    break;
-            }
+            IncrementVersion();
+
+            ClearNoUndo(false);
+            selection.Insert(0, new SelectableSplineElement(element));
+            NotifySelectionChanged();
         }
 
-        public static void Add(IEnumerable<ISplineElement> elements)
+        public static void Add<T>(T element)
+            where T : ISplineElement
+        {
+            if (Contains(element))
+                return;
+
+            IncrementVersion();
+            selection.Insert(0, new SelectableSplineElement(element));
+            NotifySelectionChanged();
+        }
+
+        public static void AddRange<T>(IEnumerable<T> elements)
+            where T : ISplineElement
         {
             IncrementVersion();
 
             bool changed = false;
             foreach (var element in elements)
-                changed |= AddElement(new SelectableSplineElement(element));
-
-            if (changed)
-                NotifySelectionChanged();
-        }
-
-        public static void Add(EditableKnot knot)
-        {
-            IncrementVersion();
-
-            if (AddElement(new SelectableSplineElement(knot)))
-                NotifySelectionChanged();
-        }
-
-        public static void Add(IEnumerable<EditableKnot> knots)
-        {
-            IncrementVersion();
-
-            bool changed = false;
-            foreach (var knot in knots)
-                changed |= AddElement(new SelectableSplineElement(knot));
-
-            if (changed)
-                NotifySelectionChanged();
-        }
-
-        public static void Add(EditableTangent tangent)
-        {
-            IncrementVersion();
-
-            if (AddElement(new SelectableSplineElement(tangent)))
-                NotifySelectionChanged();
-        }
-
-        public static void Add(IEnumerable<EditableTangent> tangents)
-        {
-            IncrementVersion();
-
-            bool changed = false;
-            foreach (var tangent in tangents)
-                changed |= AddElement(new SelectableSplineElement(tangent));
-
-            if (changed)
-                NotifySelectionChanged();
-        }
-
-        static bool AddElement(SelectableSplineElement element)
-        {
-            if (!selection.Contains(element))
             {
-                selection.Insert(0,element);
-                return true;
+                if (!Contains(element))
+                {
+                    if (!changed)
+                    {
+                        changed = true;
+                        IncrementVersion();
+                    }
+
+                    selection.Insert(0, new SelectableSplineElement(element));
+                }
             }
 
-            return false;
+            if (changed)
+                NotifySelectionChanged();
         }
 
-        public static bool Remove(ISplineElement element)
+        public static bool Remove<T>(T element)
+            where T : ISplineElement
         {
-            switch (element)
+            var index = IndexOf(element);
+            if (index >= 0)
             {
-                case EditableKnot knot: return Remove(knot);
-                case EditableTangent tangent: return Remove(tangent);
-                default: return false;
-            }
-        }
-
-        public static bool Remove(EditableKnot knot)
-        {
-            IncrementVersion();
-
-            return RemoveElement(new SelectableSplineElement(knot));
-        }
-
-        public static bool Remove(EditableTangent tangent)
-        {
-            IncrementVersion();
-
-            return RemoveElement(new SelectableSplineElement(tangent));
-        }
-
-        static bool RemoveElement(SelectableSplineElement element) 
-        {
-            if (selection.Remove(element))
-            {
+                IncrementVersion();
+                selection.RemoveAt(index);
                 NotifySelectionChanged();
                 return true;
             }
@@ -383,75 +241,121 @@ namespace UnityEditor.Splines
             return false;
         }
 
-        public static bool Contains(ISplineElement element)
+        public static bool RemoveRange<T>(IReadOnlyList<T> elements)
+            where T : ISplineElement
         {
-            switch (element)
+            bool changed = false;
+            for (int i = 0; i < elements.Count; ++i)
             {
-                case EditableKnot knot: return Contains(knot);
-                case EditableTangent tangent: return Contains(tangent);
-                default: return false;
+                var index = IndexOf(elements[i]);
+                if (index >= 0)
+                {
+                    if (!changed)
+                    {
+                        IncrementVersion();
+                        changed = true;
+                    }
+
+                    selection.RemoveAt(index);
+                }
             }
+
+            if (changed)
+                NotifySelectionChanged();
+
+            return changed;
         }
 
-        public static bool Contains(EditableKnot knot)
+        public static int IndexOf<T>(T element)
+            where T : ISplineElement
         {
-            return ContainsElement(new SelectableSplineElement(knot));
+            for (int i = 0; i < selection.Count; ++i)
+                if (IsEqual(element, selection[i]))
+                    return i;
+
+            return -1;
         }
 
-        public static bool Contains(EditableTangent tangent)
+        public static bool Contains<T>(T element)
+            where T : ISplineElement
         {
-            return ContainsElement(new SelectableSplineElement(tangent));
+            return IndexOf(element) >= 0;
         }
 
-        static bool ContainsElement(SelectableSplineElement element)
+        public static bool IsInSelection(Object splineObject)
         {
-            return selection.Contains(element);
+            return s_ObjectSet.Contains(splineObject);
         }
 
         internal static void UpdateObjectSelection(IEnumerable<Object> targets)
         {
-            s_ObjectBuffer.Clear();
+            s_ObjectSet.Clear();
             foreach (var target in targets)
                 if (target != null)
-                    s_ObjectBuffer.Add(target);
-            
-            IncrementVersion();
-            if (selection.RemoveAll(ObjectRemovePredicate) > 0)
+                    s_ObjectSet.Add(target);
+
+            bool changed = false;
+            for (int i = Count - 1; i >= 0; --i)
+            {
+                if (!s_ObjectSet.Contains(selection[i].target))
+                {
+                    if (!changed)
+                    {
+                        changed = true;
+                        IncrementVersion();
+                    }
+                    selection.RemoveAt(i);
+                }
+                else if(selection[i].tangentIndex > 0)
+                {
+                    // In the case of a tangent, also check that the tangent is still valid if the spline type
+                    // or tangent mode has been updated
+                    var spline = SplineToolContext.GetSpline(selection[i].target, selection[i].targetIndex);
+
+                    if(!EditorSplineUtility.AreTangentsModifiable(spline.GetTangentMode(selection[i].knotIndex)))
+                    {
+                        if (!changed)
+                        {
+                            changed = true;
+                            IncrementVersion();
+                        }
+                        selection.RemoveAt(i);
+                    }
+                }
+            }
+
+            if (changed)
                 NotifySelectionChanged();
         }
 
-        static bool ObjectRemovePredicate(SelectableSplineElement element)
-        {
-            return !s_ObjectBuffer.Contains(element.target);
-        }
-
         //Used when inserting new elements in spline
-        internal static void MoveAllIndexUpFromIndexToEnd(IEditableSpline spline, int index)
+        static void OnKnotInserted(SelectableKnot inserted)
         {
             for (var i = 0; i < selection.Count; ++i)
             {
                 var knot = selection[i];
-                if (knot.IsFromPath(spline))
-                {
-                    if (knot.knotIndex >= index)
-                        ++knot.knotIndex;
 
+                if (knot.target == inserted.SplineInfo.Target
+                    && knot.targetIndex == inserted.SplineInfo.Index
+                    && knot.knotIndex >= inserted.KnotIndex)
+                {
+                    ++knot.knotIndex;
                     selection[i] = knot;
                 }
             }
         }
 
         //Used when deleting an element in spline
-        internal static void OnKnotRemoved(IEditableSpline spline, int index)
+        static void OnKnotRemoved(SelectableKnot removed)
         {
             for (var i = selection.Count - 1; i >= 0; --i)
             {
                 var knot = selection[i];
-                if (knot.IsFromPath(spline))
+                if (knot.target == removed.SplineInfo.Target && knot.targetIndex == removed.SplineInfo.Index)
                 {
-                    if (knot.knotIndex == index)
+                    if (knot.knotIndex == removed.KnotIndex)
                         selection.RemoveAt(i);
-                    else if (knot.knotIndex >= index)
+                    else if (knot.knotIndex >= removed.KnotIndex)
                     {
                         --knot.knotIndex;
                         selection[i] = knot;

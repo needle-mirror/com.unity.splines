@@ -34,7 +34,7 @@ namespace UnityEngine.Splines
             /// <summary> Traverse the Spline continously without stopping. </summary>
             [InspectorName("Loop Continous")]
             Loop,
-            /// <summary> Traverse the Spline continously without stopping. If <see cref="SplineAnimate.easingMode"/> is set to <see cref="SplineAnimate.EasingMode.EaseIn"/> or
+            /// <summary> Traverse the Spline continously without stopping. If <see cref="SplineAnimate.Easing"/> is set to <see cref="SplineAnimate.EasingMode.EaseIn"/> or
             /// <see cref="SplineAnimate.EasingMode.EaseInOut"/> then only ease in is applied and only during the first loop. Otherwise, no easing is applied when using this loop mode.
             /// </summary>
             [InspectorName("Ease In Then Continous")]
@@ -121,8 +121,7 @@ namespace UnityEngine.Splines
 
         [SerializeField, Tooltip("Which axis of the object should be treated as the up axis.")]
         AlignAxis m_ObjectUpAxis = AlignAxis.YAxis;
-
-        Spline m_Spline;
+        
         float m_SplineLength = -1;
         bool m_Playing;
         float m_NormalizedTime;
@@ -132,41 +131,46 @@ namespace UnityEngine.Splines
 #endif
 
         /// <summary>The target Spline to follow.</summary>
-        public SplineContainer splineContainer
+        [Obsolete("Use Container instead.", false)]
+        public SplineContainer splineContainer => Container;
+        /// <summary>The target Spline to follow.</summary>
+        public SplineContainer Container
         {
             get => m_Target;
             set
             {
-                if (enabled && m_Target != null && m_Target.Spline != null)
-                    m_Target.Spline.changed -= OnSplineChange;
-
                 m_Target = value;
 
                 if (enabled && m_Target != null && m_Target.Spline != null)
-                {
-                    m_Target.Spline.changed += OnSplineChange;
-                    CalculateSplineLength();
-                    OnSplineChange();
-                }
+                    OnSplineChange(m_Target.Spline, -1, SplineModification.Default);
             }
         }
 
         /// <summary>If true, transform will automatically start following the target Spline on awake.</summary>
-        public bool playOnAwake
+        [Obsolete("Use PlayOnAwake instead.", false)]
+        public bool playOnAwake => PlayOnAwake;
+        /// <summary>If true, transform will automatically start following the target Spline on awake.</summary>
+        public bool PlayOnAwake
         {
             get => m_PlayOnAwake;
             set => m_PlayOnAwake = value;
         }
 
         /// <summary>The way the Spline should be looped. See <see cref="LoopMode"/> for details.</summary>
-        public LoopMode loopMode
+        [Obsolete("Use Loop instead.", false)]
+        public LoopMode loopMode => Loop;
+        /// <summary>The way the Spline should be looped. See <see cref="LoopMode"/> for details.</summary>
+        public LoopMode Loop
         {
             get => m_LoopMode;
             set => m_LoopMode = value;
         }
-        
+
         /// <summary> The method used to traverse the Spline. See <see cref="Method"/> for details. </summary>
-        public Method method
+        [Obsolete("Use AnimationMethod instead.", false)]
+        public Method method => AnimationMethod;
+        /// <summary> The method used to traverse the Spline. See <see cref="Method"/> for details. </summary>
+        public Method AnimationMethod
         {
             get => m_Method;
             set => m_Method = value;
@@ -174,10 +178,17 @@ namespace UnityEngine.Splines
 
         /// <summary> The time (in seconds) it takes to traverse the Spline once. </summary>
         /// <remarks>
-        /// When animation method is set to <see cref="Method.Time"/> this setter will set the <see cref="duration"/> value and automatically recalculate <see cref="maxSpeed"/>,
+        /// When animation method is set to <see cref="Method.Time"/> this setter will set the <see cref="Duration"/> value and automatically recalculate <see cref="MaxSpeed"/>,
         /// otherwise, it will have no effect.
         /// </remarks>
-        public float duration
+        [Obsolete("Use Duration instead.", false)]
+        public float duration => Duration;
+        /// <summary> The time (in seconds) it takes to traverse the Spline once. </summary>
+        /// <remarks>
+        /// When animation method is set to <see cref="Method.Time"/> this setter will set the <see cref="Duration"/> value and automatically recalculate <see cref="MaxSpeed"/>,
+        /// otherwise, it will have no effect.
+        /// </remarks>
+        public float Duration
         {
             get => m_Duration;
             set
@@ -189,15 +200,24 @@ namespace UnityEngine.Splines
                 }
             }
         }
-        
+
         /// <summary> The maxSpeed speed (in Unity units/second) that the Spline traversal will advance in. </summary>
         /// <remarks>
         /// If <see cref="EasingMode"/> is to <see cref="EasingMode.None"/> then the Spline will be traversed at MaxSpeed throughout its length.
         /// Otherwise, the traversal speed will range from 0 to MaxSpeed throughout the Spline's length depending on the easing mode set.
-        /// When animation method is set to <see cref="Method.Speed"/> this setter will set the <see cref="maxSpeed"/> value and automatically recalculate <see cref="duration"/>,
+        /// When animation method is set to <see cref="Method.Speed"/> this setter will set the <see cref="MaxSpeed"/> value and automatically recalculate <see cref="Duration"/>,
         /// otherwise, it will have no effect.
         /// </remarks>
-        public float maxSpeed
+        [Obsolete("Use MaxSpeed instead.", false)]
+        public float maxSpeed => MaxSpeed;
+        /// <summary> The maxSpeed speed (in Unity units/second) that the Spline traversal will advance in. </summary>
+        /// <remarks>
+        /// If <see cref="EasingMode"/> is to <see cref="EasingMode.None"/> then the Spline will be traversed at MaxSpeed throughout its length.
+        /// Otherwise, the traversal speed will range from 0 to MaxSpeed throughout the Spline's length depending on the easing mode set.
+        /// When animation method is set to <see cref="Method.Speed"/> this setter will set the <see cref="MaxSpeed"/> value and automatically recalculate <see cref="Duration"/>,
+        /// otherwise, it will have no effect.
+        /// </remarks>
+        public float MaxSpeed
         {
             get => m_MaxSpeed;
             set
@@ -209,30 +229,42 @@ namespace UnityEngine.Splines
                 }
             }
         }
-        
+
         /// <summary> Easing mode used when animating the object along the Spline. See <see cref="EasingMode"/> for details. </summary>
-        public EasingMode easingMode
+        [Obsolete("Use Easing instead.", false)]
+        public EasingMode easingMode => Easing;
+        /// <summary> Easing mode used when animating the object along the Spline. See <see cref="EasingMode"/> for details. </summary>
+        public EasingMode Easing
         {
             get => m_EasingMode;
             set => m_EasingMode = value;
         }
 
         /// <summary> The way the object should align when animating along the Spline. See <see cref="AlignmentMode"/> for details. </summary>
-        public AlignmentMode alignmentMode
+        [Obsolete("Use Alignment instead.", false)]
+        public AlignmentMode alignmentMode => Alignment;
+        /// <summary> The way the object should align when animating along the Spline. See <see cref="AlignmentMode"/> for details. </summary>
+        public AlignmentMode Alignment
         {
             get => m_AlignmentMode;
             set => m_AlignmentMode = value;
         }
 
         /// <summary> Object space axis that should be considered as the object's forward vector. </summary>
-        public AlignAxis objectForwardAxis
+        [Obsolete("Use ObjectForwardAxis instead.", false)]
+        public AlignAxis objectForwardAxis => ObjectForwardAxis;
+        /// <summary> Object space axis that should be considered as the object's forward vector. </summary>
+        public AlignAxis ObjectForwardAxis
         {
             get => m_ObjectForwardAxis;
             set => m_ObjectUpAxis = SetObjectAlignAxis(value, ref m_ObjectForwardAxis, m_ObjectUpAxis);
         }
 
         /// <summary> Object space axis that should be considered as the object's up vector. </summary>
-        public AlignAxis objectUpAxis
+        [Obsolete("Use ObjectUpAxis instead.", false)]
+        public AlignAxis objectUpAxis => ObjectUpAxis;
+        /// <summary> Object space axis that should be considered as the object's up vector. </summary>
+        public AlignAxis ObjectUpAxis
         {
             get => m_ObjectUpAxis;
             set => m_ObjectForwardAxis = SetObjectAlignAxis(value, ref m_ObjectUpAxis, m_ObjectForwardAxis);
@@ -242,7 +274,13 @@ namespace UnityEngine.Splines
         /// Normalized time of the Spline's traversal. The integer part is the number of times the Spline has been traversed.
         /// The fractional part is the % (0-1) of progress in the current loop.
         /// </summary>
-        public float normalizedTime
+        [Obsolete("Use NormalizedTime instead.", false)]
+        public float normalizedTime => NormalizedTime;
+        /// <summary>
+        /// Normalized time of the Spline's traversal. The integer part is the number of times the Spline has been traversed.
+        /// The fractional part is the % (0-1) of progress in the current loop.
+        /// </summary>
+        public float NormalizedTime
         {
             get => m_NormalizedTime;
             set
@@ -252,9 +290,12 @@ namespace UnityEngine.Splines
                 UpdateTransform();
             }
         }
-        
+
         /// <summary> Total time (in seconds) since the start of Spline's traversal. </summary>
-        public float elapsedTime
+        [Obsolete("Use ElapsedTime instead.", false)]
+        public float elapsedTime => ElapsedTime;
+        /// <summary> Total time (in seconds) since the start of Spline's traversal. </summary>
+        public float ElapsedTime
         {
             get => m_ElapsedTime;
             set
@@ -264,12 +305,18 @@ namespace UnityEngine.Splines
                 UpdateTransform();
             }
         }
-
+        
         /// <summary> Returns true if object is currently animating along the Spline. </summary>
-        public bool isPlaying => m_Playing;
+        [Obsolete("Use IsPlaying instead.", false)]
+        public bool isPlaying => IsPlaying;
+        /// <summary> Returns true if object is currently animating along the Spline. </summary>
+        public bool IsPlaying => m_Playing;
 
         /// <summary> Invoked each time object's animation along the Spline is updated.</summary>
+        [Obsolete("Use Updated instead.", false)]
         public event Action<Vector3, Quaternion> onUpdated;
+        /// <summary> Invoked each time object's animation along the Spline is updated.</summary>
+        public event Action<Vector3, Quaternion> Updated;
 
         void Awake()
         {
@@ -279,14 +326,12 @@ namespace UnityEngine.Splines
 
         void OnEnable()
         {
-            if (m_Target != null && m_Target.Spline != null)
-                m_Target.Spline.changed += OnSplineChange;
+            Spline.Changed += OnSplineChange;
         }
 
         void OnDisable()
         {
-            if (m_Target != null && m_Target.Spline != null)
-                m_Target.Spline.changed -= OnSplineChange;
+            Spline.Changed -= OnSplineChange;
         }
         
         void OnValidate()
@@ -348,7 +393,7 @@ namespace UnityEngine.Splines
             
             m_Playing = false;
             m_ElapsedTime = 0f;
-            normalizedTime = 0f;
+            NormalizedTime = 0f;
 
             switch (m_Method)
             {
@@ -474,6 +519,7 @@ namespace UnityEngine.Splines
             }
 #endif
             onUpdated?.Invoke(position, rotation);
+            Updated?.Invoke(position, rotation);
         }
         
         void EvaluatePositionAndRotation(out Vector3 position, out Quaternion rotation)
@@ -590,8 +636,11 @@ namespace UnityEngine.Splines
             return otherAxis;
         }
 
-        void OnSplineChange()
+        void OnSplineChange(Spline spline, int knotIndex, SplineModification modificationType)
         {
+            if (m_Target == null || m_Target.Spline != spline)
+                return;
+            
             CalculateSplineLength();
             switch (m_Method)
             {
@@ -612,10 +661,10 @@ namespace UnityEngine.Splines
         internal float GetLoopInterpolation()
         {
             var t = 0f;
-            if (Mathf.Floor(normalizedTime) == normalizedTime)
-                t = Mathf.Clamp01(normalizedTime);
+            if (Mathf.Floor(NormalizedTime) == NormalizedTime)
+                t = Mathf.Clamp01(NormalizedTime);
             else
-                t = normalizedTime % 1f;
+                t = NormalizedTime % 1f;
 
             return t;
         }

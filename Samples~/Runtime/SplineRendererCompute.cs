@@ -20,7 +20,7 @@ namespace Unity.Splines.Examples
         Spline m_Spline;
         LineRenderer m_Line;
         bool m_Dirty;
-        
+
         SplineComputeBufferScope<Spline> m_SplineBuffers;
         Vector3[] m_Positions;
         ComputeBuffer m_PositionsBuffer;
@@ -29,19 +29,19 @@ namespace Unity.Splines.Examples
         void Awake()
         {
             m_Spline = GetComponent<SplineContainer>().Spline;
-            
+
             // Set up the LineRenderer
             m_Line = GetComponent<LineRenderer>();
             m_Line.positionCount = m_Segments;
-            
+
             m_GetPositionsKernel = m_ComputeShader.FindKernel("GetPositions");
-            
+
             // Set up the spline evaluation compute shader. We'll use SplineComputeBufferScope to simplify the process.
             // Note that SplineComputeBufferScope is optional, you can manage the Curve, Lengths, and Info properties
             // yourself if preferred.
             m_SplineBuffers = new SplineComputeBufferScope<Spline>(m_Spline);
             m_SplineBuffers.Bind(m_ComputeShader, m_GetPositionsKernel, "info", "curves", "curveLengths");
-            
+
             // Set the compute shader properties necessary for accessing spline information. Most Spline functions in
             // Spline.cginc require the info, curves, and curve length properties. This is equivalent to:
             //     m_ComputeShader.SetVector("info", m_SplineBuffers.Info);
@@ -58,9 +58,23 @@ namespace Unity.Splines.Examples
             m_ComputeShader.SetBuffer(m_GetPositionsKernel, "positions", m_PositionsBuffer);
             m_ComputeShader.SetFloat("positionsCount", m_Segments);
 
-            // Subscribe to Spline.changed to be notified when the spline is modified
-            m_Spline.changed += () => m_Dirty = true;
             m_Dirty = true;
+        }
+
+        void OnEnable()
+        {
+            Spline.Changed += OnSplineChanged;
+        }
+
+        void OnDisable()
+        {
+            Spline.Changed -= OnSplineChanged;
+        }
+
+        void OnSplineChanged(Spline spline, int knotIndex, SplineModification modificationType)
+        {
+            if (m_Spline == spline)
+                m_Dirty = true;
         }
 
         void OnDestroy()
@@ -74,13 +88,13 @@ namespace Unity.Splines.Examples
             if (!m_Dirty)
                 return;
 
-            // Once initialized, call SplineComputeBufferScope.Upload() to update the GPU copies of spline data. This 
-            // is only necessary here because we're constantly updating the Spline in this example. If the Spline is 
+            // Once initialized, call SplineComputeBufferScope.Upload() to update the GPU copies of spline data. This
+            // is only necessary here because we're constantly updating the Spline in this example. If the Spline is
             // static, there is no need to call Upload every frame.
             m_SplineBuffers.Upload();
-            
+
             m_ComputeShader.GetKernelThreadGroupSizes(m_GetPositionsKernel, out var threadSize, out _, out _);
-            m_ComputeShader.Dispatch(m_GetPositionsKernel, (int) threadSize, 1, 1);
+            m_ComputeShader.Dispatch(m_GetPositionsKernel, (int)threadSize, 1, 1);
             m_PositionsBuffer.GetData(m_Positions);
 
             m_Line.loop = m_Spline.Closed;

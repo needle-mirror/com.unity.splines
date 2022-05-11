@@ -10,7 +10,7 @@ namespace UnityEngine.Splines
     /// closed, the first and last knots will contain an extraneous tangent (in and out, respectively).
     /// </summary>
     [Serializable]
-    public struct BezierKnot: ISerializationCallbackReceiver
+    public struct BezierKnot : ISerializationCallbackReceiver, IEquatable<BezierKnot>
     {
         /// <summary>
         /// The position of the knot. On a cubic bezier curve, this is equivalent to <see cref="BezierCurve.P0"/> or
@@ -118,6 +118,49 @@ namespace UnityEngine.Splines
             // rotation is deserialized to identity instead of (0, 0, 0, 0) which does not represent a valid rotation.
             if (math.lengthsq(Rotation) == 0f)
                 Rotation = quaternion.identity;
+        }
+
+        /// <summary>
+        /// Create a string with the values of this knot.
+        /// </summary>
+        /// <returns>A summary of the values contained by this knot.</returns>
+        public override string ToString() => $"{{{Position}, {TangentIn}, {TangentOut}, {Rotation}}}";
+
+        /// <summary>
+        /// Compare two knots for equality.
+        /// </summary>
+        /// <param name="other">The knot to compare against.</param>
+        /// <returns>Returns true when the position, tangents, and rotation of each knot are identical.</returns>
+        public bool Equals(BezierKnot other)
+        {
+            return Position.Equals(other.Position)
+                && TangentIn.Equals(other.TangentIn)
+                && TangentOut.Equals(other.TangentOut)
+                && Rotation.Equals(other.Rotation);
+        }
+
+        /// <summary>
+        /// Compare against an object for equality.
+        /// </summary>
+        /// <param name="obj">The object to compare against.</param>
+        /// <returns>
+        /// Returns true when <paramref name="obj"/> is a <see cref="BezierKnot"/> and the values of each knot are
+        /// identical.
+        /// </returns>
+        public override bool Equals(object obj)
+        {
+            return obj is BezierKnot other && Equals(other);
+        }
+
+        /// <summary>
+        /// Calculate a hash code for this knot.
+        /// </summary>
+        /// <returns>
+        /// A hash code for the knot.
+        /// </returns>
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Position, TangentIn, TangentOut, Rotation);
         }
     }
 }

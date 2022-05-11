@@ -17,12 +17,12 @@ namespace Unity.Splines.Examples
         const float k_HandleOffset = 2f;
         const float k_LineLengthsSize = 4f;
         const int k_SamplesPerCurve = 15;
-        
+
         List<Vector3> m_LineSegments = new List<Vector3>();
-        
+
         GUIContent m_IconContent;
         public override GUIContent toolbarIcon => m_IconContent;
-        
+
         void OnEnable()
         {
             m_IconContent = new GUIContent()
@@ -32,57 +32,57 @@ namespace Unity.Splines.Examples
                 tooltip = "Define the border limit of the area defined by the spline."
             };
         }
-        
+
         public override void OnToolGUI(EditorWindow window)
         {
             var splineDataTarget = target as SpawnWithinSplineBounds;
-            var nativeSpline = new NativeSpline(splineDataTarget.splineContainer.Spline, splineDataTarget.splineContainer.transform.localToWorldMatrix);
+            var nativeSpline = new NativeSpline(splineDataTarget.Container.Spline, splineDataTarget.Container.transform.localToWorldMatrix);
 
-            Undo.RecordObject(splineDataTarget,"Modifying Border SplineData");
-            
+            Undo.RecordObject(splineDataTarget, "Modifying Border SplineData");
+
             Handles.color = Color.yellow;
             //User defined : Handles to manipulate Border data
-            DrawDataPoints(nativeSpline, splineDataTarget.spawnBorderData);
+            DrawDataPoints(nativeSpline, splineDataTarget.SpawnBorderData);
             //Use defined : Draws a line along the whole Border SplineData
-            DrawSplineData(nativeSpline, splineDataTarget.spawnBorderData);
+            DrawSplineData(nativeSpline, splineDataTarget.SpawnBorderData);
 
             //Using the out-of the box behaviour to manipulate SplineData indexes
-            nativeSpline.DataPointHandles(splineDataTarget.spawnBorderData);
+            nativeSpline.DataPointHandles(splineDataTarget.SpawnBorderData);
         }
-        
+
         public void OnDrawHandles()
         {
             var splineDataTarget = target as SpawnWithinSplineBounds;
-            if(ToolManager.IsActiveTool(this) || splineDataTarget.splineContainer == null)
+            if (ToolManager.IsActiveTool(this) || splineDataTarget.Container == null)
                 return;
-            
+
             //Reduce number of time we have to convert spline To NativeSpline
-            if(Event.current.type != EventType.Repaint)
+            if (Event.current.type != EventType.Repaint)
                 return;
-                 
-            var nativeSpline = new NativeSpline(splineDataTarget.splineContainer.Spline, splineDataTarget.splineContainer.transform.localToWorldMatrix);
+
+            var nativeSpline = new NativeSpline(splineDataTarget.Container.Spline, splineDataTarget.Container.transform.localToWorldMatrix);
             Color color = Color.yellow;
             color.a = 0.5f;
             Handles.color = color;
-            DrawSplineData(nativeSpline,splineDataTarget.spawnBorderData);
+            DrawSplineData(nativeSpline, splineDataTarget.SpawnBorderData);
         }
 
         protected override bool DrawDataPoint(
-            Vector3 position, 
-            Vector3 tangent, 
-            Vector3 up, 
+            Vector3 position,
+            Vector3 tangent,
+            Vector3 up,
             float inValue,
             out float outValue)
         {
             var controlID = GUIUtility.GetControlID(FocusType.Passive);
             outValue = inValue;
             var handleColor = Handles.color;
-            if(GUIUtility.hotControl == 0 && HandleUtility.nearestControl == controlID)
+            if (GUIUtility.hotControl == 0 && HandleUtility.nearestControl == controlID)
                 handleColor = Handles.preselectionColor;
-            
+
             var right = Vector3.Cross(tangent.normalized, up.normalized);
             var borderPos = position + right * inValue;
-            
+
             var size = k_HandleSize * HandleUtility.GetHandleSize(borderPos);
             var sliderOffset = GetBorderHandleOffset(borderPos);
 
@@ -122,7 +122,7 @@ namespace Unity.Splines.Examples
                     var right = math.cross(math.normalize(tangent), upVector);
                     var border = splineData.Evaluate(spline, splineTime, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
                     var borderPos = position + right * border;
-                    borderPos += (float3) GetBorderHandleOffset(borderPos);
+                    borderPos += (float3)GetBorderHandleOffset(borderPos);
                     if (curveIndex > 0 || step > 0)
                     {
                         m_LineSegments.Add(prevBorderPos);
@@ -134,7 +134,6 @@ namespace Unity.Splines.Examples
             }
 
             Handles.DrawDottedLines(m_LineSegments.ToArray(), k_LineLengthsSize);
-        
         }
 
         Vector3 GetBorderHandleOffset(Vector3 borderPos)

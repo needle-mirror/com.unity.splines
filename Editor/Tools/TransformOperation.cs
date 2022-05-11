@@ -12,7 +12,7 @@ namespace UnityEditor.Splines
         [Flags]
         public enum PivotFreeze
         {
-            None = 0, 
+            None = 0,
             Position = 1,
             Rotation = 2,
             All = Position | Rotation
@@ -27,24 +27,22 @@ namespace UnityEditor.Splines
             internal static TransformData GetData(ISplineElement element)
             {
                 var tData = new TransformData();
-                tData.position = new float3(element.position);
-                if (element is BezierEditableKnot knot)
-                {
-                    tData.inTangentDirection = knot.tangentIn.direction;
-                    tData.outTangentDirection = knot.tangentOut.direction;
-                }
+                tData.position = new float3(element.Position);
+                var knot = new SelectableKnot(element.SplineInfo, element.KnotIndex);
+                tData.inTangentDirection = knot.TangentIn.Direction;
+                tData.outTangentDirection = knot.TangentOut.Direction;
 
                 return tData;
             }
         }
-        
+
         struct RotationSyncData
         {
             quaternion m_RotationDelta;
             float m_MagnitudeDelta;
             float m_ScaleMultiplier; // Only used for scale operation
             bool m_Initialized;
-            
+
             public bool initialized => m_Initialized;
             public quaternion rotationDelta => m_RotationDelta;
             public float magnitudeDelta => m_MagnitudeDelta;
@@ -67,8 +65,8 @@ namespace UnityEditor.Splines
             }
         }
 
-        static List<ISplineElement> s_ElementSelection = new List<ISplineElement>(32);
-        
+        static readonly List<ISplineElement> s_ElementSelection = new List<ISplineElement>(32);
+
         public static IReadOnlyList<ISplineElement> elementSelection => s_ElementSelection;
 
         static int s_ElementSelectionCount = 0;
@@ -86,18 +84,23 @@ namespace UnityEditor.Splines
 
         //Caching rotation inverse for rotate and scale operations
         static quaternion s_HandleRotationInv;
-        
+
         public static PivotFreeze pivotFreeze { get; set; }
-        
+
         static TransformData[] s_MouseDownData;
-        
+
         // Used to prevent same knot being rotated multiple times during a transform operation in Rotation Sync mode.
-        static HashSet<EditableKnot> s_RotatedKnotCache = new HashSet<EditableKnot>();
+        static HashSet<SelectableKnot> s_RotatedKnotCache = new HashSet<SelectableKnot>();
+
+        // Used to prevent the translation of the same knot multiple times if a linked knot was moved
+        static HashSet<SelectableKnot> s_LinkedKnotCache = new HashSet<SelectableKnot>();
+
+        static readonly List<SelectableKnot> s_KnotBuffer = new List<SelectableKnot>();
         static RotationSyncData s_RotationSyncData = new RotationSyncData();
 
         internal static void UpdateSelection(IEnumerable<Object> selection)
         {
-            SplineSelection.GetSelectedElements(selection, s_ElementSelection);
+            SplineSelection.GetElements(EditorSplineUtility.GetSplinesFromTargetsInternal(selection), s_ElementSelection);
             s_ElementSelectionCount = s_ElementSelection.Count;
             if (s_ElementSelectionCount > 0)
             {
@@ -105,7 +108,7 @@ namespace UnityEditor.Splines
                 UpdateHandleRotation();
             }
         }
-        
+
         internal static void UpdatePivotPosition(bool useKnotPositionForTangents = false)
         {
             if ((pivotFreeze & PivotFreeze.Position) != 0)
@@ -114,7 +117,7 @@ namespace UnityEditor.Splines
             switch (Tools.pivotMode)
             {
                 case PivotMode.Center:
-                    s_PivotPosition = EditableSplineUtility.GetBounds(s_ElementSelection, useKnotPositionForTangents).center;
+                    s_PivotPosition = EditorSplineUtility.GetBounds(s_ElementSelection, useKnotPositionForTangents).center;
                     break;
 
                 case PivotMode.Pivot:
@@ -122,10 +125,10 @@ namespace UnityEditor.Splines
                         goto default;
 
                     var element = s_ElementSelection[0];
-                    if (useKnotPositionForTangents && element is EditableTangent tangent)
-                        s_PivotPosition = tangent.owner.position;
+                    if (useKnotPositionForTangents && element is SelectableTangent tangent)
+                        s_PivotPosition = tangent.Owner.Position;
                     else
-                        s_PivotPosition = element.position;
+                        s_PivotPosition = element.Position;
                     break;
 
                 default:
@@ -153,197 +156,203 @@ namespace UnityEditor.Splines
 
                 if (SplineTool.handleOrientation == HandleOrientation.Element)
                     handleRotation = CalculateElementSpaceHandleRotation(curElement);
-                else if (curElement is EditableTangent editableTangent)
-                    handleRotation = CalculateElementSpaceHandleRotation(editableTangent.owner);
+                else if (curElement is SelectableTangent editableTangent)
+                    handleRotation = CalculateElementSpaceHandleRotation(editableTangent.Owner);
             }
 
             s_HandleRotation = handleRotation;
             s_HandleRotationInv = math.inverse(s_HandleRotation);
         }
 
-        public static void ApplyTranslation(Vector3 delta)
+        public static void ApplyTranslation(float3 delta)
         {
             s_RotatedKnotCache.Clear();
+            s_LinkedKnotCache.Clear();
 
             foreach (var element in s_ElementSelection)
             {
-                if (element is EditableKnot knot) 
+                if (element is SelectableKnot knot)
                 {
-                    knot.position += (float3)delta;
-                    if (!s_RotationSyncData.initialized)
-                        s_RotationSyncData.Initialize(quaternion.identity, 0f, 1f);
+                    if (!s_LinkedKnotCache.Contains(knot))
+                    {
+                        knot.Position += delta;
+
+                        EditorSplineUtility.GetKnotLinks(knot, s_KnotBuffer);
+                        foreach (var k in s_KnotBuffer)
+                            s_LinkedKnotCache.Add(k);
+
+                        if (!s_RotationSyncData.initialized)
+                            s_RotationSyncData.Initialize(quaternion.identity, 0f, 1f);
+                    }
                 }
-                else if (element is EditableTangent tangent)
+                else if (element is SelectableTangent tangent)
                 {
+                    knot = tangent.Owner;
                     //Do nothing on the tangent if the knot is also in the selection
-                    if (s_ElementSelection.Contains(tangent.owner))
+                    if (s_ElementSelection.Contains(knot))
                         continue;
 
-                    if (tangent.owner is BezierEditableKnot owner)
+                    if (OppositeTangentSelected(tangent))
+                        knot.Mode = TangentMode.Broken;
+
+                    if (knot.Mode == TangentMode.Broken)
+                        tangent.Position = knot.Position + tangent.Direction + delta;
+                    else
                     {
-                        if (OppositeTangentSelected(tangent))
-                            owner.SetMode(BezierEditableKnot.Mode.Broken);
+                        if (s_RotatedKnotCache.Contains(knot))
+                            continue;
 
-                        if (owner.mode == BezierEditableKnot.Mode.Broken)
-                            tangent.position = tangent.owner.position + tangent.direction + (float3) delta;
-                        else
+                        var targetDirection = tangent.Direction + (float3) delta;
+
+                        // Build rotation sync data based on active selection's transformation
+                        if (!s_RotationSyncData.initialized)
                         {
-                            if (s_RotatedKnotCache.Contains(tangent.owner))
-                                continue;
+                            var rotationDelta = Quaternion.FromToRotation(tangent.Direction, targetDirection);
+                            var magnitudeDelta = math.length(targetDirection) - math.length(tangent.Direction);
 
-                            if (tangent.owner is BezierEditableKnot tangentOwner)
-                            {
-                                var targetDirection = tangent.direction + (float3) delta;
-
-                                // Build rotation sync data based on active selection's transformation
-                                if (!s_RotationSyncData.initialized)
-                                {
-                                    var rotationDelta = Quaternion.FromToRotation(tangent.direction, targetDirection);
-                                    var magnitudeDelta = math.length(targetDirection) - math.length(tangent.direction);
-
-                                    s_RotationSyncData.Initialize(rotationDelta, magnitudeDelta, 1f);
-                                }
-
-                                ApplyTangentRotationSyncTransform(tangent);
-                            }
+                            s_RotationSyncData.Initialize(rotationDelta, magnitudeDelta, 1f);
                         }
+
+                        ApplyTangentRotationSyncTransform(tangent);
                     }
                 }
             }
 
             s_RotationSyncData.Clear();
         }
-        
-        public static void ApplyRotation(Quaternion deltaRotation, Vector3 rotationCenter)
+
+        public static void ApplyRotation(Quaternion deltaRotation, float3 rotationCenter)
         {
             s_RotatedKnotCache.Clear();
-            
+
             foreach (var element in s_ElementSelection)
             {
-                if (element is EditableKnot knot)
+                if (element is SelectableKnot knot)
                 {
-                    var knotRotation = knot.rotation;
+                    var knotRotation = knot.Rotation;
                     RotateKnot(knot, deltaRotation, rotationCenter);
                     if (!s_RotationSyncData.initialized)
-                        s_RotationSyncData.Initialize(math.mul(math.inverse(knotRotation), knot.rotation), 0f, 1f);                    
+                        s_RotationSyncData.Initialize(math.mul(math.inverse(knotRotation), knot.Rotation), 0f, 1f);
                 }
-                else if (element is EditableTangent tangent && !s_ElementSelection.Contains(tangent.owner))
+                else if (element is SelectableTangent tangent && !s_ElementSelection.Contains(tangent.Owner))
                 {
-                    if (tangent.owner is BezierEditableKnot tangentOwner)
+                    knot = tangent.Owner;
+                    if (knot.Mode == TangentMode.Broken)
                     {
-                        if (tangentOwner.mode == BezierEditableKnot.Mode.Broken)
+                        if (Tools.pivotMode == PivotMode.Pivot)
+                            rotationCenter = knot.Position;
+
+                        var mode = knot.Mode;
+
+                        var deltaPos = math.rotate(deltaRotation, tangent.Position - rotationCenter);
+                        tangent.Position = deltaPos + rotationCenter;
+                    }
+                    else
+                    {
+                        if (s_RotatedKnotCache.Contains(tangent.Owner))
+                            continue;
+
+                        deltaRotation.ToAngleAxis(out var deltaRotationAngle, out var deltaRotationAxis);
+
+                        if (math.abs(deltaRotationAngle) > 0f)
                         {
-                            if (Tools.pivotMode == PivotMode.Pivot)
-                                rotationCenter = tangent.owner.position;
-            
-                            var mode = tangentOwner.mode;
-
-                            var deltaPos = math.rotate(deltaRotation, tangent.position - (float3)rotationCenter);
-                            tangent.position = deltaPos + (float3)rotationCenter;
-
-                            tangentOwner.TangentChanged(tangent, mode);
-                        }
-                        else
-                        {
-                            if (s_RotatedKnotCache.Contains(tangent.owner))
-                                continue;
-                            
-                            deltaRotation.ToAngleAxis(out var deltaRotationAngle, out var deltaRotationAxis);
-
-                            if (math.abs(deltaRotationAngle) > 0f)
+                            if (knot.Mode != TangentMode.Broken)
                             {
-                                if (tangentOwner.mode != BezierEditableKnot.Mode.Broken)
+                                // If we're in center pivotMode and both tangents of the same knot are in selection, enter Broken mode under these conditions:
+                                if (Tools.pivotMode == PivotMode.Center && OppositeTangentSelected(tangent))
                                 {
-                                    // If we're in center pivotMode and both tangents of the same knot are in selection, enter Broken mode under these conditions:
-                                    if (Tools.pivotMode == PivotMode.Center && OppositeTangentSelected(tangent))
+                                    var knotToCenter = (float3) rotationCenter - knot.Position;
+                                    // 1) Rotation center does not match owner knot's position
+                                    if (!Mathf.Approximately(math.length(knotToCenter), 0f))
                                     {
-                                        var knotToCenter = (float3) rotationCenter - tangentOwner.position;
-                                        // 1) Rotation center does not match owner knot's position
-                                        if (!Mathf.Approximately(math.length(knotToCenter), 0f))
-                                        {
-                                            var similarity = Math.Abs(Vector3.Dot(math.normalize(deltaRotationAxis), math.normalize(knotToCenter)));
-                                            // 2) Both rotation center and knot, are not on rotation delta's axis
-                                            if (!Mathf.Approximately(similarity, 1f))
-                                                tangentOwner.SetMode(BezierEditableKnot.Mode.Broken);
-                                        }
+                                        var similarity = Math.Abs(Vector3.Dot(math.normalize(deltaRotationAxis),
+                                            math.normalize(knotToCenter)));
+                                        // 2) Both rotation center and knot, are not on rotation delta's axis
+                                        if (!Mathf.Approximately(similarity, 1f))
+                                            knot.Mode = TangentMode.Broken;
                                     }
                                 }
-
-                                // Build rotation sync data based on active selection's transformation
-                                if (!s_RotationSyncData.initialized)
-                                {
-                                    if (Tools.pivotMode == PivotMode.Pivot)
-                                        s_RotationSyncData.Initialize(deltaRotation, 0f, 1f);
-                                    else
-                                    {
-                                        var deltaPos = math.rotate(deltaRotation, tangent.position - (float3) rotationCenter);
-                                        var knotToRotationCenter = (float3) rotationCenter - tangent.owner.position;
-                                        var targetDirection = knotToRotationCenter + deltaPos;
-                                        var tangentNorm = math.normalize(tangent.direction);
-                                        var axisDotTangent = math.dot(math.normalize(deltaRotationAxis), tangentNorm);
-                                        var toRotCenterDotTangent = math.length(knotToRotationCenter) > 0f ? math.dot(math.normalize(knotToRotationCenter), tangentNorm) : 1f;
-                                        quaternion knotRotationDelta;
-                                        // In center pivotMode, use handle delta only if our handle delta rotation's axis
-                                        // matches knot's active selection tangent direction and rotation center is on the tangent's axis.
-                                        // This makes knot roll possible when element selection list only contains one or both tangents of a single knot.
-                                        if (Mathf.Approximately(math.abs(axisDotTangent), 1f) && Mathf.Approximately(math.abs(toRotCenterDotTangent), 1f))
-                                            knotRotationDelta = deltaRotation;
-                                        else
-                                            knotRotationDelta = Quaternion.FromToRotation(tangent.direction, targetDirection);
-
-                                        var scaleMultiplier = math.length(targetDirection) / math.length(tangent.direction);
-
-                                        s_RotationSyncData.Initialize(knotRotationDelta, 0f, scaleMultiplier);
-                                    }
-                                }
-
-                                ApplyTangentRotationSyncTransform(tangent, false);
                             }
+
+                            // Build rotation sync data based on active selection's transformation
+                            if (!s_RotationSyncData.initialized)
+                            {
+                                if (Tools.pivotMode == PivotMode.Pivot)
+                                    s_RotationSyncData.Initialize(deltaRotation, 0f, 1f);
+                                else
+                                {
+                                    var deltaPos = math.rotate(deltaRotation, tangent.Position - rotationCenter);
+                                    var knotToRotationCenter = rotationCenter - tangent.Owner.Position;
+                                    var targetDirection = knotToRotationCenter + deltaPos;
+                                    var tangentNorm = math.normalize(tangent.Direction);
+                                    var axisDotTangent = math.dot(math.normalize(deltaRotationAxis), tangentNorm);
+                                    var toRotCenterDotTangent = math.length(knotToRotationCenter) > 0f
+                                        ? math.dot(math.normalize(knotToRotationCenter), tangentNorm)
+                                        : 1f;
+                                    quaternion knotRotationDelta;
+                                    // In center pivotMode, use handle delta only if our handle delta rotation's axis
+                                    // matches knot's active selection tangent direction and rotation center is on the tangent's axis.
+                                    // This makes knot roll possible when element selection list only contains one or both tangents of a single knot.
+                                    if (Mathf.Approximately(math.abs(axisDotTangent), 1f) &&
+                                        Mathf.Approximately(math.abs(toRotCenterDotTangent), 1f))
+                                        knotRotationDelta = deltaRotation;
+                                    else
+                                        knotRotationDelta =
+                                            Quaternion.FromToRotation(tangent.Direction, targetDirection);
+
+                                    var scaleMultiplier =
+                                        math.length(targetDirection) / math.length(tangent.Direction);
+
+                                    s_RotationSyncData.Initialize(knotRotationDelta, 0f, scaleMultiplier);
+                                }
+                            }
+
+                            ApplyTangentRotationSyncTransform(tangent, false);
                         }
                     }
                 }
             }
-            
+
             s_RotationSyncData.Clear();
         }
 
-        static bool OppositeTangentSelected(EditableTangent tangent)
+        static bool OppositeTangentSelected(SelectableTangent tangent)
         {
-            if (tangent.owner is BezierEditableKnot tangentOwner && tangentOwner.mode != BezierEditableKnot.Mode.Broken)
-                if (tangentOwner.TryGetOppositeTangent(tangent, out var oppositeTangent) && s_ElementSelection.Contains(oppositeTangent))
+            if (tangent.Owner.Mode != TangentMode.Broken)
+                if (s_ElementSelection.Contains(tangent.OppositeTangent))
                     return true;
 
             return false;
         }
 
-        static void RotateKnot(EditableKnot knot, quaternion deltaRotation, float3 rotationCenter, bool allowTranslation = true)
+        static void RotateKnot(SelectableKnot knot, quaternion deltaRotation, float3 rotationCenter, bool allowTranslation = true)
         {
-            var knotInBrokenMode = (knot is BezierEditableKnot bezierKnot && bezierKnot.mode == BezierEditableKnot.Mode.Broken);
+            var knotInBrokenMode = knot.Mode == TangentMode.Broken;
             if (!knotInBrokenMode && s_RotatedKnotCache.Contains(knot))
                 return;
 
             if (allowTranslation && Tools.pivotMode == PivotMode.Center)
             {
-                var dir = knot.position - rotationCenter;
+                var dir = knot.Position - rotationCenter;
 
                 if (SplineTool.handleOrientation == HandleOrientation.Element || SplineTool.handleOrientation == HandleOrientation.Parent)
-                    knot.position = math.rotate(deltaRotation, dir) + rotationCenter;
+                    knot.Position = math.rotate(deltaRotation, dir) + rotationCenter;
                 else
-                    knot.position = math.rotate(s_HandleRotation, math.rotate(deltaRotation, math.rotate(s_HandleRotationInv, dir))) + rotationCenter;
+                    knot.Position = math.rotate(s_HandleRotation, math.rotate(deltaRotation, math.rotate(s_HandleRotationInv, dir))) + rotationCenter;
             }
-            
+
             if (SplineTool.handleOrientation == HandleOrientation.Element || SplineTool.handleOrientation == HandleOrientation.Parent)
             {
                 if (Tools.pivotMode == PivotMode.Center)
-                    knot.rotation = math.mul(deltaRotation, knot.rotation);
+                    knot.Rotation = math.mul(deltaRotation, knot.Rotation);
                 else
                 {
-                    var handlePivotModeRot = math.mul(GetCurrentSelectionKnot().rotation, math.inverse(knot.rotation));
-                    knot.rotation = math.mul(math.inverse(handlePivotModeRot), math.mul(deltaRotation, math.mul(handlePivotModeRot, knot.rotation)));
+                    var handlePivotModeRot = math.mul(GetCurrentSelectionKnot().Rotation, math.inverse(knot.Rotation));
+                    knot.Rotation = math.mul(math.inverse(handlePivotModeRot), math.mul(deltaRotation, math.mul(handlePivotModeRot, knot.Rotation)));
                 }
             }
             else
-                knot.rotation = math.mul(s_HandleRotation, math.mul(deltaRotation, math.mul(s_HandleRotationInv, knot.rotation)));
+                knot.Rotation = math.mul(s_HandleRotation, math.mul(deltaRotation, math.mul(s_HandleRotationInv, knot.Rotation)));
 
             s_RotatedKnotCache.Add(knot);
         }
@@ -352,165 +361,161 @@ namespace UnityEditor.Splines
         {
             s_RotatedKnotCache.Clear();
             ISplineElement[] scaledElements = new ISplineElement[s_ElementSelectionCount];
-            
-            for(int elementIndex = 0; elementIndex<s_ElementSelectionCount; elementIndex++)
+
+            for (int elementIndex = 0; elementIndex < s_ElementSelectionCount; elementIndex++)
             {
                 var element = s_ElementSelection[elementIndex];
-                if (element is EditableKnot knot)
+                if (element is SelectableKnot knot)
                 {
                     ScaleKnot(knot, elementIndex, scale);
-                    
+
                     if (!s_RotationSyncData.initialized)
                         s_RotationSyncData.Initialize(quaternion.identity, 0f, 1f);
-                } 
-                else if(element is EditableTangent tangent && !s_ElementSelection.Contains(tangent.owner))
+                }
+                else if (element is SelectableTangent tangent && !s_ElementSelection.Contains(tangent.Owner))
                 {
-                    if(tangent.owner is BezierEditableKnot tangentOwner)
+                    var owner = tangent.Owner;
+                    var restoreMode = false;
+                    var mode = owner.Mode;
+                    var scaleDelta = scale - new float3(1f, 1f, 1f);
+                    if (mode != TangentMode.Broken && math.length(scaleDelta) > 0f)
                     {
-                        var restoreMode = false;
-                        var mode = tangentOwner.mode;
-                        var scaleDelta = scale - new float3(1f, 1f, 1f);
-                        if (tangentOwner.mode != BezierEditableKnot.Mode.Broken && math.length(scaleDelta) > 0f)
+                        // If we're in center pivotMode and both tangents of the same knot are in selection
+                        if (Tools.pivotMode == PivotMode.Center && OppositeTangentSelected(tangent))
                         {
-                            // If we're in center pivotMode and both tangents of the same knot are in selection
-                            if (Tools.pivotMode == PivotMode.Center && OppositeTangentSelected(tangent))
+                            var knotToCenter = (float3) pivotPosition - owner.Position;
+                            //  Enter broken mode if scale operation center does not match owner knot's position
+                            if (!Mathf.Approximately(math.length(knotToCenter), 0f))
                             {
-                                var knotToCenter = (float3)pivotPosition - tangentOwner.position;
-                                //  Enter broken mode if scale operation center does not match owner knot's position
-                                if (!Mathf.Approximately(math.length(knotToCenter), 0f))
-                                {
-                                    tangentOwner.SetMode(BezierEditableKnot.Mode.Broken);
-                                    var similarity = Math.Abs(Vector3.Dot(math.normalize(scaleDelta), math.normalize(knotToCenter)));
-                                    // If scale center and knot are both on an axis that's orthogonal to scale operation's axis,
-                                    // mark knot for mode restore so that mirrored/continous modes can be restored
-                                    if (Mathf.Approximately(similarity, 0f))
-                                        restoreMode = true;
-                                }
+                                owner.Mode = TangentMode.Broken;
+                                var similarity = Math.Abs(Vector3.Dot(math.normalize(scaleDelta),
+                                    math.normalize(knotToCenter)));
+                                // If scale center and knot are both on an axis that's orthogonal to scale operation's axis,
+                                // mark knot for mode restore so that mirrored/continous modes can be restored
+                                if (Mathf.Approximately(similarity, 0f))
+                                    restoreMode = true;
                             }
-                        }
-
-                        var index = Array.IndexOf(scaledElements, element); 
-                        if (index == -1) //element not scaled yet
-                        {
-                            if (tangentOwner.mode == BezierEditableKnot.Mode.Broken)
-                                tangent.position = ScaleTangent(tangent, s_MouseDownData[elementIndex].position, scale);
-                            else
-                            {
-                                // Build rotation sync data based on active selection's transformation
-                                if (!s_RotationSyncData.initialized)
-                                {
-                                    var targetDirection = ScaleTangent(tangent, s_MouseDownData[elementIndex].position, scale) - tangent.owner.position;
-                                    var rotationDelta = Quaternion.FromToRotation(tangent.direction, targetDirection);
-                                    var scaleMultiplier = math.length(targetDirection) / math.length(tangent.direction);
-
-                                    s_RotationSyncData.Initialize(rotationDelta, 0f, scaleMultiplier);
-                                }
-
-                                if (tangentOwner.mode == BezierEditableKnot.Mode.Mirrored && s_RotatedKnotCache.Contains(tangentOwner))
-                                    continue;
-
-                                ApplyTangentRotationSyncTransform(tangent, false);
-                            }
-
-                            if (restoreMode)
-                                tangentOwner.SetMode(mode);
                         }
                     }
+
+                    var index = Array.IndexOf(scaledElements, element);
+                    if (index == -1) //element not scaled yet
+                    {
+                        if (owner.Mode == TangentMode.Broken)
+                            tangent.Position = ScaleTangent(tangent, s_MouseDownData[elementIndex].position, scale);
+                        else
+                        {
+                            // Build rotation sync data based on active selection's transformation
+                            if (!s_RotationSyncData.initialized)
+                            {
+                                var targetDirection =
+                                    ScaleTangent(tangent, s_MouseDownData[elementIndex].position, scale) -
+                                    owner.Position;
+                                var rotationDelta = Quaternion.FromToRotation(tangent.Direction, targetDirection);
+                                var scaleMultiplier = math.length(targetDirection) / math.length(tangent.Direction);
+
+                                s_RotationSyncData.Initialize(rotationDelta, 0f, scaleMultiplier);
+                            }
+
+                            if (owner.Mode == TangentMode.Mirrored &&
+                                s_RotatedKnotCache.Contains(owner))
+                                continue;
+
+                            ApplyTangentRotationSyncTransform(tangent, false);
+                        }
+
+                        if (restoreMode)
+                            owner.Mode = mode;
+                    }
                 }
+
                 scaledElements[elementIndex] = element;
             }
 
             s_RotationSyncData.Clear();
         }
 
-        static void ScaleKnot(EditableKnot knot, int dataIndex, float3 scale)
+        static void ScaleKnot(SelectableKnot knot, int dataIndex, float3 scale)
         {
-            if(Tools.pivotMode == PivotMode.Center)
+            if (Tools.pivotMode == PivotMode.Center)
             {
-                var deltaPos = math.rotate(s_HandleRotationInv ,s_MouseDownData[dataIndex].position - (float3) pivotPosition);
-                var deltaPosKnot =  deltaPos * scale;
-                knot.position = math.rotate(s_HandleRotation, deltaPosKnot) + (float3)pivotPosition;
+                var deltaPos = math.rotate(s_HandleRotationInv,
+                    s_MouseDownData[dataIndex].position - (float3) pivotPosition);
+                var deltaPosKnot = deltaPos * scale;
+                knot.Position = math.rotate(s_HandleRotation, deltaPosKnot) + (float3) pivotPosition;
             }
 
-            using(new BezierEditableKnot.TangentSafeEditScope(knot))
-            {
-                if(knot is BezierEditableKnot bezierKnot)
-                {
-                    var tangent = bezierKnot.tangentIn;
-                    tangent.direction = math.rotate(s_HandleRotation, math.rotate(s_HandleRotationInv,s_MouseDownData[dataIndex].inTangentDirection) * scale);
-                    tangent = bezierKnot.tangentOut;
-                    tangent.direction = math.rotate(s_HandleRotation, math.rotate(s_HandleRotationInv,s_MouseDownData[dataIndex].outTangentDirection) * scale);
-                }
-            }
+            var tangent = knot.TangentIn;
+            tangent.Direction = math.rotate(s_HandleRotation, math.rotate(s_HandleRotationInv, s_MouseDownData[dataIndex].inTangentDirection) * scale);
+            tangent = knot.TangentOut;
+            tangent.Direction = math.rotate(s_HandleRotation, math.rotate(s_HandleRotationInv, s_MouseDownData[dataIndex].outTangentDirection) * scale);
         }
 
-        static float3 ScaleTangent(EditableTangent tangent, float3 originalPosition, float3 scale)
+        static float3 ScaleTangent(SelectableTangent tangent, float3 originalPosition, float3 scale)
         {
-            var scaleCenter = Tools.pivotMode == PivotMode.Center ? (float3) pivotPosition : tangent.owner.position;
-            
+            var scaleCenter = Tools.pivotMode == PivotMode.Center ? (float3) pivotPosition : tangent.Owner.Position;
+
             var deltaPos = math.rotate(s_HandleRotationInv, originalPosition - scaleCenter) * scale;
             return math.rotate(s_HandleRotation, deltaPos) + scaleCenter;
         }
 
-        static void ApplyTangentRotationSyncTransform(EditableTangent tangent, bool absoluteScale = true)
+        static void ApplyTangentRotationSyncTransform(SelectableTangent tangent, bool absoluteScale = true)
         {
-            if (tangent.owner is BezierEditableKnot tangentOwner)
+            // Apply scale only if tangent is active selection or it's part of multi select and its knot is mirrored
+            if (tangent.Equals(currentElementSelected) ||
+                tangent.Owner.Mode == TangentMode.Mirrored ||
+                (!absoluteScale && tangent.Owner.Mode == TangentMode.Continuous))
             {
-                // Apply scale only if tangent is active selection or it's part of multi select and its knot is mirrored
-                if (tangent == currentElementSelected || 
-                    tangentOwner.mode == BezierEditableKnot.Mode.Mirrored || 
-                    (!absoluteScale && tangentOwner.mode == BezierEditableKnot.Mode.Continuous))
-                {
-                    if (absoluteScale)
-                        tangent.direction += math.normalize(tangent.direction) * s_RotationSyncData.magnitudeDelta;
-                    else 
-                        tangent.direction *= s_RotationSyncData.scaleMultiplier;
-                }
+                if (absoluteScale)
+                    tangent.Direction += math.normalize(tangent.Direction) * s_RotationSyncData.magnitudeDelta;
+                else
+                    tangent.Direction *= s_RotationSyncData.scaleMultiplier;
             }
 
-            RotateKnot(tangent.owner, s_RotationSyncData.rotationDelta, tangent.owner.position, false);
+            RotateKnot(tangent.Owner, s_RotationSyncData.rotationDelta, tangent.Owner.Position, false);
         }
 
-        internal static quaternion CalculateElementSpaceHandleRotation(ISplineElement element)
+        internal static quaternion CalculateElementSpaceHandleRotation<T>(T element)
+            where T : ISplineElement
         {
             quaternion handleRotation = quaternion.identity;
-            if (element is EditableTangent editableTangent && editableTangent.owner is BezierEditableKnot tangentKnot)
+            if (element is SelectableTangent editableTangent)
             {
                 float3 forward;
-                var knotUp = math.rotate(tangentKnot.rotation, math.up());
-                    
-                if (math.length(editableTangent.direction) > 0)
-                    forward = math.normalize(editableTangent.direction);
+                var knotUp = math.rotate(editableTangent.Owner.Rotation, math.up());
+
+                if (math.length(editableTangent.Direction) > 0)
+                    forward = math.normalize(editableTangent.Direction);
                 else // Treat zero length tangent same way as when it's parallel to knot's up vector
                     forward = knotUp;
 
                 float3 right;
                 var dotForwardKnotUp = math.dot(forward, knotUp);
                 if (Mathf.Approximately(math.abs(dotForwardKnotUp), 1f))
-                    right = math.rotate(tangentKnot.rotation, math.right()) * math.sign(dotForwardKnotUp);
+                    right = math.rotate(editableTangent.Owner.Rotation, math.right()) * math.sign(dotForwardKnotUp);
                 else
                     right = math.cross(forward, knotUp);
 
                 handleRotation = quaternion.LookRotationSafe(forward, math.cross(right, forward));
             }
-            else if (element is EditableKnot editableKnot)
-                handleRotation = editableKnot.rotation;
+            else if (element is SelectableKnot editableKnot)
+                handleRotation = editableKnot.Rotation;
 
             return handleRotation;
         }
 
-        static EditableKnot GetCurrentSelectionKnot()
+        static SelectableKnot GetCurrentSelectionKnot()
         {
             if (currentElementSelected == null)
-                return null;
+                return default;
 
-            if (currentElementSelected is EditableTangent tangent)
-                return tangent.owner;
+            if (currentElementSelected is SelectableTangent tangent)
+                return tangent.Owner;
 
-            if (currentElementSelected is EditableKnot knot)
+            if (currentElementSelected is SelectableKnot knot)
                 return knot;
 
-            return null;
+            return default;
         }
 
         public static void RecordMouseDownState()
@@ -526,10 +531,10 @@ namespace UnityEditor.Splines
         {
             s_MouseDownData = null;
         }
-        
+
         public static Bounds GetSelectionBounds(bool useKnotPositionForTangents = false)
         {
-            return EditableSplineUtility.GetBounds(s_ElementSelection, useKnotPositionForTangents);
+            return EditorSplineUtility.GetBounds(s_ElementSelection, useKnotPositionForTangents);
         }
     }
 }
