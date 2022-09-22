@@ -14,7 +14,7 @@ Use `Splines.cginc` to import curve data data types and HLSL functions for worki
 
 ## Creating a Spline
 
-The default method of creating a Spline is the draw spline tool, which is accessed through the menu `GameObject/3D Object/Spline/Draw Spline Tool...`. This instantiates a new `SplineContainer` in the active scene, and enters the knot placement tool. 
+The default method of creating a Spline is the draw spline tool, which is accessed through the menu `GameObject/3D Object/Spline/Draw Splines Tool`. This instantiates a new `SplineContainer` in the active scene, and enters the knot placement tool. 
 
 With the **Knot Placement** tool active, add points to the spline by clicking in the Scene View. Press the `Escape` or `Enter/Return` key to finish placing points.
 

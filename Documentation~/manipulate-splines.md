@@ -1,8 +1,8 @@
 # Manipulate splines
 
-You can move, rotate, and scale splines like you would with other GameObjects. See [Positioning GameObjects](https://docs.unity3d.com/Manual/PositioningGameObjects.html) to learn more.  
+You can move, rotate, and scale splines like other GameObjects. See [Positioning GameObjects](https://docs.unity3d.com/Manual/PositioningGameObjects.html) in the Unity User Manual to learn more.  
 
-Knots and tangents determine a spline's path and shape. To modify a spline's path or shape, manipulate a spline's knots and tangents. 
+Knots and tangents determine a spline's path and shape. To change a spline's path or shape, manipulate a spline's knots and tangents. 
 
 ## Select knots or tangents in the Scene view
 
@@ -10,8 +10,8 @@ Activate the Splines tool context to use the Move, Rotate, and Scale tools on kn
 
 To select the knots or tangents of a spline in the Scene view:  
 
-1. In the Hierarchy window or Scene view, select a spline GameObject.
-1. In the Tools overlay, set the tool context to **Splines**.
+1. In the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html) or [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html), select a spline GameObject.
+1. In the [Tools overlay](https://docs.unity3d.com/Manual/overlays.html), set the tool context to **Spline**.
 1. In the Scene view, select a knot or tangent. 
 1. To select multiple knots and tangents, do one of the following:
     * Click and drag to draw a box over multiple knots and tangents. 

@@ -4,6 +4,10 @@ using System.Collections.Generic;
 
 namespace UnityEngine.Splines
 {
+    /// <summary>
+    /// A collection of KnotLinks to track how spline knots are linked and the utilities to
+    /// update these links when splines are modified.
+    /// </summary>
     [Serializable]
     public sealed class KnotLinkCollection
     {
@@ -24,6 +28,9 @@ namespace UnityEngine.Splines
         [SerializeField]
         KnotLink[] m_KnotsLink = new KnotLink[0];
 
+        /// <summary>
+        /// How many KnotLinks the collection contains.
+        /// </summary>
         public int Count => m_KnotsLink.Length;
 
         KnotLink GetKnotLinksInternal(SplineKnotIndex index)
@@ -35,20 +42,34 @@ namespace UnityEngine.Splines
             return null;
         }
 
-        public bool TryGetKnotLinks(SplineKnotIndex index, out IReadOnlyList<SplineKnotIndex> linkedKnots)
+        /// <summary>
+        /// Gets the knots linked to a specific knot.
+        /// </summary>
+        /// <param name="knotIndex">The <see cref="SplineKnotIndex"/> of the knot.</param>
+        /// <param name="linkedKnots">The output list of the knots linked to the specified knot if they exist or null if they do not exist.</param>
+        /// <returns>Returns true if linked knots are found, false otherwise.</returns>
+        public bool TryGetKnotLinks(SplineKnotIndex knotIndex, out IReadOnlyList<SplineKnotIndex> linkedKnots)
         {
-            linkedKnots = GetKnotLinksInternal(index);
+            linkedKnots = GetKnotLinksInternal(knotIndex);
             return linkedKnots != null;
         }
 
-        public IReadOnlyList<SplineKnotIndex> GetKnotLinks(SplineKnotIndex index)
+        /// <summary>
+        /// Gets the knots linked to a specific knot.
+        /// </summary>
+        /// <param name="knotIndex">The <see cref="SplineKnotIndex"/> of the knot.</param>
+        /// <returns>Returns a list of knots linked to the specified knot. The specified knot is also in the list. </returns>
+        public IReadOnlyList<SplineKnotIndex> GetKnotLinks(SplineKnotIndex knotIndex)
         {
-            if(TryGetKnotLinks(index, out var linkedKnots))
+            if(TryGetKnotLinks(knotIndex, out var linkedKnots))
                 return linkedKnots;
 
-            return new KnotLink { Knots = new[] { index } };
+            return new KnotLink { Knots = new[] { knotIndex } };
         }
 
+        /// <summary>
+        /// Clears all the links in the collection.
+        /// </summary>
         public void Clear()
         {
             m_KnotsLink = new KnotLink[0];
@@ -152,7 +173,57 @@ namespace UnityEngine.Splines
                 }
             }
         }
+        /// <summary>
+        /// Updates the KnotLinkCollection indices after a spline index changes.
+        /// </summary>
+        /// <param name="previousIndex">The previous index of that spline in the SplineContainer.</param>
+        /// <param name="newIndex">The new index of that spline in the SplineContainer.</param>
+        public void SplineIndexChanged(int previousIndex, int newIndex)
+        {
+            for (var index = m_KnotsLink.Length - 1; index >= 0; --index)
+            {
+                var sharedKnot = m_KnotsLink[index];
+                for (int i = 0; i < sharedKnot.Knots.Length; ++i)
+                {
+                    var knotIndex = sharedKnot.Knots[i];
+                    if (knotIndex.Spline == previousIndex)
+                        sharedKnot.Knots[i] = new SplineKnotIndex(newIndex, knotIndex.Knot);
+                    else if (knotIndex.Spline > previousIndex && knotIndex.Spline <= newIndex)
+                        sharedKnot.Knots[i] = new SplineKnotIndex(knotIndex.Spline - 1, knotIndex.Knot);
+                    else if (knotIndex.Spline < previousIndex && knotIndex.Spline >= newIndex)
+                        sharedKnot.Knots[i] = new SplineKnotIndex(knotIndex.Spline + 1, knotIndex.Knot);
+                }
+            }
+        }
 
+        /// <summary>
+        /// Updates the KnotLinkCollection indices after a knot index changes.
+        /// </summary>
+        /// <param name="splineIndex">The index of the spline.</param>
+        /// <param name="previousKnotIndex">The previous index of the knot in the spline.</param>
+        /// <param name="newKnotIndex">The new index of the knot in the spline.</param>
+        public void KnotIndexChanged(int splineIndex, int previousKnotIndex, int newKnotIndex) => KnotIndexChanged(new SplineKnotIndex(splineIndex, previousKnotIndex),new SplineKnotIndex(splineIndex, newKnotIndex));
+
+        /// <summary>
+        /// Updates the KnotLinkCollection indices after a knot index changes.
+        /// </summary>
+        /// <param name="previousIndex">The previous SplineKnotIndex of the knot.</param>
+        /// <param name="newIndex">The new SplineKnotIndex of the knot.</param>
+        public void KnotIndexChanged(SplineKnotIndex previousIndex, SplineKnotIndex newIndex)
+        {
+            if (previousIndex.Knot > newIndex.Knot)
+                previousIndex.Knot += 1;
+            else
+                newIndex.Knot += 1;
+
+            //Insert the knot to shift indexes
+            KnotInserted(newIndex);
+            //Link the 2 knots together temporary to link the new knot to the same knots as previous knot
+            Link(previousIndex, newIndex);
+            //Now that links has been updated, remove the previous knot
+            KnotRemoved(previousIndex);
+        }
+        
         /// <summary>
         /// Updates the KnotLinkCollection indices after a knot has been removed.
         /// </summary>

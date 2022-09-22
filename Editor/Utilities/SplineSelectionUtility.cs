@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
@@ -8,7 +9,24 @@ namespace UnityEditor.Splines
     {
         static readonly List<SelectableKnot> s_KnotBuffer = new List<SelectableKnot>();
 
-        internal static void HandleSelection<T>(T element, bool appendElement, bool addLinkedKnots = true)
+        internal static void ValidateTangentSelection(SelectableKnot knot)
+        {
+            if (!EditorSplineUtility.AreTangentsModifiable(knot.Mode))
+            {
+                SplineSelection.Remove(knot.TangentIn);
+                SplineSelection.Remove(knot.TangentOut);
+            }
+        }
+
+        internal static void HandleSelection<T>(T element, bool addLinkedKnots = true)
+            where T : struct, ISplineElement
+        {
+            HandleSelection(element, EditorGUI.actionKey || Event.current.modifiers == EventModifiers.Shift,
+                Event.current.modifiers == EventModifiers.Shift, addLinkedKnots);
+        }
+
+        internal static void HandleSelection<T>(T element, bool appendElement, bool setActive, bool addLinkedKnots = true)
+
             where T : struct, ISplineElement
         {
             if (appendElement)
@@ -19,10 +37,14 @@ namespace UnityEditor.Splines
                     {
                         EditorSplineUtility.GetKnotLinks(knot, s_KnotBuffer);
                         var allContained = true;
-                        foreach(var k in s_KnotBuffer)
+                        var hasActive = false;
+                        foreach (var k in s_KnotBuffer)
+                        {
                             allContained &= SplineSelection.Contains(k);
+                            hasActive |= SplineSelection.IsActive(k);
+                        }
 
-                        if (allContained)
+                        if (allContained && (!setActive || hasActive)) 
                             SplineSelection.RemoveRange(s_KnotBuffer);
                         else
                             SplineSelection.AddRange(s_KnotBuffer);
@@ -30,7 +52,7 @@ namespace UnityEditor.Splines
                     else
                     {
                         var activeKnot = GetSelectedKnot(knot);
-                        if(SplineSelection.Contains(activeKnot))
+                        if (SplineSelection.Contains(activeKnot) && (!setActive || SplineSelection.IsActive(activeKnot)))
                             SplineSelection.Remove(activeKnot);
                         else
                             SplineSelection.Add(activeKnot);
@@ -38,11 +60,15 @@ namespace UnityEditor.Splines
                 }
                 else
                 {
-                    if(SplineSelection.Contains(element))
+                    if(SplineSelection.Contains(element) && (!setActive || SplineSelection.IsActive(element)))
                         SplineSelection.Remove(element);
                     else
                         SplineSelection.Add(element);
                 }
+
+                if (setActive && SplineSelection.Contains(element))
+                    SplineSelection.SetActive(element);
+                    
             }
             else
             {
@@ -61,7 +87,7 @@ namespace UnityEditor.Splines
                 else
                     newSelection.Add(element);
 
-                SplineSelection.ClearNoUndo(false);
+                SplineSelection.Clear();
                 SplineSelection.AddRange(newSelection);
             }
         }

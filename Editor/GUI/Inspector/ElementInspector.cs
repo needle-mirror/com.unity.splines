@@ -24,7 +24,6 @@ namespace UnityEditor.Splines
 
         static StyleSheet s_CommonStyleSheet;
         static StyleSheet s_ThemeStyleSheet;
-        static StyleSheet s_ButtonStripStyleSheet;
 
         public ElementInspector()
         {
@@ -32,12 +31,9 @@ namespace UnityEditor.Splines
                 s_CommonStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/com.unity.splines/Editor/Stylesheets/SplineInspectorCommon.uss");
             if (s_ThemeStyleSheet == null)
                 s_ThemeStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"Packages/com.unity.splines/Editor/Stylesheets/SplineInspector{(EditorGUIUtility.isProSkin ? "Dark" : "Light")}.uss");
-            if (s_ButtonStripStyleSheet == null)
-                s_ButtonStripStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/com.unity.splines/Editor/Stylesheets/ButtonStripField.uss");
 
             styleSheets.Add(s_CommonStyleSheet);
             styleSheets.Add(s_ThemeStyleSheet);
-            styleSheets.Add(s_ButtonStripStyleSheet);
             
             Add(m_KnotIdentifierLabel = new Label());
             m_KnotIdentifierLabel.style.height = 24;

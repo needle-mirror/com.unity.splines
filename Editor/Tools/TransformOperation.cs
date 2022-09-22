@@ -117,7 +117,7 @@ namespace UnityEditor.Splines
             switch (Tools.pivotMode)
             {
                 case PivotMode.Center:
-                    s_PivotPosition = EditorSplineUtility.GetBounds(s_ElementSelection, useKnotPositionForTangents).center;
+                    s_PivotPosition = EditorSplineUtility.GetElementBounds(s_ElementSelection, useKnotPositionForTangents).center;
                     break;
 
                 case PivotMode.Pivot:
@@ -175,7 +175,7 @@ namespace UnityEditor.Splines
                 {
                     if (!s_LinkedKnotCache.Contains(knot))
                     {
-                        knot.Position += delta;
+                        knot.Position = ApplySmartRounding(knot.Position + delta);
 
                         EditorSplineUtility.GetKnotLinks(knot, s_KnotBuffer);
                         foreach (var k in s_KnotBuffer)
@@ -196,23 +196,21 @@ namespace UnityEditor.Splines
                         knot.Mode = TangentMode.Broken;
 
                     if (knot.Mode == TangentMode.Broken)
-                        tangent.Position = knot.Position + tangent.Direction + delta;
+                        tangent.Position = ApplySmartRounding(knot.Position + tangent.Direction + delta);
                     else
                     {
                         if (s_RotatedKnotCache.Contains(knot))
                             continue;
-
-                        var targetDirection = tangent.Direction + (float3) delta;
-
+                        
                         // Build rotation sync data based on active selection's transformation
                         if (!s_RotationSyncData.initialized)
                         {
-                            var rotationDelta = Quaternion.FromToRotation(tangent.Direction, targetDirection);
-                            var magnitudeDelta = math.length(targetDirection) - math.length(tangent.Direction);
-
-                            s_RotationSyncData.Initialize(rotationDelta, magnitudeDelta, 1f);
+                            var newTangentPosWorld = knot.Position + tangent.Direction + delta;
+                            var deltas = CalculateMirroredTangentTranslationDeltas(tangent, newTangentPosWorld);
+                            
+                            s_RotationSyncData.Initialize(deltas.knotRotationDelta, deltas.tangentLocalMagnitudeDelta, 1f);
                         }
-
+                        
                         ApplyTangentRotationSyncTransform(tangent);
                     }
                 }
@@ -220,7 +218,7 @@ namespace UnityEditor.Splines
 
             s_RotationSyncData.Clear();
         }
-
+        
         public static void ApplyRotation(Quaternion deltaRotation, float3 rotationCenter)
         {
             s_RotatedKnotCache.Clear();
@@ -297,11 +295,9 @@ namespace UnityEditor.Splines
                                         Mathf.Approximately(math.abs(toRotCenterDotTangent), 1f))
                                         knotRotationDelta = deltaRotation;
                                     else
-                                        knotRotationDelta =
-                                            Quaternion.FromToRotation(tangent.Direction, targetDirection);
+                                        knotRotationDelta = Quaternion.FromToRotation(tangent.Direction, targetDirection);
 
-                                    var scaleMultiplier =
-                                        math.length(targetDirection) / math.length(tangent.Direction);
+                                    var scaleMultiplier = math.length(targetDirection) / math.length(tangent.Direction);
 
                                     s_RotationSyncData.Initialize(knotRotationDelta, 0f, scaleMultiplier);
                                 }
@@ -408,17 +404,14 @@ namespace UnityEditor.Splines
                             // Build rotation sync data based on active selection's transformation
                             if (!s_RotationSyncData.initialized)
                             {
-                                var targetDirection =
-                                    ScaleTangent(tangent, s_MouseDownData[elementIndex].position, scale) -
-                                    owner.Position;
-                                var rotationDelta = Quaternion.FromToRotation(tangent.Direction, targetDirection);
-                                var scaleMultiplier = math.length(targetDirection) / math.length(tangent.Direction);
+                                var newTangentPosWorld = ScaleTangent(tangent, s_MouseDownData[elementIndex].position, scale);
+                                var deltas = CalculateMirroredTangentTranslationDeltas(tangent, newTangentPosWorld);
+                                var scaleMultiplier = 1f + deltas.tangentLocalMagnitudeDelta / math.length(tangent.LocalDirection);
 
-                                s_RotationSyncData.Initialize(rotationDelta, 0f, scaleMultiplier);
+                                s_RotationSyncData.Initialize(deltas.knotRotationDelta, 0f, scaleMultiplier);
                             }
 
-                            if (owner.Mode == TangentMode.Mirrored &&
-                                s_RotatedKnotCache.Contains(owner))
+                            if (owner.Mode == TangentMode.Mirrored && s_RotatedKnotCache.Contains(owner))
                                 continue;
 
                             ApplyTangentRotationSyncTransform(tangent, false);
@@ -461,18 +454,45 @@ namespace UnityEditor.Splines
 
         static void ApplyTangentRotationSyncTransform(SelectableTangent tangent, bool absoluteScale = true)
         {
-            // Apply scale only if tangent is active selection or it's part of multi select and its knot is mirrored
             if (tangent.Equals(currentElementSelected) ||
                 tangent.Owner.Mode == TangentMode.Mirrored ||
                 (!absoluteScale && tangent.Owner.Mode == TangentMode.Continuous))
             {
                 if (absoluteScale)
-                    tangent.Direction += math.normalize(tangent.Direction) * s_RotationSyncData.magnitudeDelta;
+                    tangent.LocalDirection += math.normalize(tangent.LocalDirection) * s_RotationSyncData.magnitudeDelta;
                 else
-                    tangent.Direction *= s_RotationSyncData.scaleMultiplier;
+                    tangent.LocalDirection *= s_RotationSyncData.scaleMultiplier;
             }
 
             RotateKnot(tangent.Owner, s_RotationSyncData.rotationDelta, tangent.Owner.Position, false);
+        }
+
+        /*
+         Given a mirrored tangent and a target position, calculate the knot rotation delta and tangent's local magnitude change required to 
+         put the tangent into target world position while fully respecting the owner spline's transformation (including non-uniform scale).
+         */
+        internal static (quaternion knotRotationDelta, float tangentLocalMagnitudeDelta) CalculateMirroredTangentTranslationDeltas(SelectableTangent tangent, float3 targetPosition)
+        {
+            var knot = tangent.Owner;
+            var splineTrsInv = math.inverse(knot.SplineInfo.LocalToWorld);
+            var splineTrs = knot.SplineInfo.LocalToWorld;
+            var splinePos = splineTrs.c3.xyz;
+            var splineRotation = new quaternion(splineTrs);
+
+            var unscaledTargetPos = splinePos + math.rotate(splineRotation, math.transform(splineTrsInv, targetPosition));
+            var unscaledCurrentPos = splinePos + math.rotate(splineRotation, math.transform(splineTrsInv, tangent.Position));
+            var unscaledKnotPos = splinePos + math.rotate(splineRotation, math.transform(splineTrsInv, knot.Position));
+
+            var knotRotationInv = math.inverse(knot.Rotation);
+            var forward = (tangent.TangentIndex == 0 ? -1f : 1f) * math.normalizesafe(unscaledTargetPos - unscaledKnotPos);
+            var up = math.mul(knot.Rotation, math.up());
+            var knotLookAtRotation = quaternion.LookRotationSafe(forward, up);
+            var knotRotationDelta = math.mul(knotLookAtRotation, knotRotationInv);
+
+            var targetLocalDirection = math.rotate(knotRotationInv, (unscaledTargetPos - unscaledKnotPos));
+            var tangentLocalMagnitudeDelta = math.length(targetLocalDirection) - math.length(tangent.LocalDirection);
+
+            return (knotRotationDelta, tangentLocalMagnitudeDelta);
         }
 
         internal static quaternion CalculateElementSpaceHandleRotation<T>(T element)
@@ -534,7 +554,22 @@ namespace UnityEditor.Splines
 
         public static Bounds GetSelectionBounds(bool useKnotPositionForTangents = false)
         {
-            return EditorSplineUtility.GetBounds(s_ElementSelection, useKnotPositionForTangents);
+            return EditorSplineUtility.GetElementBounds(s_ElementSelection, useKnotPositionForTangents);
+        }
+
+        static float3 ApplySmartRounding(float3 position)
+        {
+            //If we are snapping, disable the smart rounding. If not the case, the transform will have the wrong snap value based on distance to screen.
+#if UNITY_2022_2_OR_NEWER
+            if (EditorSnapSettings.incrementalSnapActive || EditorSnapSettings.gridSnapActive)
+                return position;
+#endif
+
+            float3 minDifference = SplineHandleUtility.GetMinDifference(position);
+            for (int i = 0; i < 3; ++i)
+                position[i] = Mathf.Approximately(position[i], 0f) ? position[i] : SplineHandleUtility.RoundBasedOnMinimumDifference(position[i], minDifference[i]);
+
+            return position;
         }
     }
 }

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine.Splines;
 using UnityEngine.UIElements;
+#if !UNITY_2022_1_OR_NEWER
+using UnityEditor.UIElements;
+#endif
 
 namespace UnityEditor.Splines
 {
@@ -30,15 +33,21 @@ namespace UnityEditor.Splines
             AddToClassList(k_TangentFoldoutStyle);
             AddToClassList("unity-base-field");
 
+            style.marginBottom = style.marginLeft = style.marginRight = style.marginTop = 0;
+
             var foldout = new Foldout() { value = false };
             var foldoutToggle = foldout.Q<Toggle>();
-            m_Magnitude = new FloatField(L10n.Tr(text), 3);
+
+            m_Magnitude = new FloatField(L10n.Tr(text),6);
+            m_Magnitude.style.flexDirection = FlexDirection.Row;
+            m_Magnitude.RemoveFromClassList("unity-base-field");
             vector3field = new Float3PropertyField<SelectableKnot>("", GetTangentPosition, ApplyPosition) { name = vect3name };
 
             //Build UI Hierarchy
             Add(foldout);
             foldoutToggle.Add(m_Magnitude);
             foldout.Add(vector3field);
+            foldout.Q<VisualElement>("unity-content").style.marginBottom = 0;
 
             var field = m_Magnitude.Q<VisualElement>("unity-text-input");
             field.AddToClassList(k_TangentMagnitudeFloatFieldStyle);
@@ -95,7 +104,7 @@ namespace UnityEditor.Splines
         {
             new SelectableTangent(knot.SplineInfo, knot.KnotIndex, m_Direction) { LocalPosition = position };
         }
-        
+
         void UpdateTangentMagnitude(SelectableTangent tangent, float value, float directionSign)
         {
             var direction = new float3(0, 0, directionSign);

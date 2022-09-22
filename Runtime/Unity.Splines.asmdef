@@ -12,6 +12,17 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.modules.physics",
+            "expression": "",
+            "define": "UNITY_PHYSICS_MODULE"
+        },
+        {
+            "name": "com.unity.burst",
+            "expression": "1.7.4",
+            "define": "UNITY_BURST_ENABLED"
+        }
+    ],
     "noEngineReferences": false
 }

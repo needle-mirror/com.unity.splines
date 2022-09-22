@@ -144,11 +144,14 @@ namespace Unity.Splines.Examples
 
             float length = LoftSpline.GetLength();
 
-            if (length < 1)
+            if (length <= 0.001f)
                 return;
 
-            int segments = (int)(SegmentsPerMeter * length);
-            int vertexCount = segments * 2, triangleCount = (LoftSpline.Closed ? segments : segments - 1) * 6;
+            var segmentsPerLength = SegmentsPerMeter * length;
+            int segments = Mathf.CeilToInt(segmentsPerLength);
+            var segmentStepT = (1f / SegmentsPerMeter) / length;
+            var steps = segments + 1;
+            int vertexCount = steps * 2, triangleCount = segments * 6;
 
             m_Positions.Clear();
             m_Normals.Clear();
@@ -160,30 +163,46 @@ namespace Unity.Splines.Examples
             m_Textures.Capacity = vertexCount;
             m_Indices.Capacity = triangleCount;
 
-            for (int i = 0; i < segments; i++)
+            var t = 0f;
+            for (int i = 0; i < steps; i++)
             {
-                var index = i / (segments - 1f);
-                var control = SplineUtility.EvaluatePosition(LoftSpline, index);
-                var dir = SplineUtility.EvaluateTangent(LoftSpline, index);
-                var up = SplineUtility.EvaluateUpVector(LoftSpline, index);
+                SplineUtility.Evaluate(LoftSpline, t, out var pos, out var dir, out var up);
 
                 var scale = transform.lossyScale;
-                //var tangent = math.normalize((float3)math.mul(math.cross(up, dir), new float3(1f / scale.x, 1f / scale.y, 1f / scale.z)));
-                var tangent = math.normalize(math.cross(up, dir)) * new float3(1f / scale.x, 1f / scale.y, 1f / scale.z);
+                // If dir evaluates to zero (linear orbroken zero length tangents?)
+                // then attempt to advance forward by a small amount and build direction to that point
+                if (math.length(dir) == 0)
+                {
+                    var nextPos = LoftSpline.GetPointAtLinearDistance(t, 0.01f, out _);
+                    dir = math.normalizesafe(nextPos - pos);
+
+                    if (math.length(dir) == 0)
+                    {
+                        nextPos = LoftSpline.GetPointAtLinearDistance(t, -0.01f, out _);
+                        dir = -math.normalizesafe(nextPos - pos);
+                    }
+
+                    if (math.length(dir) == 0)
+                        dir = new float3(0, 0, 1);
+                }
+
+                var tangent = math.normalizesafe(math.cross(up, dir)) * new float3(1f / scale.x, 1f / scale.y, 1f / scale.z);
 
                 var w = widthData.Width.DefaultValue;
                 if (widthData.Width != null && widthData.Count > 0)
                 {
-                    w = widthData.Width.Evaluate(LoftSpline, index, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
+                    w = widthData.Width.Evaluate(LoftSpline, t, PathIndexUnit.Normalized, new Interpolators.LerpFloat());
                     w = math.clamp(w, .001f, 10000f);
                 }
 
-                m_Positions.Add(control - (tangent * w));
-                m_Positions.Add(control + (tangent * w));
+                m_Positions.Add(pos - (tangent * w));
+                m_Positions.Add(pos + (tangent * w));
                 m_Normals.Add(Vector3.up);
                 m_Normals.Add(Vector3.up);
-                m_Textures.Add(new Vector2(0f, index * m_TextureScale));
-                m_Textures.Add(new Vector2(1f, index * m_TextureScale));
+                m_Textures.Add(new Vector2(0f, t * m_TextureScale));
+                m_Textures.Add(new Vector2(1f, t * m_TextureScale));
+
+                t = math.min(1f, t + segmentStepT);
             }
 
             for (int i = 0, n = 0; i < triangleCount; i += 6, n += 2)

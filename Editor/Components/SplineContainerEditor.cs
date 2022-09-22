@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -42,9 +43,30 @@ namespace UnityEditor.Splines
             EditorGUILayout.EndVertical();
             EditorGUILayout.EndHorizontal();
             
-            EditorGUILayout.PropertyField(splinesProperty);
+            var reorderableList = SplineReorderableListUtility.GetSplinesReorderableList(splinesProperty);
+            reorderableList.DoList(EditorGUILayout.GetControlRect(true, reorderableList.GetHeight()));
             
             serializedObject.ApplyModifiedProperties();
+        }
+        
+        bool HasFrameBounds()
+        {
+            foreach (var o in targets)
+            {
+                var target = (SplineContainer) o;
+                foreach (var spline in target.Splines)
+                    if (spline.Count > 0)
+                        return true;
+            }
+
+            return false;
+        }
+
+        Bounds OnGetFrameBounds()
+        {
+            List<SplineInfo> splines = new List<SplineInfo>();
+            EditorSplineUtility.GetSplinesFromTargets(targets, splines);
+            return EditorSplineUtility.GetBounds(splines);
         }
     }
 }

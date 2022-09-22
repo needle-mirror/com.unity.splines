@@ -1,17 +1,17 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.0.0-pre.2",
+  "version": "2.0.0-pre.4",
   "unity": "2022.1",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
     "com.unity.settings-manager": "1.0.3",
     "com.unity.mathematics": "1.2.1",
-    "com.unity.burst": "1.6.0-pre.2"
+    "com.unity.ugui": "1.0.0"
   },
   "samples": [
     {
-      "displayName": "Spline Examples",
+      "displayName": "Spline Examples (requires Shader Graph package)",
       "description": "Example code and scenes files showing how to use Splines.",
       "path": "Samples~/"
     }
@@ -21,21 +21,20 @@
     "curve",
     "path"
   ],
+  "category": "Tool",
+  "type": "tool",
   "testables": [
     "com.unity.test-framework.performance"
   ],
-  "_upm": {
-    "changelog": "### Added\r\n\r\n- Added the ability to edit multiple spline elements in the element inspector.\r\n- Added functionality to join knots from different splines.\r\n- Added functionality to reverse the flow of a spline.\r\n\r\n### Changed\r\n\r\n- Added a dropdown menu to select tangent modes to the Element Inspector.\r\n- Updated the `Draw Splines Tool` to display only one tangent when a new knot is created.\r\n- Simplified tangents in the `Draw Splines Tool` by removing the interactable handle . \r\n- Renamed `Knot Placement Tool` to `Draw Splines Tool`.\r\n- Modified the `Draw Splines Tool` to account for multiple splines.\r\n\r\n### Fixed\r\n\r\n- Fixed SplineInspector knot removal not keeping metadata consistent (KnotLinks).\r\n- Fixed an issue that caused auto-smoothed tangents to show in the `Draw Splines Tool` and be selectable by rect selection. \r\n- Added `ReadOnly` to knot's and length's `NativeArray` to fix IndexOutOfRangeException on `NativeSpline`. \r\n- Fixed tangents when closing the spline to keep user-defined values.\r\n- Fixed index error in the `Spline.SendSizeChangeEvent` method.\r\n- Fixed a case where inserting a knot would not update adjacent knots with \"auto-smooth\" tangent mode."
-  },
   "relatedPackages": {
-    "com.unity.splines.tests": "2.0.0-pre.2"
+    "com.unity.splines.tests": "2.0.0-pre.4"
   },
   "upmCi": {
-    "footprint": "bdd4ca2a405c31ac0c0f2eab751c9b04304eefef"
+    "footprint": "8ee4831d15ea75cd01550fb0197a68f1e09c4960"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "46a98f5614bafff392adcc8aa7e942d80e33014e"
+    "revision": "43c0997759696b1749a2a2ae959816b44a5ea1e6"
   }
 }

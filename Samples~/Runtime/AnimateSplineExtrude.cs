@@ -29,8 +29,15 @@ namespace samples.Runtime
 
         void Update()
         {
-            bool closed = m_Extrude.Spline.Closed;
-            float t = closed
+            bool allClosed = true;
+            foreach (var spline in m_Extrude.Splines)
+                if (!spline.Closed)
+                {
+                    allClosed = false;
+                    break;
+                }
+
+            float t = allClosed
                 ? Time.time * m_Speed
                 : Mathf.Lerp(-m_Span, 1 + m_Span, math.frac(Time.time * m_Speed));
             m_Extrude.Range = new float2(t - m_Span, t + m_Span);

@@ -12,43 +12,46 @@ namespace UnityEditor.Splines
     sealed class TangentDrawer : ElementDrawer<SelectableTangent>
     {
         const string k_TangentDrawerStyle = "tangent-drawer";
-        const string k_TangentLabelStyle = "tangent-label";
-        const string k_TangentFillerStyle = "tangent-filler";
-        const string k_TangentMagnitudeFloatFieldStyle = "tangent-magnitude-floatfield";
 
         static readonly List<float> s_LengthBuffer = new List<float>(0);
         static readonly SplineGUIUtility.EqualityComparer<float> s_MagnitudeComparer = (a, b) => a.Equals(b);
 
-        readonly TangentModeDropdown<SelectableTangent> m_Mode;
-        readonly BezierTangentModeDropdown<SelectableTangent> m_BezierMode;
+        readonly TangentModePropertyField<SelectableTangent> m_Mode;
+        readonly BezierTangentPropertyField<SelectableTangent> m_BezierMode;
 
         FloatField m_Magnitude;
-        Label m_DirectionLabel;
         Float3PropertyField<SelectableTangent> m_Direction;
 
         public TangentDrawer()
         {
             AddToClassList(k_TangentDrawerStyle);
 
-            Add(m_Mode = new TangentModeDropdown<SelectableTangent>());
+            Add(m_Mode = new TangentModePropertyField<SelectableTangent>());
             m_Mode.changed += () =>
             {
                 m_BezierMode.Update(targets);
                 EnableElements();
             };
-            Add(m_BezierMode = new BezierTangentModeDropdown<SelectableTangent>());
+            Add(m_BezierMode = new BezierTangentPropertyField<SelectableTangent>());
             m_BezierMode.changed += () =>
             {
                 m_Mode.Update(targets);
                 EnableElements();
             };
-            
+
             CreateTangentFields();
 
             m_Magnitude.RegisterValueChangedCallback((evt) =>
             {
+                var value = evt.newValue;
+                if (evt.newValue < 0f)
+                {
+                    m_Magnitude.SetValueWithoutNotify(0f);
+                    value = 0f;
+                }
+
                 Undo.RecordObject(target.SplineInfo.Target, SplineInspectorOverlay.SplineChangeUndoMessage);
-                UpdateTangentMagnitude(evt.newValue);
+                UpdateTangentMagnitude(value);
                 var tangent = target;
                 m_Direction.SetValueWithoutNotify(tangent.LocalPosition);
             });
@@ -62,45 +65,31 @@ namespace UnityEditor.Splines
                 return $"<b>({targets.Count}) Tangents</b> selected";
 
             var inOutLabel = target.TangentIndex == 0 ? "In" : "Out";
-            return $"Tangent <b>{inOutLabel}</b> selected (<b>Knot {target.KnotIndex}</b>)";
+            return $"Tangent <b>{inOutLabel}</b> selected (<b>Knot {target.KnotIndex}</b>, <b>Spline {target.SplineInfo.Index}</b>)";
         }
 
         public override void Update()
         {
             base.Update();
-            
+
             m_Mode.Update(targets);
             m_BezierMode.Update(targets);
 
             UpdateMagnitudeField(targets);
             m_Direction.Update(targets);
-            
+
             EnableElements();
         }
 
         void CreateTangentFields()
         {
-            m_Magnitude = new FloatField("Magnitude", 3);
-            var field = m_Magnitude.Q<VisualElement>("unity-text-input");
-            field.AddToClassList(k_TangentMagnitudeFloatFieldStyle);
+            Add(m_Magnitude = new FloatField(L10n.Tr("Magnitude"), 6));
 
-            m_DirectionLabel = new Label("Direction");
-            m_DirectionLabel.AddToClassList(k_TangentLabelStyle);
-
-            var filler = new VisualElement();
-            filler.AddToClassList(k_TangentFillerStyle);
-
-            Add(m_Direction = new Float3PropertyField<SelectableTangent>("",
+            Add(m_Direction = new Float3PropertyField<SelectableTangent>(L10n.Tr("Direction"),
                     (tangent) => tangent.LocalDirection,
                     (tangent, value) => tangent.LocalDirection = value)
                 { name = "direction" });
             m_Direction.changed += () => { UpdateMagnitudeField(targets); };
-
-            //Build UI Hierarchy
-            Add(m_Magnitude);
-            Add(m_DirectionLabel);
-            Add(filler);
-            filler.Add(m_Direction);
         }
 
         void UpdateMagnitudeField(IReadOnlyList<SelectableTangent> tangents)
@@ -140,13 +129,9 @@ namespace UnityEditor.Splines
                 tangentsModifiable &= EditorSplineUtility.AreTangentsModifiable(mode);
                 tangentsBroken &= mode == TangentMode.Broken;
             }
-            
-            m_DirectionLabel.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
-            m_Direction.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
-            m_Magnitude.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if(tangentsModifiable)
-                m_Direction.SetEnabled(tangentsBroken);
+            m_Direction.SetEnabled(tangentsModifiable && tangentsBroken);
+            m_Magnitude.SetEnabled(tangentsModifiable);
         }
     }
 }

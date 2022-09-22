@@ -321,6 +321,25 @@ namespace UnityEngine.Splines
 
             return nextRMFrame;
         }
+        
+        static readonly DistanceToInterpolation[] k_DistanceLUT = new DistanceToInterpolation[24];
+
+        /// <summary>
+        /// Gets the normalized interpolation, (t), that corresponds to a distance on a <see cref="BezierCurve"/>.
+        /// </summary>
+        /// <remarks>
+        /// It is inefficient to call this method frequently. For better performance create a
+        /// <see cref="DistanceToInterpolation"/> cache with <see cref="CalculateCurveLengths"/> and use the
+        /// overload of this method which accepts a lookup table.
+        /// </remarks>
+        /// <param name="curve">The <see cref="BezierCurve"/> to calculate the distance to interpolation ratio for.</param>
+        /// <param name="distance">The curve-relative distance to convert to an interpolation ratio (also referred to as 't').</param>
+        /// <returns> Returns the normalized interpolation ratio associated to distance on the designated curve.</returns>
+        public static float GetDistanceToInterpolation(BezierCurve curve, float distance)
+        {
+            CalculateCurveLengths(curve, k_DistanceLUT);
+            return GetDistanceToInterpolation(k_DistanceLUT, distance);
+        }
 
         /// <summary>
         /// Return the normalized interpolation (t) corresponding to a distance on a <see cref="BezierCurve"/>. This

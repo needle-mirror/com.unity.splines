@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Mathematics;
 using UnityEditor.EditorTools;
 using UnityEngine;
 using UnityEngine.Splines;
@@ -26,6 +27,7 @@ namespace UnityEditor.Splines
         readonly SplineElementRectSelector m_RectSelector = new SplineElementRectSelector();
         readonly List<SplineInfo> m_Splines = new List<SplineInfo>();
         readonly List<SelectableKnot> m_KnotBuffer = new List<SelectableKnot>();
+        readonly List<SelectableTangent> m_TangentBuffer = new List<SelectableTangent>();
 
         bool m_WasActiveAfterDeserialize;
 
@@ -70,13 +72,14 @@ namespace UnityEditor.Splines
 
             HandleSelectionFraming();
             HandleSelectAll();
-            HandleDeleteSelectedKnots();
+            HandleSelectedElementDelete();
         }
 
         void OnEnable()
         {
             AssemblyReloadEvents.afterAssemblyReload += OnAfterDomainReload;
             ToolManager.activeContextChanged += ContextChanged;
+            UpdateSelection();
         }
 
         /// <summary>
@@ -91,8 +94,6 @@ namespace UnityEditor.Splines
             else
                 m_WasActiveAfterDeserialize = false;
 
-            OnSelectionChanged();
-            Selection.selectionChanged += OnSelectionChanged;
             Spline.afterSplineWasModified += OnSplineWasModified;
             Undo.undoRedoPerformed += UndoRedoPerformed;
         }
@@ -102,7 +103,6 @@ namespace UnityEditor.Splines
         /// </summary>
         public override void OnWillBeDeactivated()
         {
-            Selection.selectionChanged -= OnSelectionChanged;
             Spline.afterSplineWasModified -= OnSplineWasModified;
             Undo.undoRedoPerformed -= UndoRedoPerformed;
         }
@@ -120,7 +120,6 @@ namespace UnityEditor.Splines
                 UpdateSelection();
         }
 
-        void OnSelectionChanged() => UpdateSelection();
         void UndoRedoPerformed() => UpdateSelection();
 
         void UpdateSelection()
@@ -129,19 +128,30 @@ namespace UnityEditor.Splines
             SceneView.RepaintAll();
         }
 
-        void HandleDeleteSelectedKnots()
+        void HandleSelectedElementDelete()
         {
             Event evt = Event.current;
             if (evt.type == EventType.KeyDown && evt.keyCode == KeyCode.Delete)
             {
-                SplineSelection.GetElements(m_Splines, m_KnotBuffer);
-                EditorSplineUtility.RecordSelection("Delete Selected Knots {"+ m_KnotBuffer.Count + "}");
-
-                //Sort knots index so removing them doesn't cause the rest of the indices to be invalid
-                m_KnotBuffer.Sort((a, b) => a.KnotIndex.CompareTo(b.KnotIndex));
-                for (int i = m_KnotBuffer.Count - 1; i >= 0; --i)
+                var selectedElements = SplineSelection.Count;
+                if (selectedElements > 0)
                 {
-                    EditorSplineUtility.RemoveKnot(m_KnotBuffer[i]);
+                    EditorSplineUtility.RecordSelection($"Delete selected elements ({selectedElements})");
+
+                    // First delete the knots in selection
+                    SplineSelection.GetElements(m_Splines, m_KnotBuffer);
+                    if (m_KnotBuffer.Count > 0)
+                    {
+                        //Sort knots index so removing them doesn't cause the rest of the indices to be invalid
+                        m_KnotBuffer.Sort((a, b) => a.KnotIndex.CompareTo(b.KnotIndex));
+                        for (int i = m_KnotBuffer.Count - 1; i >= 0; --i)
+                            EditorSplineUtility.RemoveKnot(m_KnotBuffer[i]);
+                    }
+
+                    // "Delete" remaining tangents by zeroing them out
+                    SplineSelection.GetElements(m_Splines, m_TangentBuffer);
+                    for (int i = m_TangentBuffer.Count - 1; i >= 0; --i)
+                        EditorSplineUtility.ClearTangent(m_TangentBuffer[i]);
                 }
                 evt.Use();
             }
@@ -160,8 +170,14 @@ namespace UnityEditor.Splines
                     {
                         if (execute)
                         {
-                            var selectionBounds = TransformOperation.GetSelectionBounds(false);
-                            selectionBounds.Encapsulate(TransformOperation.pivotPosition);
+                            Bounds selectionBounds;
+                            if (TransformOperation.canManipulate)
+                            {
+                                selectionBounds = TransformOperation.GetSelectionBounds(false);
+                                selectionBounds.Encapsulate(TransformOperation.pivotPosition);
+                            }
+                            else
+                                selectionBounds = EditorSplineUtility.GetBounds(m_Splines);
 
                             var size = selectionBounds.size;
                             if (selectionBounds.size.x < 1f)

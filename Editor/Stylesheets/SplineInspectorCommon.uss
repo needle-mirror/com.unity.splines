@@ -42,6 +42,14 @@ Vector3Field FloatInput {
     width: 100%;
 }
 
+SplineActionButtons .button-strip-button--left-spacer {
+	margin-left: 2px;
+}
+
+SplineActionButtons .button-strip-button--right-spacer {
+	margin-right: 2px;
+}
+
 .tangent-drawer .unity-toggle
 {
     margin-bottom: 1px;
@@ -61,12 +69,7 @@ Vector3Field FloatInput {
 .tangent-drawer .unity-toggle>.unity-float-field .unity-text-element
 {
     margin-left: 1px;
-    flex-grow: 1;
-}
-
-.tangent-drawer>.unity-float-field>.unity-label
-{
-    flex-grow: 1;
+    min-width: 60px;
 }
 
 .tangent-drawer .unity-foldout__content
@@ -77,47 +80,16 @@ Vector3Field FloatInput {
     justify-content: flex-end;
 }
 
-.tangent-drawer .unity-vector3-field
-{
-    width: 204px;
-    overflow: hidden;
-    text-overflow: clip;
-}
-
-.tangent-drawer .unity-vector3-field>.unity-vector3-field__input
-{
-    width: 204px;
-}
-
-.tangent-label
-{
-    height: 20px;
-    margin-left: 3px;
-    margin-top: 1px;
-    -unity-text-align: middle-left;
-}
-
 .tangent-filler
 {
     flex-direction: row;
     justify-content: flex-end;
 }
 
-.tangent-magnitude-floatfield
-{
-    min-width: 120px;
-    max-width: 120px;
-}
-
 #Vector3WithIcon
 {
     height: 20px;
     margin: 2px;
-}
-
-#ModesDropdown
-{
-    width: 120px;
 }
 
 #TangentIcon
@@ -146,7 +118,7 @@ Vector3Field FloatInput {
     margin-left: 4px;
 }
 
-#ErrorMessage 
+#ErrorMessage
 {
 	height: 30px;
 	-unity-text-align: middle-left;
@@ -166,4 +138,86 @@ BezierTangentModeDropdown, TangentModeDropdown{
 	margin-bottom: 4px;
 	background-color: var(--unity-theme-background-color-1);
 	opacity: 0.7;
+}
+
+TangentPropertyField .unity-foldout__input {
+	padding-left: 0;
+}
+
+.unity-toggle__checkmark {
+	margin-left: 0;
+	margin-right: 6px;
+}
+
+.button-strip {
+	overflow: hidden;
+	flex-shrink: 0;
+	margin: 1px 3px;
+	flex-direction: row;
+}
+
+.button-strip-button {
+	margin: 0;
+	flex-grow: 1;
+	justify-content: center;
+	align-content: center;
+	flex-direction: row;
+}
+
+.button-strip .button-strip-button.button-strip-button--checked {
+	background-color: var(--unity-overlay-buttons-on-color);
+}
+
+.button-strip-button--left,
+.button-strip-button--middle {
+	margin-right: 2px;
+}
+
+.button-strip-button--middle {
+	border-radius: 0;
+}
+
+.button-strip-button--left {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.button-strip-button--right {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+}
+
+.button-strip-button__icon {
+	width: 16px;
+	height: 16px;
+	align-self: center;
+	margin-right: 4px;
+}
+
+TangentPropertyField Float3PropertyField {
+    flex-grow: 1;
+}
+
+TangentModePropertyField #Linear .button-strip-button__icon {
+	background-image: var(--image-linear-tangent-mode);
+}
+
+TangentModePropertyField #AutoSmooth .button-strip-button__icon {
+	background-image: var(--image-auto-smooth-tangent-mode);
+}
+
+TangentModePropertyField #Bezier .button-strip-button__icon {
+	background-image: var(--image-bezier-tangent-mode);
+}
+
+TangentModePropertyField #Linear.button-strip-button--checked .button-strip-button__icon {
+	background-image: var(--image-linear-tangent-mode-on);
+}
+
+TangentModePropertyField #AutoSmooth.button-strip-button--checked .button-strip-button__icon {
+	background-image: var(--image-auto-smooth-tangent-mode-on);
+}
+
+TangentModePropertyField #Bezier.button-strip-button--checked .button-strip-button__icon {
+	background-image: var(--image-bezier-tangent-mode-on);
 }

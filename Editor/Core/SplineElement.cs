@@ -63,13 +63,18 @@ namespace UnityEditor.Splines
         public TangentMode Mode
         {
             get => SplineInfo.Spline.GetTangentMode(KnotIndex);
-            set => SplineInfo.Spline.SetTangentMode(KnotIndex, value);
+            set
+            {
+                SplineInfo.Spline.SetTangentMode(KnotIndex, value);
+                SplineSelectionUtility.ValidateTangentSelection(this);
+            }
         }
 
         public void SetTangentMode(TangentMode mode, BezierTangent main)
         {
             var spline = SplineInfo.Spline;
             spline.SetTangentMode(KnotIndex, mode, main);
+            SplineSelectionUtility.ValidateTangentSelection(this);
         }
 
         public SelectableTangent TangentIn => new SelectableTangent(SplineInfo, KnotIndex, BezierTangent.In);
@@ -131,8 +136,8 @@ namespace UnityEditor.Splines
 
         public float3 Direction
         {
-            get => math.mul(new quaternion(LocalToWorld), LocalDirection);
-            set => LocalDirection = math.mul(math.inverse(new quaternion(LocalToWorld)), value);
+            get => MathUtility.MultiplyVector(LocalToWorld, LocalDirection);
+            set => LocalDirection = MathUtility.MultiplyVector(math.inverse(LocalToWorld), value);
         }
 
         public float3 LocalDirection

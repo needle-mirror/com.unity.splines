@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace UnityEngine.Splines
@@ -22,7 +24,9 @@ namespace UnityEngine.Splines
         int m_RebuildFrequency = 30;
 
         [SerializeField, Tooltip("Automatically update any Mesh, Box, or Sphere collider components when the mesh is extruded.")]
+#pragma warning disable 414
         bool m_UpdateColliders = true;
+#pragma warning restore 414
 
         [SerializeField, Tooltip("The number of sides that comprise the radius of the mesh.")]
         int m_Sides = 8;
@@ -40,7 +44,6 @@ namespace UnityEngine.Splines
         [SerializeField, Tooltip("The section of the Spline to extrude.")]
         Vector2 m_Range = new Vector2(0f, 1f);
 
-        Spline m_Spline;
         Mesh m_Mesh;
         bool m_RebuildRequested;
         float m_NextScheduledRebuild;
@@ -74,6 +77,7 @@ namespace UnityEngine.Splines
         /// <summary>The maximum number of times per-second that the mesh will be rebuilt.</summary>
         [Obsolete("Use RebuildFrequency instead.", false)]
         public int rebuildFrequency => RebuildFrequency;
+
         /// <summary>The maximum number of times per-second that the mesh will be rebuilt.</summary>
         public int RebuildFrequency
         {
@@ -94,6 +98,7 @@ namespace UnityEngine.Splines
         /// <summary>How many edge loops comprise the one unit length of the mesh.</summary>
         [Obsolete("Use SegmentsPerUnit instead.", false)]
         public float segmentsPerUnit => SegmentsPerUnit;
+
         /// <summary>How many edge loops comprise the one unit length of the mesh.</summary>
         public float SegmentsPerUnit
         {
@@ -104,6 +109,7 @@ namespace UnityEngine.Splines
         /// <summary>Whether the start and end of the mesh is filled. This setting is ignored when spline is closed.</summary>
         [Obsolete("Use Capped instead.", false)]
         public bool capped => Capped;
+
         /// <summary>Whether the start and end of the mesh is filled. This setting is ignored when spline is closed.</summary>
         public bool Capped
         {
@@ -114,6 +120,7 @@ namespace UnityEngine.Splines
         /// <summary>The radius of the extruded mesh.</summary>
         [Obsolete("Use Radius instead.", false)]
         public float radius => Radius;
+
         /// <summary>The radius of the extruded mesh.</summary>
         public float Radius
         {
@@ -126,6 +133,7 @@ namespace UnityEngine.Splines
         /// </summary>
         [Obsolete("Use Range instead.", false)]
         public Vector2 range => Range;
+
         /// <summary>
         /// The section of the Spline to extrude.
         /// </summary>
@@ -135,21 +143,20 @@ namespace UnityEngine.Splines
             set => m_Range = new Vector2(Mathf.Min(value.x, value.y), Mathf.Max(value.x, value.y));
         }
 
-        /// <summary>The Spline to extrude.</summary>
+        /// <summary>The main Spline to extrude.</summary>
         [Obsolete("Use Spline instead.", false)]
         public Spline spline => Spline;
-        /// <summary>The Spline to extrude.</summary>
+
+        /// <summary>The main Spline to extrude.</summary>
         public Spline Spline
         {
-            get
-            {
-                // m_Spline is cached in the Start() method, meaning that it is not valid in the Editor.
-#if UNITY_EDITOR
-                return m_Container.Spline;
-#else
-                return m_Spline;
-#endif
-            }
+            get => m_Container.Spline;
+        }
+
+        /// <summary>The Splines to extrude.</summary>
+        public IReadOnlyList<Spline> Splines
+        {
+            get => m_Container.Splines;
         }
 
         void Reset()
@@ -175,7 +182,7 @@ namespace UnityEngine.Splines
 
         void Start()
         {
-            if (m_Container == null || (m_Spline = m_Container.Spline) == null)
+            if (m_Container == null || m_Container.Spline == null)
             {
                 Debug.LogError("Spline Extrude does not have a valid SplineContainer set.");
                 return;
@@ -200,7 +207,7 @@ namespace UnityEngine.Splines
 
         void OnSplineChanged(Spline spline, int knotIndex, SplineModification modificationType)
         {
-            if (m_Container != null && m_Container.Spline == spline && m_RebuildOnSplineChange)
+            if (m_Container != null && Splines.Contains(spline) && m_RebuildOnSplineChange)
                 m_RebuildRequested = true;
         }
 
@@ -217,12 +224,11 @@ namespace UnityEngine.Splines
         {
             if(m_Mesh == null && (m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
                 return;
-
-            float span = Mathf.Abs(Range.y - Range.x);
-            int segments = Mathf.Max((int)Mathf.Ceil(Spline.GetLength() * span * m_SegmentsPerUnit), 1);
-            SplineMesh.Extrude(Spline, m_Mesh, m_Radius, m_Sides, segments, m_Capped, m_Range);
+            
+            SplineMesh.Extrude(Splines, m_Mesh, m_Radius, m_Sides, m_SegmentsPerUnit, m_Capped, m_Range);
             m_NextScheduledRebuild = Time.time + 1f / m_RebuildFrequency;
 
+#if UNITY_PHYSICS_MODULE
             if (m_UpdateColliders)
             {
                 if (TryGetComponent<MeshCollider>(out var meshCollider))
@@ -241,6 +247,7 @@ namespace UnityEngine.Splines
                     sphereCollider.radius = Mathf.Max(ext.x, ext.y, ext.z);
                 }
             }
+#endif
         }
 
         void OnValidate()

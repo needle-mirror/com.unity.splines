@@ -269,7 +269,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 233ed62ee749644e4a87ff99e36a3b7f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -657,6 +657,7 @@ MonoBehaviour:
           z: 0
           w: 1
     m_Length: -1
+    m_MetaData: []
     m_Closed: 1
     m_TrackWidth: 1
     m_TracksPerMeter: 1
@@ -792,7 +793,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Spline:
-    m_EditModeType: 2
+    m_EditModeType: 1
+    m_Knots: []
+    m_Length: -1
+    m_MetaData: []
+    m_Closed: 0
+  m_Splines:
+  - m_EditModeType: 2
     m_Knots:
     - Position:
         x: -0.5
@@ -867,7 +874,10 @@ MonoBehaviour:
           z: 0
           w: 1
     m_Length: -1
+    m_MetaData: []
     m_Closed: 1
+  m_Knots:
+    m_KnotsLink: []
 --- !u!4 &2138199297
 Transform:
   m_ObjectHideFlags: 0

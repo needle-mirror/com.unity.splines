@@ -63,7 +63,7 @@ namespace UnityEngine.Splines
 
         [SerializeField]
         T m_DefaultValue;
-        
+
         [SerializeField]
         List<DataPoint<T>> m_DataPoints = new List<DataPoint<T>>();
 
@@ -94,7 +94,7 @@ namespace UnityEngine.Splines
             get => m_IndexUnit;
             set => m_IndexUnit = value;
         }
-        
+
         /// <summary>
         /// Default value to use when a new DataPoint is automatically added.
         /// </summary>
@@ -104,17 +104,17 @@ namespace UnityEngine.Splines
             get => m_DefaultValue;
             set => m_DefaultValue = value;
         }
-        
+
         /// <summary>
         /// How many data points the SplineData collection contains.
         /// </summary>
         public int Count => m_DataPoints.Count;
-        
+
         /// <summary>
         /// The DataPoint Indexes of the current SplineData.
         /// </summary>
         public IEnumerable<float> Indexes => m_DataPoints.Select(dp => dp.Index);
-        
+
         /// <summary>
         /// Invoked any time a SplineData is modified.
         /// </summary>
@@ -215,10 +215,10 @@ namespace UnityEngine.Splines
         public int Add(DataPoint<T> dataPoint)
         {
             int index = m_DataPoints.BinarySearch(0, Count, dataPoint, k_DataPointComparer);
-            
+
             index = index < 0 ? ~index : index;
             m_DataPoints.Insert(index, dataPoint);
-            
+
             SetDirty();
             return index;
         }
@@ -240,13 +240,13 @@ namespace UnityEngine.Splines
             var dataPoint = new DataPoint<T>(t, m_DefaultValue);
             if(Count == 0 || useDefaultValue)
                 return Add(dataPoint);
-            
+
             if(Count == 1)
             {
                 dataPoint.Value = m_DataPoints[0].Value;
                 return Add(dataPoint);
             }
-            
+
             int index = m_DataPoints.BinarySearch(0, Count, dataPoint, k_DataPointComparer);
             index = index < 0 ? ~index : index;
 
@@ -256,7 +256,7 @@ namespace UnityEngine.Splines
 
             return index;
         }
-        
+
         /// <summary>
         /// Remove a <see cref="DataPoint{T}"/> at index.
         /// </summary>
@@ -286,7 +286,7 @@ namespace UnityEngine.Splines
                 SetDirty();
             return removed;
         }
-        
+
         /// <summary>
         /// Move a <see cref="DataPoint{T}"/> (if it exists) from this collection, from one index to the another.
         /// </summary>
@@ -309,7 +309,7 @@ namespace UnityEngine.Splines
 
             return newRealIndex;
         }
-        
+
         /// <summary>
         /// Remove all data points.
         /// </summary>
@@ -528,8 +528,6 @@ namespace UnityEngine.Splines
             return SplineUtility.GetNormalizedInterpolation(spline, t, m_IndexUnit);
         }
 
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
         /// <summary>
         /// Returns an enumerator that iterates through the DataPoints collection.
         /// </summary>
@@ -540,5 +538,12 @@ namespace UnityEngine.Splines
             for (int i = 0, c = Count; i < c; ++i)
                 yield return m_DataPoints[i];
         }
+
+        /// <summary>
+        /// Returns an enumerator that iterates through the DataPoints collection.
+        /// </summary>
+        /// <returns>
+        /// An IEnumerator{DataPoint{T}} for this collection.</returns>
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

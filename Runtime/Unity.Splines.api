@@ -3,7 +3,7 @@
 // make sure the XML doc file is present and located next to the scraped dll
 namespace UnityEngine.Splines
 {
-    public struct BezierCurve : System.IEquatable<UnityEngine.Splines.BezierCurve>
+    public struct BezierCurve : System.IEquatable<BezierCurve>
     {
         public Unity.Mathematics.float3 P0;
         public Unity.Mathematics.float3 P1;
@@ -12,19 +12,19 @@ namespace UnityEngine.Splines
         public Unity.Mathematics.float3 Tangent0 { get; set; }
         public Unity.Mathematics.float3 Tangent1 { get; set; }
         public BezierCurve(Unity.Mathematics.float3 p0, Unity.Mathematics.float3 p1) {}
-        public BezierCurve(UnityEngine.Splines.BezierKnot a, UnityEngine.Splines.BezierKnot b) {}
+        public BezierCurve(BezierKnot a, BezierKnot b) {}
         public BezierCurve(Unity.Mathematics.float3 p0, Unity.Mathematics.float3 p1, Unity.Mathematics.float3 p2) {}
         public BezierCurve(Unity.Mathematics.float3 p0, Unity.Mathematics.float3 p1, Unity.Mathematics.float3 p2, Unity.Mathematics.float3 p3) {}
-        public virtual bool Equals(object obj);
-        public virtual bool Equals(UnityEngine.Splines.BezierCurve other);
-        public static UnityEngine.Splines.BezierCurve FromTangent(Unity.Mathematics.float3 pointA, Unity.Mathematics.float3 tangentOutA, Unity.Mathematics.float3 pointB, Unity.Mathematics.float3 tangentInB);
-        public virtual int GetHashCode();
-        public static bool operator ==(UnityEngine.Splines.BezierCurve left, UnityEngine.Splines.BezierCurve right);
-        public static bool operator !=(UnityEngine.Splines.BezierCurve left, UnityEngine.Splines.BezierCurve right);
-        public UnityEngine.Splines.BezierCurve Transform(Unity.Mathematics.float4x4 matrix);
+        public override bool Equals(object obj);
+        public bool Equals(BezierCurve other);
+        public static BezierCurve FromTangent(Unity.Mathematics.float3 pointA, Unity.Mathematics.float3 tangentOutA, Unity.Mathematics.float3 pointB, Unity.Mathematics.float3 tangentInB);
+        public override int GetHashCode();
+        public static bool operator ==(BezierCurve left, BezierCurve right);
+        public static bool operator !=(BezierCurve left, BezierCurve right);
+        public BezierCurve Transform(Unity.Mathematics.float4x4 matrix);
     }
 
-    public struct BezierKnot : System.IEquatable<UnityEngine.Splines.BezierKnot>, UnityEngine.ISerializationCallbackReceiver
+    public struct BezierKnot : ISerializationCallbackReceiver, System.IEquatable<BezierKnot>
     {
         public Unity.Mathematics.float3 Position;
         public Unity.Mathematics.quaternion Rotation;
@@ -32,45 +32,45 @@ namespace UnityEngine.Splines
         public Unity.Mathematics.float3 TangentOut;
         public BezierKnot(Unity.Mathematics.float3 position) {}
         public BezierKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 tangentIn, Unity.Mathematics.float3 tangentOut, Unity.Mathematics.quaternion rotation) {}
-        public virtual bool Equals(object obj);
-        public virtual bool Equals(UnityEngine.Splines.BezierKnot other);
-        public virtual int GetHashCode();
-        public virtual void OnAfterDeserialize();
-        public virtual void OnBeforeSerialize();
-        public static UnityEngine.Splines.BezierKnot operator +(UnityEngine.Splines.BezierKnot knot, Unity.Mathematics.float3 rhs);
-        public static UnityEngine.Splines.BezierKnot operator -(UnityEngine.Splines.BezierKnot knot, Unity.Mathematics.float3 rhs);
-        public virtual string ToString();
-        public UnityEngine.Splines.BezierKnot Transform(Unity.Mathematics.float4x4 matrix);
+        public override bool Equals(object obj);
+        public bool Equals(BezierKnot other);
+        public override int GetHashCode();
+        public void OnAfterDeserialize();
+        public void OnBeforeSerialize();
+        public static BezierKnot operator +(BezierKnot knot, Unity.Mathematics.float3 rhs);
+        public static BezierKnot operator -(BezierKnot knot, Unity.Mathematics.float3 rhs);
+        public override string ToString();
+        public BezierKnot Transform(Unity.Mathematics.float4x4 matrix);
     }
 
     public enum BezierTangent
     {
-        public const UnityEngine.Splines.BezierTangent In = 0;
-        public const UnityEngine.Splines.BezierTangent Out = 1;
-        public int value__;
+        In = 0,
+        Out = 1,
     }
 
     public static class CurveUtility
     {
-        public static float ApproximateLength(UnityEngine.Splines.BezierCurve curve);
-        public static void CalculateCurveLengths(UnityEngine.Splines.BezierCurve curve, UnityEngine.Splines.DistanceToInterpolation[] lookupTable);
-        public static float CalculateLength(UnityEngine.Splines.BezierCurve curve, int resolution = 30);
-        public static Unity.Mathematics.float3 EvaluateAcceleration(UnityEngine.Splines.BezierCurve curve, float t);
-        public static float EvaluateCurvature(UnityEngine.Splines.BezierCurve curve, float t);
-        public static Unity.Mathematics.float3 EvaluatePosition(UnityEngine.Splines.BezierCurve curve, float t);
-        public static Unity.Mathematics.float3 EvaluateTangent(UnityEngine.Splines.BezierCurve curve, float t);
-        public static float GetDistanceToInterpolation<T>(T lut, float distance) where T : System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.DistanceToInterpolation>;
-        public static void Split(UnityEngine.Splines.BezierCurve curve, float t, out UnityEngine.Splines.BezierCurve left, out UnityEngine.Splines.BezierCurve right);
+        public static float ApproximateLength(BezierCurve curve);
+        public static void CalculateCurveLengths(BezierCurve curve, DistanceToInterpolation[] lookupTable);
+        public static float CalculateLength(BezierCurve curve, int resolution = 30);
+        public static Unity.Mathematics.float3 EvaluateAcceleration(BezierCurve curve, float t);
+        public static float EvaluateCurvature(BezierCurve curve, float t);
+        public static Unity.Mathematics.float3 EvaluatePosition(BezierCurve curve, float t);
+        public static Unity.Mathematics.float3 EvaluateTangent(BezierCurve curve, float t);
+        public static float GetDistanceToInterpolation<T>(T lut, float distance) where T : System.Collections.Generic.IReadOnlyList<DistanceToInterpolation>;
+        public static float GetDistanceToInterpolation(BezierCurve curve, float distance);
+        public static void Split(BezierCurve curve, float t, out BezierCurve left, out BezierCurve right);
     }
 
-    public struct DataPoint<TDataType> : System.IComparable<float>, System.IComparable<UnityEngine.Splines.DataPoint<TDataType>>, UnityEngine.Splines.IDataPoint
+    public struct DataPoint<TDataType> : IDataPoint, System.IComparable<float>, System.IComparable<UnityEngine.Splines.DataPoint<TDataType>>
     {
-        public virtual float Index { get; set; }
+        public float Index { get; set; }
         public TDataType Value { get; set; }
         public DataPoint(float index, TDataType value) {}
-        public virtual int CompareTo(float other);
-        public virtual int CompareTo(UnityEngine.Splines.DataPoint<TDataType> other);
-        public virtual string ToString();
+        public int CompareTo(float other);
+        public int CompareTo(UnityEngine.Splines.DataPoint<TDataType> other);
+        public override string ToString();
     }
 
     public struct DistanceToInterpolation
@@ -82,47 +82,64 @@ namespace UnityEngine.Splines
     public struct GetPosition : Unity.Jobs.IJobParallelFor
     {
         [Unity.Collections.WriteOnly] public Unity.Collections.NativeArray<Unity.Mathematics.float3> Positions;
-        [Unity.Collections.ReadOnly] public UnityEngine.Splines.NativeSpline Spline;
-        public virtual void Execute(int index);
+        [Unity.Collections.ReadOnly] public NativeSpline Spline;
+        public void Execute(int index);
     }
 
     public struct GetPositionTangentNormal : Unity.Jobs.IJobParallelFor
     {
         [Unity.Collections.WriteOnly] public Unity.Collections.NativeArray<Unity.Mathematics.float3> Normals;
         [Unity.Collections.WriteOnly] public Unity.Collections.NativeArray<Unity.Mathematics.float3> Positions;
-        [Unity.Collections.ReadOnly] public UnityEngine.Splines.NativeSpline Spline;
+        [Unity.Collections.ReadOnly] public NativeSpline Spline;
         [Unity.Collections.WriteOnly] public Unity.Collections.NativeArray<Unity.Mathematics.float3> Tangents;
-        public virtual void Execute(int index);
+        public void Execute(int index);
     }
 
     public interface IDataPoint
     {
-        public abstract float Index { get; set; }
+        public float Index { get; set; }
     }
 
     public interface IInterpolator<T>
     {
-        public abstract T Interpolate(T from, T to, float t);
+        public T Interpolate(T from, T to, float t);
     }
 
-    public interface ISpline : System.Collections.Generic.IEnumerable<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IReadOnlyCollection<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.BezierKnot>, System.Collections.IEnumerable
+    public static class InterpolatorUtility
     {
-        public abstract bool Closed { get; }
-        public abstract UnityEngine.Splines.BezierCurve GetCurve(int index);
-        public abstract float GetCurveInterpolation(int curveIndex, float curveDistance);
-        public abstract float GetCurveLength(int index);
-        public abstract float GetLength();
+        public static UnityEngine.Splines.IInterpolator<Color> LerpColor { get; }
+        public static UnityEngine.Splines.IInterpolator<float> LerpFloat { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float2> LerpFloat2 { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float3> LerpFloat3 { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float4> LerpFloat4 { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.quaternion> LerpQuaternion { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float2> SlerpFloat2 { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float3> SlerpFloat3 { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.quaternion> SlerpQuaternion { get; }
+        public static UnityEngine.Splines.IInterpolator<float> SmoothStepFloat { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float2> SmoothStepFloat2 { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float3> SmoothStepFloat3 { get; }
+        public static UnityEngine.Splines.IInterpolator<Unity.Mathematics.float4> SmoothStepFloat4 { get; }
+    }
+
+    public interface ISpline : System.Collections.Generic.IEnumerable<BezierKnot>, System.Collections.Generic.IReadOnlyCollection<BezierKnot>, System.Collections.Generic.IReadOnlyList<BezierKnot>, System.Collections.IEnumerable
+    {
+        public bool Closed { get; }
+        public BezierCurve GetCurve(int index);
+        public float GetCurveInterpolation(int curveIndex, float curveDistance);
+        public float GetCurveLength(int index);
+        public float GetLength();
     }
 
     public interface ISplineContainer
     {
-        public abstract UnityEngine.Splines.KnotLinkCollection KnotLinkCollection { get; }
-        public abstract System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.Spline> Splines { get; set; }
+        public KnotLinkCollection KnotLinkCollection { get; }
+        public System.Collections.Generic.IReadOnlyList<Spline> Splines { get; set; }
     }
 
     [System.Obsolete(@"Use ISplineContainer instead.")] public interface ISplineProvider
     {
-        public abstract System.Collections.Generic.IEnumerable<UnityEngine.Splines.Spline> Splines { get; }
+        public System.Collections.Generic.IEnumerable<Spline> Splines { get; }
     }
 
     public sealed class KnotLinkCollection
@@ -130,114 +147,116 @@ namespace UnityEngine.Splines
         public int Count { get; }
         public KnotLinkCollection() {}
         public void Clear();
-        public System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.SplineKnotIndex> GetKnotLinks(UnityEngine.Splines.SplineKnotIndex index);
-        public void KnotInserted(UnityEngine.Splines.SplineKnotIndex index);
+        public System.Collections.Generic.IReadOnlyList<SplineKnotIndex> GetKnotLinks(SplineKnotIndex knotIndex);
+        public void KnotIndexChanged(SplineKnotIndex previousIndex, SplineKnotIndex newIndex);
+        public void KnotIndexChanged(int splineIndex, int previousKnotIndex, int newKnotIndex);
+        public void KnotInserted(SplineKnotIndex index);
         public void KnotInserted(int splineIndex, int knotIndex);
-        public void KnotRemoved(UnityEngine.Splines.SplineKnotIndex index);
+        public void KnotRemoved(SplineKnotIndex index);
         public void KnotRemoved(int splineIndex, int knotIndex);
-        public void Link(UnityEngine.Splines.SplineKnotIndex knotA, UnityEngine.Splines.SplineKnotIndex knotB);
-        public void ShiftKnotIndices(UnityEngine.Splines.SplineKnotIndex index, int offset);
+        public void Link(SplineKnotIndex knotA, SplineKnotIndex knotB);
+        public void ShiftKnotIndices(SplineKnotIndex index, int offset);
+        public void SplineIndexChanged(int previousIndex, int newIndex);
         public void SplineRemoved(int splineIndex);
-        public bool TryGetKnotLinks(UnityEngine.Splines.SplineKnotIndex index, out System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.SplineKnotIndex> linkedKnots);
-        public void Unlink(UnityEngine.Splines.SplineKnotIndex knot);
+        public bool TryGetKnotLinks(SplineKnotIndex knotIndex, out System.Collections.Generic.IReadOnlyList<SplineKnotIndex> linkedKnots);
+        public void Unlink(SplineKnotIndex knot);
     }
 
-    [System.Reflection.DefaultMember(@"Item")] public struct NativeSpline : System.Collections.Generic.IEnumerable<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IReadOnlyCollection<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.BezierKnot>, System.Collections.IEnumerable, System.IDisposable, UnityEngine.Splines.ISpline
+    public struct NativeSpline : ISpline, System.Collections.Generic.IEnumerable<BezierKnot>, System.Collections.Generic.IReadOnlyCollection<BezierKnot>, System.Collections.Generic.IReadOnlyList<BezierKnot>, System.Collections.IEnumerable, System.IDisposable
     {
-        public virtual bool Closed { get; }
-        public virtual int Count { get; }
-        public virtual UnityEngine.Splines.BezierKnot this[int index] { get; }
-        public Unity.Collections.NativeArray<UnityEngine.Splines.BezierKnot> Knots { get; }
-        public NativeSpline(UnityEngine.Splines.ISpline spline, Unity.Collections.Allocator allocator = 2) {}
-        public NativeSpline(UnityEngine.Splines.ISpline spline, Unity.Mathematics.float4x4 transform, Unity.Collections.Allocator allocator = 2) {}
-        public NativeSpline(System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.BezierKnot> knots, bool closed, Unity.Mathematics.float4x4 transform, Unity.Collections.Allocator allocator = 2) {}
-        public virtual void Dispose();
-        public virtual UnityEngine.Splines.BezierCurve GetCurve(int index);
-        public virtual float GetCurveInterpolation(int curveIndex, float curveDistance);
-        public virtual float GetCurveLength(int curveIndex);
-        public virtual System.Collections.Generic.IEnumerator<UnityEngine.Splines.BezierKnot> GetEnumerator();
-        public virtual float GetLength();
+        public bool Closed { get; }
+        public int Count { get; }
+        public BezierKnot this[int index] { get; }
+        public Unity.Collections.NativeArray<BezierKnot> Knots { get; }
+        public NativeSpline(ISpline spline, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {}
+        public NativeSpline(ISpline spline, Unity.Mathematics.float4x4 transform, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {}
+        public NativeSpline(System.Collections.Generic.IReadOnlyList<BezierKnot> knots, bool closed, Unity.Mathematics.float4x4 transform, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {}
+        public void Dispose();
+        public BezierCurve GetCurve(int index);
+        public float GetCurveInterpolation(int curveIndex, float curveDistance);
+        public float GetCurveLength(int curveIndex);
+        public System.Collections.Generic.IEnumerator<BezierKnot> GetEnumerator();
+        public float GetLength();
     }
 
     public enum PathIndexUnit
     {
-        public const UnityEngine.Splines.PathIndexUnit Distance = 0;
-        public const UnityEngine.Splines.PathIndexUnit Knot = 2;
-        public const UnityEngine.Splines.PathIndexUnit Normalized = 1;
-        public int value__;
+        Distance = 0,
+        Knot = 2,
+        Normalized = 1,
     }
 
-    [System.Reflection.DefaultMember(@"Item")] public class Spline : System.Collections.Generic.ICollection<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IEnumerable<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IList<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IReadOnlyCollection<UnityEngine.Splines.BezierKnot>, System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.BezierKnot>, System.Collections.IEnumerable, UnityEngine.Splines.ISpline
+    public class Spline : ISpline, System.Collections.Generic.ICollection<BezierKnot>, System.Collections.Generic.IEnumerable<BezierKnot>, System.Collections.Generic.IList<BezierKnot>, System.Collections.Generic.IReadOnlyCollection<BezierKnot>, System.Collections.Generic.IReadOnlyList<BezierKnot>, System.Collections.IEnumerable
     {
         [System.Obsolete(@"Deprecated, use Changed instead.")] public event System.Action changed;
-        public static event System.Action<UnityEngine.Splines.Spline, int, UnityEngine.Splines.SplineModification> Changed;
-        public virtual bool Closed { get; set; }
-        public virtual int Count { get; }
-        [System.Obsolete(@"Use GetTangentMode and SetTangentMode.")] public UnityEngine.Splines.SplineType EditType { get; set; }
-        public virtual bool IsReadOnly { get; }
-        public virtual UnityEngine.Splines.BezierKnot this[int index] { get; set; }
-        public System.Collections.Generic.IEnumerable<UnityEngine.Splines.BezierKnot> Knots { get; }
+        public static event System.Action<Spline, int, SplineModification> Changed;
+        public bool Closed { get; set; }
+        public int Count { get; }
+        [System.Obsolete(@"Use GetTangentMode and SetTangentMode.")] public SplineType EditType { get; set; }
+        public bool IsReadOnly { get; }
+        public BezierKnot this[int index] { get; set; }
+        public System.Collections.Generic.IEnumerable<BezierKnot> Knots { get; }
         public Spline() {}
-        public Spline(System.Collections.Generic.IEnumerable<UnityEngine.Splines.BezierKnot> knots, bool closed = False) {}
-        public Spline(int knotCapacity, bool closed = False) {}
-        public virtual void Add(UnityEngine.Splines.BezierKnot item);
-        public void Add(UnityEngine.Splines.BezierKnot item, UnityEngine.Splines.TangentMode mode);
-        public virtual void Clear();
-        public virtual bool Contains(UnityEngine.Splines.BezierKnot item);
-        public void Copy(UnityEngine.Splines.Spline copyFrom);
-        public virtual void CopyTo(UnityEngine.Splines.BezierKnot[] array, int arrayIndex);
-        public virtual UnityEngine.Splines.BezierCurve GetCurve(int index);
-        public virtual float GetCurveInterpolation(int curveIndex, float curveDistance);
-        public virtual float GetCurveLength(int index);
-        public virtual System.Collections.Generic.IEnumerator<UnityEngine.Splines.BezierKnot> GetEnumerator();
-        public virtual float GetLength();
-        public UnityEngine.Splines.TangentMode GetTangentMode(int index);
-        public virtual int IndexOf(UnityEngine.Splines.BezierKnot item);
-        public virtual void Insert(int index, UnityEngine.Splines.BezierKnot knot);
-        public void Insert(int index, UnityEngine.Splines.BezierKnot knot, UnityEngine.Splines.TangentMode mode);
+        public Spline(System.Collections.Generic.IEnumerable<BezierKnot> knots, bool closed = false) {}
+        public Spline(int knotCapacity, bool closed = false) {}
+        public void Add(BezierKnot item);
+        public void Add(BezierKnot item, TangentMode mode);
+        public void Clear();
+        public bool Contains(BezierKnot item);
+        public void Copy(Spline copyFrom);
+        public void CopyTo(BezierKnot[] array, int arrayIndex);
+        public BezierCurve GetCurve(int index);
+        public float GetCurveInterpolation(int curveIndex, float curveDistance);
+        public float GetCurveLength(int index);
+        public System.Collections.Generic.IEnumerator<BezierKnot> GetEnumerator();
+        public float GetLength();
+        public TangentMode GetTangentMode(int index);
+        public int IndexOf(BezierKnot item);
+        public void Insert(int index, BezierKnot knot);
+        public void Insert(int index, BezierKnot knot, TangentMode mode);
         protected virtual void OnSplineChanged();
-        public virtual bool Remove(UnityEngine.Splines.BezierKnot item);
-        public virtual void RemoveAt(int index);
+        public bool Remove(BezierKnot item);
+        public void RemoveAt(int index);
         public void Resize(int newSize);
-        public void SetKnot(int index, UnityEngine.Splines.BezierKnot value, UnityEngine.Splines.BezierTangent main = 1);
-        public void SetKnotNoNotify(int index, UnityEngine.Splines.BezierKnot value, UnityEngine.Splines.BezierTangent main = 1);
-        public void SetTangentMode(UnityEngine.Splines.TangentMode mode);
-        public void SetTangentMode(int index, UnityEngine.Splines.TangentMode mode, UnityEngine.Splines.BezierTangent main = 1);
-        public void SetTangentModeNoNotify(int index, UnityEngine.Splines.TangentMode mode, UnityEngine.Splines.BezierTangent main = 1);
-        public UnityEngine.Splines.BezierKnot[] ToArray();
+        public void SetKnot(int index, BezierKnot value, BezierTangent main = BezierTangent.Out);
+        public void SetKnotNoNotify(int index, BezierKnot value, BezierTangent main = BezierTangent.Out);
+        public void SetTangentMode(TangentMode mode);
+        public void SetTangentMode(int index, TangentMode mode, BezierTangent main = BezierTangent.Out);
+        public void SetTangentModeNoNotify(int index, TangentMode mode, BezierTangent main = BezierTangent.Out);
+        public BezierKnot[] ToArray();
         public void Warmup();
     }
 
-    [UnityEngine.AddComponentMenu(@"Splines/Spline Animate")] public class SplineAnimate : UnityEngine.Splines.SplineComponent
+    [AddComponentMenu(@"Splines/Spline Animate")] public class SplineAnimate : SplineComponent
     {
-        [System.Obsolete(@"Use Updated instead.", false)] public event System.Action<UnityEngine.Vector3, UnityEngine.Quaternion> onUpdated;
-        public event System.Action<UnityEngine.Vector3, UnityEngine.Quaternion> Updated;
-        public UnityEngine.Splines.SplineAnimate.AlignmentMode Alignment { get; set; }
-        [System.Obsolete(@"Use Alignment instead.", false)] public UnityEngine.Splines.SplineAnimate.AlignmentMode alignmentMode { get; }
-        public UnityEngine.Splines.SplineAnimate.Method AnimationMethod { get; set; }
-        public UnityEngine.Splines.SplineContainer Container { get; set; }
+        [System.Obsolete(@"Use Updated instead.", false)] public event System.Action<Vector3, Quaternion> onUpdated;
+        public event System.Action<Vector3, Quaternion> Updated;
+        public SplineAnimate.AlignmentMode Alignment { get; set; }
+        [System.Obsolete(@"Use Alignment instead.", false)] public SplineAnimate.AlignmentMode alignmentMode { get; }
+        public SplineAnimate.Method AnimationMethod { get; set; }
+        public SplineContainer Container { get; set; }
         [System.Obsolete(@"Use Duration instead.", false)] public float duration { get; }
         public float Duration { get; set; }
-        public UnityEngine.Splines.SplineAnimate.EasingMode Easing { get; set; }
-        [System.Obsolete(@"Use Easing instead.", false)] public UnityEngine.Splines.SplineAnimate.EasingMode easingMode { get; }
+        public SplineAnimate.EasingMode Easing { get; set; }
+        [System.Obsolete(@"Use Easing instead.", false)] public SplineAnimate.EasingMode easingMode { get; }
         [System.Obsolete(@"Use ElapsedTime instead.", false)] public float elapsedTime { get; }
         public float ElapsedTime { get; set; }
         [System.Obsolete(@"Use IsPlaying instead.", false)] public bool isPlaying { get; }
         public bool IsPlaying { get; }
-        public UnityEngine.Splines.SplineAnimate.LoopMode Loop { get; set; }
-        [System.Obsolete(@"Use Loop instead.", false)] public UnityEngine.Splines.SplineAnimate.LoopMode loopMode { get; }
+        public SplineAnimate.LoopMode Loop { get; set; }
+        [System.Obsolete(@"Use Loop instead.", false)] public SplineAnimate.LoopMode loopMode { get; }
         [System.Obsolete(@"Use MaxSpeed instead.", false)] public float maxSpeed { get; }
         public float MaxSpeed { get; set; }
-        [System.Obsolete(@"Use AnimationMethod instead.", false)] public UnityEngine.Splines.SplineAnimate.Method method { get; }
+        [System.Obsolete(@"Use AnimationMethod instead.", false)] public SplineAnimate.Method method { get; }
         [System.Obsolete(@"Use NormalizedTime instead.", false)] public float normalizedTime { get; }
         public float NormalizedTime { get; set; }
-        [System.Obsolete(@"Use ObjectForwardAxis instead.", false)] public UnityEngine.Splines.SplineComponent.AlignAxis objectForwardAxis { get; }
-        public UnityEngine.Splines.SplineComponent.AlignAxis ObjectForwardAxis { get; set; }
-        [System.Obsolete(@"Use ObjectUpAxis instead.", false)] public UnityEngine.Splines.SplineComponent.AlignAxis objectUpAxis { get; }
-        public UnityEngine.Splines.SplineComponent.AlignAxis ObjectUpAxis { get; set; }
+        [System.Obsolete(@"Use ObjectForwardAxis instead.", false)] public SplineComponent.AlignAxis objectForwardAxis { get; }
+        public SplineComponent.AlignAxis ObjectForwardAxis { get; set; }
+        [System.Obsolete(@"Use ObjectUpAxis instead.", false)] public SplineComponent.AlignAxis objectUpAxis { get; }
+        public SplineComponent.AlignAxis ObjectUpAxis { get; set; }
         [System.Obsolete(@"Use PlayOnAwake instead.", false)] public bool playOnAwake { get; }
         public bool PlayOnAwake { get; set; }
-        [System.Obsolete(@"Use Container instead.", false)] public UnityEngine.Splines.SplineContainer splineContainer { get; }
+        [System.Obsolete(@"Use Container instead.", false)] public SplineContainer splineContainer { get; }
         public SplineAnimate() {}
         public void Pause();
         public void Play();
@@ -245,84 +264,86 @@ namespace UnityEngine.Splines
         public void Update();
         public enum AlignmentMode
         {
-            [UnityEngine.InspectorName(@"None")] public const UnityEngine.Splines.SplineAnimate.AlignmentMode None = 0;
-            [UnityEngine.InspectorName(@"Spline Element")] public const UnityEngine.Splines.SplineAnimate.AlignmentMode SplineElement = 1;
-            [UnityEngine.InspectorName(@"Spline Object")] public const UnityEngine.Splines.SplineAnimate.AlignmentMode SplineObject = 2;
-            public int value__;
-            [UnityEngine.InspectorName(@"World")] public const UnityEngine.Splines.SplineAnimate.AlignmentMode World = 3;
+            [InspectorName(@"None")] None = 0,
+            [InspectorName(@"Spline Element")] SplineElement = 1,
+            [InspectorName(@"Spline Object")] SplineObject = 2,
+            [InspectorName(@"World Space")] World = 3,
         }
         public enum EasingMode
         {
-            [UnityEngine.InspectorName(@"Ease In Only")] public const UnityEngine.Splines.SplineAnimate.EasingMode EaseIn = 1;
-            [UnityEngine.InspectorName(@"Ease In-Out")] public const UnityEngine.Splines.SplineAnimate.EasingMode EaseInOut = 3;
-            [UnityEngine.InspectorName(@"Ease Out Only")] public const UnityEngine.Splines.SplineAnimate.EasingMode EaseOut = 2;
-            [UnityEngine.InspectorName(@"None")] public const UnityEngine.Splines.SplineAnimate.EasingMode None = 0;
-            public int value__;
+            [InspectorName(@"Ease In Only")] EaseIn = 1,
+            [InspectorName(@"Ease In-Out")] EaseInOut = 3,
+            [InspectorName(@"Ease Out Only")] EaseOut = 2,
+            [InspectorName(@"None")] None = 0,
         }
         public enum LoopMode
         {
-            [UnityEngine.InspectorName(@"Loop Continous")] public const UnityEngine.Splines.SplineAnimate.LoopMode Loop = 1;
-            [UnityEngine.InspectorName(@"Ease In Then Continous")] public const UnityEngine.Splines.SplineAnimate.LoopMode LoopEaseInOnce = 2;
-            [UnityEngine.InspectorName(@"Once")] public const UnityEngine.Splines.SplineAnimate.LoopMode Once = 0;
-            [UnityEngine.InspectorName(@"Ping Pong")] public const UnityEngine.Splines.SplineAnimate.LoopMode PingPong = 3;
-            public int value__;
+            [InspectorName(@"Loop Continous")] Loop = 1,
+            [InspectorName(@"Ease In Then Continous")] LoopEaseInOnce = 2,
+            [InspectorName(@"Once")] Once = 0,
+            [InspectorName(@"Ping Pong")] PingPong = 3,
         }
         public enum Method
         {
-            public const UnityEngine.Splines.SplineAnimate.Method Speed = 1;
-            public const UnityEngine.Splines.SplineAnimate.Method Time = 0;
-            public int value__;
+            Speed = 1,
+            Time = 0,
         }
     }
 
-    public abstract class SplineComponent : UnityEngine.MonoBehaviour
+    public abstract class SplineComponent : MonoBehaviour
     {
         protected SplineComponent() {}
-        protected Unity.Mathematics.float3 GetAxis(UnityEngine.Splines.SplineComponent.AlignAxis axis);
+        protected Unity.Mathematics.float3 GetAxis(SplineComponent.AlignAxis axis);
         public enum AlignAxis
         {
-            [UnityEngine.InspectorName(@"Object X-")] public const UnityEngine.Splines.SplineComponent.AlignAxis NegativeXAxis = 3;
-            [UnityEngine.InspectorName(@"Object Y-")] public const UnityEngine.Splines.SplineComponent.AlignAxis NegativeYAxis = 4;
-            [UnityEngine.InspectorName(@"Object Z-")] public const UnityEngine.Splines.SplineComponent.AlignAxis NegativeZAxis = 5;
-            public int value__;
-            [UnityEngine.InspectorName(@"Object X+")] public const UnityEngine.Splines.SplineComponent.AlignAxis XAxis = 0;
-            [UnityEngine.InspectorName(@"Object Y+")] public const UnityEngine.Splines.SplineComponent.AlignAxis YAxis = 1;
-            [UnityEngine.InspectorName(@"Object Z+")] public const UnityEngine.Splines.SplineComponent.AlignAxis ZAxis = 2;
+            [InspectorName(@"Object X-")] NegativeXAxis = 3,
+            [InspectorName(@"Object Y-")] NegativeYAxis = 4,
+            [InspectorName(@"Object Z-")] NegativeZAxis = 5,
+            [InspectorName(@"Object X+")] XAxis = 0,
+            [InspectorName(@"Object Y+")] YAxis = 1,
+            [InspectorName(@"Object Z+")] ZAxis = 2,
         }
     }
 
-    public struct SplineComputeBufferScope<T> : System.IDisposable where T : UnityEngine.Splines.ISpline
+    public struct SplineComputeBufferScope<T> : System.IDisposable where T : ISpline
     {
-        public UnityEngine.ComputeBuffer CurveLengths { get; }
-        public UnityEngine.ComputeBuffer Curves { get; }
-        public UnityEngine.Vector4 Info { get; }
+        public ComputeBuffer CurveLengths { get; }
+        public ComputeBuffer Curves { get; }
+        public Vector4 Info { get; }
         public SplineComputeBufferScope(T spline) {}
-        public void Bind(UnityEngine.ComputeShader shader, int kernel, string info, string curves, string lengths);
-        public virtual void Dispose();
+        public void Bind(ComputeShader shader, int kernel, string info, string curves, string lengths);
+        public void Dispose();
         public void Upload();
     }
 
-    [UnityEngine.AddComponentMenu(@"Splines/Spline")] [UnityEngine.ExecuteInEditMode] [UnityEngine.Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineComponent.png")] public sealed class SplineContainer : UnityEngine.MonoBehaviour, UnityEngine.Splines.ISplineContainer
+    [AddComponentMenu(@"Splines/Spline")] [ExecuteInEditMode] [Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineComponent.png")] public sealed class SplineContainer : MonoBehaviour, ISerializationCallbackReceiver, ISplineContainer
     {
-        public virtual UnityEngine.Splines.KnotLinkCollection KnotLinkCollection { get; }
-        public UnityEngine.Splines.Spline Spline { get; set; }
-        public virtual System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.Spline> Splines { get; set; }
+        public KnotLinkCollection KnotLinkCollection { get; }
+        public Spline Spline { get; set; }
+        public System.Collections.Generic.IReadOnlyList<Spline> Splines { get; set; }
         public SplineContainer() {}
         public float CalculateLength();
         public float CalculateLength(int splineIndex);
         public bool Evaluate(float t, out Unity.Mathematics.float3 position, out Unity.Mathematics.float3 tangent, out Unity.Mathematics.float3 upVector);
         public bool Evaluate(int splineIndex, float t, out Unity.Mathematics.float3 position, out Unity.Mathematics.float3 tangent, out Unity.Mathematics.float3 upVector);
+        public bool Evaluate<T>(T spline, float t, out Unity.Mathematics.float3 position, out Unity.Mathematics.float3 tangent, out Unity.Mathematics.float3 upVector) where T : ISpline;
         public Unity.Mathematics.float3 EvaluateAcceleration(float t);
         public Unity.Mathematics.float3 EvaluateAcceleration(int splineIndex, float t);
+        public Unity.Mathematics.float3 EvaluateAcceleration<T>(T spline, float t) where T : ISpline;
         public Unity.Mathematics.float3 EvaluatePosition(float t);
         public Unity.Mathematics.float3 EvaluatePosition(int splineIndex, float t);
+        public Unity.Mathematics.float3 EvaluatePosition<T>(T spline, float t) where T : ISpline;
         public Unity.Mathematics.float3 EvaluateTangent(float t);
         public Unity.Mathematics.float3 EvaluateTangent(int splineIndex, float t);
+        public Unity.Mathematics.float3 EvaluateTangent<T>(T spline, float t) where T : ISpline;
         public Unity.Mathematics.float3 EvaluateUpVector(float t);
         public Unity.Mathematics.float3 EvaluateUpVector(int splineIndex, float t);
+        public Unity.Mathematics.float3 EvaluateUpVector<T>(T spline, float t) where T : ISpline;
+        public void OnAfterDeserialize();
+        public void OnBeforeSerialize();
     }
 
-    [System.Reflection.DefaultMember(@"Item")] public class SplineData<T> : System.Collections.Generic.IEnumerable<UnityEngine.Splines.DataPoint<T>>, System.Collections.IEnumerable
+    public class SplineData<T> : System.Collections.Generic.IEnumerable<UnityEngine.Splines.DataPoint<T>>, System.Collections.IEnumerable
     {
         [System.Obsolete(@"Use Changed instead.", false)] public event System.Action changed;
         public event System.Action Changed;
@@ -330,19 +351,19 @@ namespace UnityEngine.Splines
         public T DefaultValue { get; set; }
         public System.Collections.Generic.IEnumerable<float> Indexes { get; }
         public UnityEngine.Splines.DataPoint<T> this[int index] { get; set; }
-        public UnityEngine.Splines.PathIndexUnit PathIndexUnit { get; set; }
+        public PathIndexUnit PathIndexUnit { get; set; }
         public SplineData() {}
         public SplineData(System.Collections.Generic.IEnumerable<UnityEngine.Splines.DataPoint<T>> dataPoints) {}
         public SplineData(T init) {}
         public int Add(UnityEngine.Splines.DataPoint<T> dataPoint);
         public void Add(float t, T data);
-        public int AddDataPointWithDefaultValue(float t, bool useDefaultValue = False);
+        public int AddDataPointWithDefaultValue(float t, bool useDefaultValue = false);
         public void Clear();
-        public void ConvertPathUnit<TSplineType>(TSplineType spline, UnityEngine.Splines.PathIndexUnit toUnit) where TSplineType : UnityEngine.Splines.ISpline;
-        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, TInterpolator interpolator) where TSpline : UnityEngine.Splines.ISpline where TInterpolator : UnityEngine.Splines.IInterpolator<T>;
-        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, UnityEngine.Splines.PathIndexUnit indexUnit, TInterpolator interpolator) where TSpline : UnityEngine.Splines.ISpline where TInterpolator : UnityEngine.Splines.IInterpolator<T>;
-        [System.Runtime.CompilerServices.IteratorStateMachine(typeof(UnityEngine.Splines.SplineData<>))] public virtual System.Collections.Generic.IEnumerator<UnityEngine.Splines.DataPoint<T>> GetEnumerator();
-        public float GetNormalizedInterpolation<TSplineType>(TSplineType spline, float t) where TSplineType : UnityEngine.Splines.ISpline;
+        public void ConvertPathUnit<TSplineType>(TSplineType spline, PathIndexUnit toUnit) where TSplineType : ISpline;
+        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, TInterpolator interpolator) where TSpline : ISpline where TInterpolator : UnityEngine.Splines.IInterpolator<T>;
+        public T Evaluate<TSpline, TInterpolator>(TSpline spline, float t, PathIndexUnit indexUnit, TInterpolator interpolator) where TSpline : ISpline where TInterpolator : UnityEngine.Splines.IInterpolator<T>;
+        public System.Collections.Generic.IEnumerator<UnityEngine.Splines.DataPoint<T>> GetEnumerator();
+        public float GetNormalizedInterpolation<TSplineType>(TSplineType spline, float t) where TSplineType : ISpline;
         public int MoveDataPoint(int index, float newIndex);
         public void RemoveAt(int index);
         public bool RemoveDataPoint(float t);
@@ -351,21 +372,21 @@ namespace UnityEngine.Splines
         public void SortIfNecessary();
     }
 
-    [System.AttributeUsage(256)] [System.Obsolete(@"Use SplineDataHandles.DataPointHandles instead and EditorTools to interact with SplineData.", false)] public abstract class SplineDataHandleAttribute : System.Attribute
+    [System.AttributeUsage(System.AttributeTargets.Field)] [System.Obsolete(@"Use SplineDataHandles.DataPointHandles instead and EditorTools to interact with SplineData.", false)] public abstract class SplineDataHandleAttribute : System.Attribute
     {
         protected SplineDataHandleAttribute() {}
     }
 
-    [UnityEngine.AddComponentMenu(@"Splines/Spline Extrude")] [UnityEngine.RequireComponent(typeof(UnityEngine.MeshFilter), typeof(UnityEngine.MeshRenderer))] public class SplineExtrude : UnityEngine.MonoBehaviour
+    [AddComponentMenu(@"Splines/Spline Extrude")] [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))] public class SplineExtrude : MonoBehaviour
     {
         [System.Obsolete(@"Use Capped instead.", false)] public bool capped { get; }
         public bool Capped { get; set; }
-        [System.Obsolete(@"Use Container instead.", false)] public UnityEngine.Splines.SplineContainer container { get; }
-        public UnityEngine.Splines.SplineContainer Container { get; set; }
+        [System.Obsolete(@"Use Container instead.", false)] public SplineContainer container { get; }
+        public SplineContainer Container { get; set; }
         [System.Obsolete(@"Use Radius instead.", false)] public float radius { get; }
         public float Radius { get; set; }
-        [System.Obsolete(@"Use Range instead.", false)] public UnityEngine.Vector2 range { get; }
-        public UnityEngine.Vector2 Range { get; set; }
+        [System.Obsolete(@"Use Range instead.", false)] public Vector2 range { get; }
+        public Vector2 Range { get; set; }
         [System.Obsolete(@"Use RebuildFrequency instead.", false)] public int rebuildFrequency { get; }
         public int RebuildFrequency { get; set; }
         [System.Obsolete(@"Use RebuildOnSplineChange instead.", false)] public bool rebuildOnSplineChange { get; }
@@ -374,51 +395,52 @@ namespace UnityEngine.Splines
         public float SegmentsPerUnit { get; set; }
         [System.Obsolete(@"Use Sides instead.", false)] public int sides { get; }
         public int Sides { get; set; }
-        [System.Obsolete(@"Use Spline instead.", false)] public UnityEngine.Splines.Spline spline { get; }
-        public UnityEngine.Splines.Spline Spline { get; }
+        [System.Obsolete(@"Use Spline instead.", false)] public Spline spline { get; }
+        public Spline Spline { get; }
+        public System.Collections.Generic.IReadOnlyList<Spline> Splines { get; }
         public SplineExtrude() {}
         public void Rebuild();
     }
 
     public static class SplineFactory
     {
-        public static UnityEngine.Splines.Spline CreateCatmullRom(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, bool closed = False);
-        public static UnityEngine.Splines.Spline CreateLinear(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, bool closed = False);
-        public static UnityEngine.Splines.Spline CreateLinear(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, System.Collections.Generic.IList<Unity.Mathematics.quaternion> rotations, bool closed = False);
-        public static UnityEngine.Splines.Spline CreateRoundedSquare(float radius, float rounding);
-        public static UnityEngine.Splines.Spline CreateSquare(float radius);
+        public static Spline CreateCatmullRom(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, bool closed = false);
+        public static Spline CreateLinear(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, bool closed = false);
+        public static Spline CreateLinear(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, System.Collections.Generic.IList<Unity.Mathematics.quaternion> rotations, bool closed = false);
+        public static Spline CreateRoundedSquare(float radius, float rounding);
+        public static Spline CreateSquare(float radius);
     }
 
-    [UnityEngine.AddComponentMenu(@"Splines/Spline Instantiate")] [UnityEngine.ExecuteInEditMode] public class SplineInstantiate : UnityEngine.Splines.SplineComponent
+    [AddComponentMenu(@"Splines/Spline Instantiate")] [ExecuteInEditMode] public class SplineInstantiate : SplineComponent
     {
-        [System.Obsolete(@"Use Container instead.", false)] public UnityEngine.Splines.SplineContainer container { get; }
-        public UnityEngine.Splines.SplineContainer Container { get; set; }
-        public UnityEngine.Splines.SplineInstantiate.Space CoordinateSpace { get; set; }
-        [System.Obsolete(@"Use ForwardAxis instead.", false)] public UnityEngine.Splines.SplineComponent.AlignAxis forwardAxis { get; }
-        public UnityEngine.Splines.SplineComponent.AlignAxis ForwardAxis { get; set; }
-        public UnityEngine.Splines.SplineInstantiate.Method InstantiateMethod { get; set; }
-        [System.Obsolete(@"Use MaxPositionOffset instead.", false)] public UnityEngine.Vector3 maxPositionOffset { get; }
-        public UnityEngine.Vector3 MaxPositionOffset { get; set; }
-        [System.Obsolete(@"Use MaxRotationOffset instead.", false)] public UnityEngine.Vector3 maxRotationOffset { get; }
-        public UnityEngine.Vector3 MaxRotationOffset { get; set; }
-        [System.Obsolete(@"Use MaxScaleOffset instead.", false)] public UnityEngine.Vector3 maxScaleOffset { get; }
-        public UnityEngine.Vector3 MaxScaleOffset { get; set; }
-        [System.Obsolete(@"Use InstantiateMethod instead.", false)] public UnityEngine.Splines.SplineInstantiate.Method method { get; }
-        [System.Obsolete(@"Use MinPositionOffset instead.", false)] public UnityEngine.Vector3 minPositionOffset { get; }
-        public UnityEngine.Vector3 MinPositionOffset { get; set; }
-        [System.Obsolete(@"Use MinRotationOffset instead.", false)] public UnityEngine.Vector3 minRotationOffset { get; }
-        public UnityEngine.Vector3 MinRotationOffset { get; set; }
-        [System.Obsolete(@"Use MinScaleOffset instead.", false)] public UnityEngine.Vector3 minScaleOffset { get; }
-        public UnityEngine.Vector3 MinScaleOffset { get; set; }
-        [System.Obsolete(@"Use PositionSpace instead.", false)] public UnityEngine.Splines.SplineInstantiate.OffsetSpace positionSpace { get; }
-        public UnityEngine.Splines.SplineInstantiate.OffsetSpace PositionSpace { get; set; }
-        [System.Obsolete(@"Use RotationSpace instead.", false)] public UnityEngine.Splines.SplineInstantiate.OffsetSpace rotationSpace { get; }
-        public UnityEngine.Splines.SplineInstantiate.OffsetSpace RotationSpace { get; set; }
-        [System.Obsolete(@"Use ScaleSpace instead.", false)] public UnityEngine.Splines.SplineInstantiate.OffsetSpace scaleSpace { get; }
-        public UnityEngine.Splines.SplineInstantiate.OffsetSpace ScaleSpace { get; set; }
-        [System.Obsolete(@"Use CoordinateSpace instead.", false)] public UnityEngine.Splines.SplineInstantiate.Space space { get; }
-        [System.Obsolete(@"Use UpAxis instead.", false)] public UnityEngine.Splines.SplineComponent.AlignAxis upAxis { get; }
-        public UnityEngine.Splines.SplineComponent.AlignAxis UpAxis { get; set; }
+        [System.Obsolete(@"Use Container instead.", false)] public SplineContainer container { get; }
+        public SplineContainer Container { get; set; }
+        public SplineInstantiate.Space CoordinateSpace { get; set; }
+        [System.Obsolete(@"Use ForwardAxis instead.", false)] public SplineComponent.AlignAxis forwardAxis { get; }
+        public SplineComponent.AlignAxis ForwardAxis { get; set; }
+        public SplineInstantiate.Method InstantiateMethod { get; set; }
+        [System.Obsolete(@"Use MaxPositionOffset instead.", false)] public Vector3 maxPositionOffset { get; }
+        public Vector3 MaxPositionOffset { get; set; }
+        [System.Obsolete(@"Use MaxRotationOffset instead.", false)] public Vector3 maxRotationOffset { get; }
+        public Vector3 MaxRotationOffset { get; set; }
+        [System.Obsolete(@"Use MaxScaleOffset instead.", false)] public Vector3 maxScaleOffset { get; }
+        public Vector3 MaxScaleOffset { get; set; }
+        [System.Obsolete(@"Use InstantiateMethod instead.", false)] public SplineInstantiate.Method method { get; }
+        [System.Obsolete(@"Use MinPositionOffset instead.", false)] public Vector3 minPositionOffset { get; }
+        public Vector3 MinPositionOffset { get; set; }
+        [System.Obsolete(@"Use MinRotationOffset instead.", false)] public Vector3 minRotationOffset { get; }
+        public Vector3 MinRotationOffset { get; set; }
+        [System.Obsolete(@"Use MinScaleOffset instead.", false)] public Vector3 minScaleOffset { get; }
+        public Vector3 MinScaleOffset { get; set; }
+        [System.Obsolete(@"Use PositionSpace instead.", false)] public SplineInstantiate.OffsetSpace positionSpace { get; }
+        public SplineInstantiate.OffsetSpace PositionSpace { get; set; }
+        [System.Obsolete(@"Use RotationSpace instead.", false)] public SplineInstantiate.OffsetSpace rotationSpace { get; }
+        public SplineInstantiate.OffsetSpace RotationSpace { get; set; }
+        [System.Obsolete(@"Use ScaleSpace instead.", false)] public SplineInstantiate.OffsetSpace scaleSpace { get; }
+        public SplineInstantiate.OffsetSpace ScaleSpace { get; set; }
+        [System.Obsolete(@"Use CoordinateSpace instead.", false)] public SplineInstantiate.Space space { get; }
+        [System.Obsolete(@"Use UpAxis instead.", false)] public SplineComponent.AlignAxis upAxis { get; }
+        public SplineComponent.AlignAxis UpAxis { get; set; }
         public SplineInstantiate() {}
         public void Clear();
         public void Randomize();
@@ -426,205 +448,202 @@ namespace UnityEngine.Splines
         public void UpdateInstances();
         public struct InstantiableItem
         {
-            [System.Obsolete(@"Use Prefab instead.", false)] [UnityEngine.HideInInspector] public UnityEngine.GameObject prefab;
-            [UnityEngine.Serialization.FormerlySerializedAs(@"prefab")] public UnityEngine.GameObject Prefab;
-            [System.Obsolete(@"Use Probability instead.", false)] [UnityEngine.HideInInspector] public float probability;
+            [HideInInspector] [System.Obsolete(@"Use Prefab instead.", false)] public GameObject prefab;
+            [UnityEngine.Serialization.FormerlySerializedAs(@"prefab")] public GameObject Prefab;
+            [HideInInspector] [System.Obsolete(@"Use Probability instead.", false)] public float probability;
             [UnityEngine.Serialization.FormerlySerializedAs(@"probability")] public float Probability;
         }
         public enum Method
         {
-            [UnityEngine.InspectorName(@"Instance Count")] public const UnityEngine.Splines.SplineInstantiate.Method InstanceCount = 0;
-            [UnityEngine.InspectorName(@"Linear Distance")] public const UnityEngine.Splines.SplineInstantiate.Method LinearDistance = 2;
-            [UnityEngine.InspectorName(@"Spline Distance")] public const UnityEngine.Splines.SplineInstantiate.Method SpacingDistance = 1;
-            public int value__;
+            [InspectorName(@"Instance Count")] InstanceCount = 0,
+            [InspectorName(@"Linear Distance")] LinearDistance = 2,
+            [InspectorName(@"Spline Distance")] SpacingDistance = 1,
         }
         public enum OffsetSpace
         {
-            [UnityEngine.InspectorName(@"Spline Object")] public const UnityEngine.Splines.SplineInstantiate.OffsetSpace Local = 1;
-            [UnityEngine.InspectorName(@"Instantiated Object")] public const UnityEngine.Splines.SplineInstantiate.OffsetSpace Object = 3;
-            [UnityEngine.InspectorName(@"Spline Element")] public const UnityEngine.Splines.SplineInstantiate.OffsetSpace Spline = 0;
-            public int value__;
-            [UnityEngine.InspectorName(@"World Space")] public const UnityEngine.Splines.SplineInstantiate.OffsetSpace World = 2;
+            [InspectorName(@"Spline Object")] Local = 1,
+            [InspectorName(@"Instantiated Object")] Object = 3,
+            [InspectorName(@"Spline Element")] Spline = 0,
+            [InspectorName(@"World Space")] World = 2,
         }
         public enum Space
         {
-            [UnityEngine.InspectorName(@"Spline Object")] public const UnityEngine.Splines.SplineInstantiate.Space Local = 1;
-            [UnityEngine.InspectorName(@"Spline Element")] public const UnityEngine.Splines.SplineInstantiate.Space Spline = 0;
-            public int value__;
-            [UnityEngine.InspectorName(@"World Space")] public const UnityEngine.Splines.SplineInstantiate.Space World = 2;
+            [InspectorName(@"Spline Object")] Local = 1,
+            [InspectorName(@"Spline Element")] Spline = 0,
+            [InspectorName(@"World Space")] World = 2,
         }
     }
 
     public static class SplineJobs
     {
-        public static void EvaluatePosition<T>(T spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions) where T : UnityEngine.Splines.ISpline;
-        public static void EvaluatePosition(UnityEngine.Splines.NativeSpline spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions);
-        public static void EvaluatePositionTangentNormal<T>(T spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions, Unity.Collections.NativeArray<Unity.Mathematics.float3> tangents, Unity.Collections.NativeArray<Unity.Mathematics.float3> normals) where T : UnityEngine.Splines.ISpline;
-        public static void EvaluatePositionTangentNormal(UnityEngine.Splines.NativeSpline spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions, Unity.Collections.NativeArray<Unity.Mathematics.float3> tangents, Unity.Collections.NativeArray<Unity.Mathematics.float3> normals);
+        public static void EvaluatePosition<T>(T spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions) where T : ISpline;
+        public static void EvaluatePosition(NativeSpline spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions);
+        public static void EvaluatePositionTangentNormal<T>(T spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions, Unity.Collections.NativeArray<Unity.Mathematics.float3> tangents, Unity.Collections.NativeArray<Unity.Mathematics.float3> normals) where T : ISpline;
+        public static void EvaluatePositionTangentNormal(NativeSpline spline, Unity.Collections.NativeArray<Unity.Mathematics.float3> positions, Unity.Collections.NativeArray<Unity.Mathematics.float3> tangents, Unity.Collections.NativeArray<Unity.Mathematics.float3> normals);
     }
 
-    public struct SplineKnotIndex : System.IEquatable<UnityEngine.Splines.SplineKnotIndex>
+    public struct SplineKnotIndex : System.IEquatable<SplineKnotIndex>
     {
         public int Knot;
         public int Spline;
         public SplineKnotIndex(int spline, int knot) {}
-        public virtual bool Equals(object obj);
-        public virtual bool Equals(UnityEngine.Splines.SplineKnotIndex other);
-        public virtual int GetHashCode();
-        public static bool operator ==(UnityEngine.Splines.SplineKnotIndex indexA, UnityEngine.Splines.SplineKnotIndex indexB);
-        public static bool operator !=(UnityEngine.Splines.SplineKnotIndex indexA, UnityEngine.Splines.SplineKnotIndex indexB);
-        public virtual string ToString();
+        public override bool Equals(object obj);
+        public bool Equals(SplineKnotIndex otherIndex);
+        public override int GetHashCode();
+        public static bool operator ==(SplineKnotIndex indexA, SplineKnotIndex indexB);
+        public static bool operator !=(SplineKnotIndex indexA, SplineKnotIndex indexB);
+        public override string ToString();
     }
 
     public static class SplineMesh
     {
-        public static void Extrude<T>(T spline, UnityEngine.Mesh mesh, float radius, int sides, int segments, bool capped = True) where T : UnityEngine.Splines.ISpline;
-        public static void Extrude<T>(T spline, UnityEngine.Mesh mesh, float radius, int sides, int segments, bool capped, Unity.Mathematics.float2 range) where T : UnityEngine.Splines.ISpline;
-        public static void Extrude<TSplineType, TVertexType, TIndexType>(TSplineType spline, Unity.Collections.NativeArray<TVertexType> vertices, Unity.Collections.NativeArray<TIndexType> indices, float radius, int sides, int segments, bool capped, Unity.Mathematics.float2 range) where TSplineType : UnityEngine.Splines.ISpline where TVertexType : System.ValueType, UnityEngine.Splines.SplineMesh.ISplineVertexData, new() where TIndexType : System.ValueType, new();
-        public static void GetVertexAndIndexCount(int sides, int segments, bool capped, bool closed, UnityEngine.Vector2 range, out int vertexCount, out int indexCount);
+        public static void Extrude<T>(T spline, Mesh mesh, float radius, int sides, int segments, bool capped = true) where T : ISpline;
+        public static void Extrude<T>(System.Collections.Generic.IReadOnlyList<T> splines, Mesh mesh, float radius, int sides, float segmentsPerUnit, bool capped, Unity.Mathematics.float2 range) where T : ISpline;
+        public static void Extrude<T>(T spline, Mesh mesh, float radius, int sides, int segments, bool capped, Unity.Mathematics.float2 range) where T : ISpline;
+        public static void Extrude<TSplineType, TVertexType, TIndexType>(TSplineType spline, Unity.Collections.NativeArray<TVertexType> vertices, Unity.Collections.NativeArray<TIndexType> indices, float radius, int sides, int segments, bool capped, Unity.Mathematics.float2 range) where TSplineType : ISpline where TVertexType : struct, SplineMesh.ISplineVertexData, new() where TIndexType : struct, new();
+        public static void GetVertexAndIndexCount(int sides, int segments, bool capped, bool closed, Vector2 range, out int vertexCount, out int indexCount);
         public interface ISplineVertexData
         {
-            public abstract UnityEngine.Vector3 normal { get; set; }
-            public abstract UnityEngine.Vector3 position { get; set; }
-            public abstract UnityEngine.Vector2 texture { get; set; }
+            public Vector3 normal { get; set; }
+            public Vector3 position { get; set; }
+            public Vector2 texture { get; set; }
         }
     }
 
     public enum SplineModification
     {
-        public const UnityEngine.Splines.SplineModification ClosedModified = 1;
-        public const UnityEngine.Splines.SplineModification Default = 0;
-        public const UnityEngine.Splines.SplineModification KnotInserted = 3;
-        public const UnityEngine.Splines.SplineModification KnotModified = 2;
-        public const UnityEngine.Splines.SplineModification KnotRemoved = 4;
-        public int value__;
+        ClosedModified = 1,
+        Default = 0,
+        KnotInserted = 3,
+        KnotModified = 2,
+        KnotRemoved = 4,
     }
 
     [System.Obsolete(@"Replaced by GetTangentMode and SetTangentMode.")] public enum SplineType
     {
-        public const UnityEngine.Splines.SplineType Bezier = 1;
-        public const UnityEngine.Splines.SplineType CatmullRom = 0;
-        public const UnityEngine.Splines.SplineType Linear = 2;
-        public byte value__;
+        Bezier = 1,
+        CatmullRom = 0,
+        Linear = 2,
     }
 
-    [System.Runtime.CompilerServices.Extension] public static class SplineUtility
+    public static class SplineUtility
     {
         public const int DrawResolutionDefault = 10;
         public const int PickResolutionDefault = 4;
         public const int PickResolutionMax = 64;
         public const int PickResolutionMin = 2;
-        [System.Runtime.CompilerServices.Extension] public static UnityEngine.Splines.Spline AddSpline<T>(T container) where T : UnityEngine.Splines.ISplineContainer;
-        [System.Runtime.CompilerServices.Extension] public static float CalculateLength<T>(T spline, Unity.Mathematics.float4x4 transform) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static float ConvertIndexUnit<T>(T spline, float t, UnityEngine.Splines.PathIndexUnit targetPathUnit) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static float ConvertIndexUnit<T>(T spline, float t, UnityEngine.Splines.PathIndexUnit fromPathUnit, UnityEngine.Splines.PathIndexUnit targetPathUnit) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static float CurveToSplineT<T>(T spline, float curve) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static bool Evaluate<T>(T spline, float t, out Unity.Mathematics.float3 position, out Unity.Mathematics.float3 tangent, out Unity.Mathematics.float3 upVector) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 EvaluateAcceleration<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static float EvaluateCurvature<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 EvaluateCurvatureCenter<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 EvaluatePosition<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 EvaluateTangent<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 EvaluateUpVector<T>(T spline, float t) where T : UnityEngine.Splines.ISpline;
-        public static UnityEngine.Splines.BezierKnot GetAutoSmoothKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next);
-        public static UnityEngine.Splines.BezierKnot GetAutoSmoothKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next, Unity.Mathematics.float3 normal);
-        [System.Runtime.CompilerServices.Extension] public static UnityEngine.Bounds GetBounds<T>(T spline) where T : UnityEngine.Splines.ISpline;
+        public static Spline AddSpline<T>(this T container) where T : ISplineContainer;
+        public static float CalculateLength<T>(this T spline, Unity.Mathematics.float4x4 transform) where T : ISpline;
+        public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit targetPathUnit) where T : ISpline;
+        public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit fromPathUnit, PathIndexUnit targetPathUnit) where T : ISpline;
+        public static float CurveToSplineT<T>(this T spline, float curve) where T : ISpline;
+        public static bool Evaluate<T>(this T spline, float t, out Unity.Mathematics.float3 position, out Unity.Mathematics.float3 tangent, out Unity.Mathematics.float3 upVector) where T : ISpline;
+        public static Unity.Mathematics.float3 EvaluateAcceleration<T>(this T spline, float t) where T : ISpline;
+        public static float EvaluateCurvature<T>(this T spline, float t) where T : ISpline;
+        public static Unity.Mathematics.float3 EvaluateCurvatureCenter<T>(this T spline, float t) where T : ISpline;
+        public static Unity.Mathematics.float3 EvaluatePosition<T>(this T spline, float t) where T : ISpline;
+        public static Unity.Mathematics.float3 EvaluateTangent<T>(this T spline, float t) where T : ISpline;
+        public static Unity.Mathematics.float3 EvaluateUpVector<T>(this T spline, float t) where T : ISpline;
+        public static BezierKnot GetAutoSmoothKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next);
+        public static BezierKnot GetAutoSmoothKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next, Unity.Mathematics.float3 normal);
+        public static Unity.Mathematics.float3 GetAutoSmoothTangent(Unity.Mathematics.float3 previous, Unity.Mathematics.float3 current, Unity.Mathematics.float3 next, float tension = 0.3333333f);
+        public static Bounds GetBounds<T>(this T spline) where T : ISpline;
+        public static Bounds GetBounds<T>(this T spline, Unity.Mathematics.float4x4 transform) where T : ISpline;
         public static Unity.Mathematics.float3 GetCatmullRomTangent(Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next);
-        [System.Runtime.CompilerServices.Extension] public static int GetCurveCount<T>(T spline) where T : UnityEngine.Splines.ISpline;
-        public static float GetNearestPoint<T>(T spline, Unity.Mathematics.float3 point, out Unity.Mathematics.float3 nearest, out float t, int resolution = 4, int iterations = 2) where T : UnityEngine.Splines.ISpline;
-        public static float GetNearestPoint<T>(T spline, UnityEngine.Ray ray, out Unity.Mathematics.float3 nearest, out float t, int resolution = 4, int iterations = 2) where T : UnityEngine.Splines.ISpline;
-        public static float GetNormalizedInterpolation<T>(T spline, float t, UnityEngine.Splines.PathIndexUnit originalPathUnit) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static Unity.Mathematics.float3 GetPointAtLinearDistance<T>(T spline, float fromT, float relativeDistance, out float resultPointT) where T : UnityEngine.Splines.ISpline;
+        public static int GetCurveCount<T>(this T spline) where T : ISpline;
+        public static float GetNearestPoint<T>(T spline, Unity.Mathematics.float3 point, out Unity.Mathematics.float3 nearest, out float t, int resolution = 4, int iterations = 2) where T : ISpline;
+        public static float GetNearestPoint<T>(T spline, Ray ray, out Unity.Mathematics.float3 nearest, out float t, int resolution = 4, int iterations = 2) where T : ISpline;
+        public static float GetNormalizedInterpolation<T>(T spline, float t, PathIndexUnit originalPathUnit) where T : ISpline;
+        public static Unity.Mathematics.float3 GetPointAtLinearDistance<T>(this T spline, float fromT, float relativeDistance, out float resultPointT) where T : ISpline;
         [System.Obsolete(@"Use GetSubdivisionCount instead.", false)] public static int GetSegmentCount(float length, int resolution);
         public static int GetSubdivisionCount(float length, int resolution);
-        [System.Runtime.CompilerServices.Extension] public static void LinkKnots<T>(T container, UnityEngine.Splines.SplineKnotIndex knotA, UnityEngine.Splines.SplineKnotIndex knotB) where T : UnityEngine.Splines.ISplineContainer;
-        [System.Runtime.CompilerServices.Extension] public static UnityEngine.Splines.BezierKnot Next<T>(T spline, int index) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static int NextIndex<T>(T spline, int index) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static UnityEngine.Splines.BezierKnot Previous<T>(T spline, int index) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static int PreviousIndex<T>(T spline, int index) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static bool RemoveSpline<T>(T container, UnityEngine.Splines.Spline spline) where T : UnityEngine.Splines.ISplineContainer;
-        [System.Runtime.CompilerServices.Extension] public static bool RemoveSplineAt<T>(T container, int splineIndex) where T : UnityEngine.Splines.ISplineContainer;
-        [System.Runtime.CompilerServices.Extension] public static void SetLinkedKnotPosition<T>(T container, UnityEngine.Splines.SplineKnotIndex index) where T : UnityEngine.Splines.ISplineContainer;
-        public static void SetPivot(UnityEngine.Splines.SplineContainer container, UnityEngine.Vector3 position);
-        [System.Runtime.CompilerServices.Extension] public static int SplineToCurveT<T>(T spline, float splineT, out float curveT) where T : UnityEngine.Splines.ISpline;
-        [System.Runtime.CompilerServices.Extension] public static void UnlinkKnots<T>(T container, System.Collections.Generic.IReadOnlyList<UnityEngine.Splines.SplineKnotIndex> knots) where T : UnityEngine.Splines.ISplineContainer;
+        public static void LinkKnots<T>(this T container, SplineKnotIndex knotA, SplineKnotIndex knotB) where T : ISplineContainer;
+        public static BezierKnot Next<T>(this T spline, int index) where T : ISpline;
+        public static int NextIndex<T>(this T spline, int index) where T : ISpline;
+        public static BezierKnot Previous<T>(this T spline, int index) where T : ISpline;
+        public static int PreviousIndex<T>(this T spline, int index) where T : ISpline;
+        public static bool RemoveSpline<T>(this T container, Spline spline) where T : ISplineContainer;
+        public static bool RemoveSplineAt<T>(this T container, int splineIndex) where T : ISplineContainer;
+        public static void SetLinkedKnotPosition<T>(this T container, SplineKnotIndex index) where T : ISplineContainer;
+        public static void SetPivot(SplineContainer container, Vector3 position);
+        public static int SplineToCurveT<T>(this T spline, float splineT, out float curveT) where T : ISpline;
+        public static void UnlinkKnots<T>(this T container, System.Collections.Generic.IReadOnlyList<SplineKnotIndex> knots) where T : ISplineContainer;
     }
 
     public enum TangentMode
     {
-        public const UnityEngine.Splines.TangentMode AutoSmooth = 0;
-        public const UnityEngine.Splines.TangentMode Broken = 4;
-        public const UnityEngine.Splines.TangentMode Continuous = 3;
-        public const UnityEngine.Splines.TangentMode Linear = 1;
-        public const UnityEngine.Splines.TangentMode Mirrored = 2;
-        public int value__;
+        AutoSmooth = 0,
+        Broken = 4,
+        Continuous = 3,
+        Linear = 1,
+        Mirrored = 2,
     }
 }
 
 namespace UnityEngine.Splines.Interpolators
 {
-    public struct LerpColor : UnityEngine.Splines.IInterpolator<UnityEngine.Color>
+    public struct LerpColor : UnityEngine.Splines.IInterpolator<Color>
     {
-        public virtual UnityEngine.Color Interpolate(UnityEngine.Color a, UnityEngine.Color b, float t);
+        public Color Interpolate(Color a, Color b, float t);
     }
 
     public struct LerpFloat : UnityEngine.Splines.IInterpolator<float>
     {
-        public virtual float Interpolate(float a, float b, float t);
+        public float Interpolate(float a, float b, float t);
     }
 
     public struct LerpFloat2 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float2>
     {
-        public virtual Unity.Mathematics.float2 Interpolate(Unity.Mathematics.float2 a, Unity.Mathematics.float2 b, float t);
+        public Unity.Mathematics.float2 Interpolate(Unity.Mathematics.float2 a, Unity.Mathematics.float2 b, float t);
     }
 
     public struct LerpFloat3 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float3>
     {
-        public virtual Unity.Mathematics.float3 Interpolate(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, float t);
+        public Unity.Mathematics.float3 Interpolate(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, float t);
     }
 
     public struct LerpFloat4 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float4>
     {
-        public virtual Unity.Mathematics.float4 Interpolate(Unity.Mathematics.float4 a, Unity.Mathematics.float4 b, float t);
+        public Unity.Mathematics.float4 Interpolate(Unity.Mathematics.float4 a, Unity.Mathematics.float4 b, float t);
     }
 
     public struct LerpQuaternion : UnityEngine.Splines.IInterpolator<Unity.Mathematics.quaternion>
     {
-        public virtual Unity.Mathematics.quaternion Interpolate(Unity.Mathematics.quaternion a, Unity.Mathematics.quaternion b, float t);
+        public Unity.Mathematics.quaternion Interpolate(Unity.Mathematics.quaternion a, Unity.Mathematics.quaternion b, float t);
     }
 
     public struct SlerpFloat2 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float2>
     {
-        public virtual Unity.Mathematics.float2 Interpolate(Unity.Mathematics.float2 a, Unity.Mathematics.float2 b, float t);
+        public Unity.Mathematics.float2 Interpolate(Unity.Mathematics.float2 a, Unity.Mathematics.float2 b, float t);
     }
 
     public struct SlerpFloat3 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float3>
     {
-        public virtual Unity.Mathematics.float3 Interpolate(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, float t);
+        public Unity.Mathematics.float3 Interpolate(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, float t);
     }
 
     public struct SlerpQuaternion : UnityEngine.Splines.IInterpolator<Unity.Mathematics.quaternion>
     {
-        public virtual Unity.Mathematics.quaternion Interpolate(Unity.Mathematics.quaternion a, Unity.Mathematics.quaternion b, float t);
+        public Unity.Mathematics.quaternion Interpolate(Unity.Mathematics.quaternion a, Unity.Mathematics.quaternion b, float t);
     }
 
     public struct SmoothStepFloat : UnityEngine.Splines.IInterpolator<float>
     {
-        public virtual float Interpolate(float a, float b, float t);
+        public float Interpolate(float a, float b, float t);
     }
 
     public struct SmoothStepFloat2 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float2>
     {
-        public virtual Unity.Mathematics.float2 Interpolate(Unity.Mathematics.float2 a, Unity.Mathematics.float2 b, float t);
+        public Unity.Mathematics.float2 Interpolate(Unity.Mathematics.float2 a, Unity.Mathematics.float2 b, float t);
     }
 
     public struct SmoothStepFloat3 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float3>
     {
-        public virtual Unity.Mathematics.float3 Interpolate(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, float t);
+        public Unity.Mathematics.float3 Interpolate(Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, float t);
     }
 
     public struct SmoothStepFloat4 : UnityEngine.Splines.IInterpolator<Unity.Mathematics.float4>
     {
-        public virtual Unity.Mathematics.float4 Interpolate(Unity.Mathematics.float4 a, Unity.Mathematics.float4 b, float t);
+        public Unity.Mathematics.float4 Interpolate(Unity.Mathematics.float4 a, Unity.Mathematics.float4 b, float t);
     }
 }

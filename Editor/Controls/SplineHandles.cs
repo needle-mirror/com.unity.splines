@@ -8,109 +8,174 @@ namespace UnityEditor.Splines
 {
     static class SplineHandles
     {
-        static int[] s_CurveIDs;
-
-        static readonly List<int> s_TangentChildIDs = new List<int>(2);
+        static List<int> s_ControlIDs = new();
+        static readonly List<int> k_TangentChildIDs = new(2);
+        static List<int> s_CurveIDs = new();
+        
+        internal static List<int> tangentIDs => k_TangentChildIDs;
+        
+        // todo Tools.viewToolActive should be handling the modifier check, but 2022.2 broke this
+        internal static bool ViewToolActive()
+        {
+            return Tools.viewToolActive || Tools.current == Tool.View || (Event.current.modifiers & EventModifiers.Alt) == EventModifiers.Alt;
+        }
 
         internal static void DrawSplineHandles(IReadOnlyList<SplineInfo> splines)
         {
+            var id = HandleUtility.nearestControl;
+
+            s_CurveIDs.Clear();
+            // Drawing done in two separate passes to make sure the curves are drawn behind the spline elements.
+            // Draw the curves.
             for (int i = 0; i < splines.Count; ++i)
-            {
-                DrawSplineHandles(splines[i]);
-            }
+                DrawSplineCurves(splines[i]);
+
+            KnotHandles.ClearVisibleKnots();
+            // Draw the spline elements.
+            for (int i = 0; i < splines.Count; ++i)
+                DrawSplineElements(splines[i]);
+            //Drawing knots on top of all other elements and above other splines
+            KnotHandles.DrawVisibleKnots();
+
+            var evtType = Event.current.type;
+            if ((evtType == EventType.MouseMove || evtType == EventType.Layout) && HandleUtility.nearestControl == id)
+                SplineHandleUtility.ResetLastHoveredElement();
         }
 
-        internal static bool DrawSplineHandles(SplineInfo splineInfo, bool activeSpline = true)
+        internal static bool IsCurveId(int id)
+        {
+            return s_CurveIDs.Contains(id);
+        }
+
+        internal static void DrawSplineCurves(SplineInfo splineInfo)
         {
             var spline = splineInfo.Spline;
             var localToWorld = splineInfo.LocalToWorld;
+
             // If the spline isn't closed, skip the last index of the spline
             int lastIndex = spline.Closed ? spline.Count - 1 : spline.Count - 2;
 
-            s_CurveIDs = new int[spline.GetCurveCount()];
-            for(int idIndex = 0; idIndex < lastIndex + 1; ++idIndex)
-                s_CurveIDs[idIndex] = GUIUtility.GetControlID(FocusType.Passive);
+            s_ControlIDs.Clear();
+            for (int idIndex = 0; idIndex < lastIndex + 1; ++idIndex)
+            {
+                var id = GUIUtility.GetControlID(FocusType.Passive);
+                s_ControlIDs.Add(id);
+                s_CurveIDs.Add(id);
+            }
 
-            var drawHandlesAsActive = s_CurveIDs.Contains(HandleUtility.nearestControl) || activeSpline;
+            var drawHandlesAsActive = !SplineSelection.HasActiveSplineSelection() || SplineSelection.Contains(splineInfo);
+
             for (int curveIndex = 0; curveIndex < lastIndex + 1; ++curveIndex)
             {
                 var curve = spline.GetCurve(curveIndex).Transform(localToWorld);
-                CurveHandles.DrawWithHighlight(
-                    s_CurveIDs[curveIndex],
+                CurveHandles.DrawWithoutHighlight(
+                    s_ControlIDs[curveIndex],
                     curve,
+                    splineInfo.Spline,
+                    curveIndex,
                     new SelectableKnot(splineInfo, curveIndex),
                     new SelectableKnot(splineInfo, SplineUtility.NextIndex(curveIndex, spline.Count, spline.Closed)),
                     drawHandlesAsActive);
             }
 
-            for (int knotIndex = 0; knotIndex < spline.Count; ++knotIndex)
+            for (int curveIndex = 0; curveIndex < lastIndex + 1; ++curveIndex)
             {
-                s_TangentChildIDs.Clear();
-                var knot = new SelectableKnot(splineInfo, knotIndex);
-
-                int controlId = SelectionHandle(knot);
-                KnotHandles.Draw(controlId, knot, s_TangentChildIDs, false, s_CurveIDs.Contains(HandleUtility.nearestControl) || drawHandlesAsActive);
-
-                if (EditorSplineUtility.AreTangentsModifiable(splineInfo.Spline.GetTangentMode(knotIndex)))
-                {
-                    var tangentIn = new SelectableTangent(splineInfo, knotIndex, BezierTangent.In);
-                    var tangentOut = new SelectableTangent(splineInfo, knotIndex, BezierTangent.Out);
-
-                    //Tangent In
-                    if (spline.Closed || knotIndex != 0)
-                    {
-                        controlId = SelectionHandle(tangentIn);
-                        s_TangentChildIDs.Add(controlId);
-                        TangentHandles.Draw(controlId, tangentIn, drawHandlesAsActive);
-                    }
-
-                    //Tangent Out
-                    if (spline.Closed || knotIndex + 1 != spline.Count)
-                    {
-                        controlId = SelectionHandle(tangentOut);
-                        s_TangentChildIDs.Add(controlId);
-                        TangentHandles.Draw(controlId, tangentOut, drawHandlesAsActive);
-                    }
-                }
+                var curve = spline.GetCurve(curveIndex).Transform(localToWorld);
+                CurveHandles.DrawWithHighlight(
+                    s_ControlIDs[curveIndex],
+                    curve,
+                    splineInfo.Spline,
+                    curveIndex,
+                    new SelectableKnot(splineInfo, curveIndex),
+                    new SelectableKnot(splineInfo, SplineUtility.NextIndex(curveIndex, spline.Count, spline.Closed)),
+                    drawHandlesAsActive);
             }
-
-            if (SplineHandleUtility.lastHoveredTangent.IsValid() && Event.current.GetTypeForControl(SplineHandleUtility.lastHoveredTangentID) == EventType.Repaint)
-                SplineHandleUtility.SetLastHoveredTangent(default, -1);
-
-            return activeSpline;
         }
 
-        static int SelectionHandle<T>(T element)
+        static void DrawSplineElements(SplineInfo splineInfo)
+        {
+            var spline = splineInfo.Spline;
+            var drawHandlesAsActive = !SplineSelection.HasActiveSplineSelection() || SplineSelection.Contains(splineInfo);
+            if(drawHandlesAsActive)
+            {
+                for(int knotIndex = 0; knotIndex < spline.Count; ++knotIndex)
+                {
+                    k_TangentChildIDs.Clear();
+                    var knot = new SelectableKnot(splineInfo, knotIndex);
+                    
+                    if (EditorSplineUtility.AreTangentsModifiable(splineInfo.Spline.GetTangentMode(knotIndex)))
+                    {
+                        var tangentIn = new SelectableTangent(splineInfo, knotIndex, BezierTangent.In);
+                        var tangentOut = new SelectableTangent(splineInfo, knotIndex, BezierTangent.Out);
+
+                        // Tangent In
+                        if (SplineHandleUtility.ShouldShowTangent(tangentIn) && (spline.Closed || knotIndex != 0))
+                        {
+                            var controlId = GUIUtility.GetControlID(FocusType.Passive);
+                            SelectionHandle(controlId, tangentIn);
+                            k_TangentChildIDs.Add(controlId);
+                            s_ControlIDs.Add(controlId);
+                            TangentHandles.Draw(controlId, tangentIn);
+                        }
+
+                        // Tangent Out
+                        if (SplineHandleUtility.ShouldShowTangent(tangentOut) && (spline.Closed || knotIndex + 1 != spline.Count))
+                        {
+                            var controlId = GUIUtility.GetControlID(FocusType.Passive);
+                            SelectionHandle(controlId, tangentOut);
+                            k_TangentChildIDs.Add(controlId);
+                            s_ControlIDs.Add(controlId);
+                            TangentHandles.Draw(controlId, tangentOut);
+                        }
+                    }
+
+                    var id = GUIUtility.GetControlID(FocusType.Passive);
+                    s_ControlIDs.Add(id);
+                    SelectionHandle(id, knot);
+                    KnotHandles.Draw(id, knot);
+                }
+            }
+            else
+            {
+                for (int knotIndex = 0; knotIndex < spline.Count; ++knotIndex)
+                {
+                    var knot = new SelectableKnot(splineInfo, knotIndex);
+                    KnotHandles.DrawInformativeKnot(knot);
+                }
+            }
+        }
+
+        static void SelectionHandle<T>(int id, T element)
             where T : struct, ISplineElement
         {
-            var id = GUIUtility.GetControlID(FocusType.Passive);
             Event evt = Event.current;
             EventType eventType = evt.GetTypeForControl(id);
 
             switch (eventType)
             {
                 case EventType.Layout:
-                    if (!Tools.viewToolActive)
+                case EventType.MouseMove:
+                    if (!ViewToolActive())
                     {
                         HandleUtility.AddControl(id, SplineHandleUtility.DistanceToCircle(element.Position, SplineHandleUtility.pickingDistance));
-                        if (element is SelectableTangent tangent && HandleUtility.nearestControl == id)
-                            SplineHandleUtility.SetLastHoveredTangent(tangent, id);
+                        if(HandleUtility.nearestControl == id)
+                        {
+                            SplineHandleUtility.SetLastHoveredElement(element, id);
+                        }
                     }
                     break;
 
                 case EventType.MouseDown:
-                    if (HandleUtility.nearestControl == id)
+                    if (!ViewToolActive() && HandleUtility.nearestControl == id)
                     {
-                        //Clicking a knot selects it
+                        // Clicking a knot selects it
                         if (evt.button != 0)
                             break;
 
                         GUIUtility.hotControl = id;
                         evt.Use();
 
-                        SplineSelectionUtility.HandleSelection(
-                            element,
-                            (EditorGUI.actionKey || evt.modifiers == EventModifiers.Shift));
+                        SplineSelectionUtility.HandleSelection(element);
                     }
 
                     break;
@@ -121,16 +186,8 @@ namespace UnityEditor.Splines
                         GUIUtility.hotControl = 0;
                         evt.Use();
                     }
-
-                    break;
-
-                case EventType.MouseMove:
-                    if (id == HandleUtility.nearestControl)
-                        HandleUtility.Repaint();
                     break;
             }
-
-            return id;
         }
     }
 }

@@ -1,11 +1,9 @@
 using System;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.Splines;
 
 namespace Unity.Splines.Examples
 {
-    [CanEditMultipleObjects]
     public class WidthSplineData : MonoBehaviour
     {
         [HideInInspector]

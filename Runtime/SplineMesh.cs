@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.Rendering;
@@ -56,21 +57,25 @@ namespace UnityEngine.Splines
             where K : struct, ISplineVertexData
         {
             var evaluationT = spline.Closed ? math.frac(t) : math.clamp(t, 0f, 1f);
-            spline.Evaluate(evaluationT, out var sp, out var st, out _);
+            spline.Evaluate(evaluationT, out var sp, out var st, out var up);
+
+            var tangentLength = math.lengthsq(st);
+            if (tangentLength == 0f || float.IsNaN(tangentLength))
+            {
+                var adjustedT = math.clamp(evaluationT + (0.0001f * (t < 1f ? 1f : -1f)), 0f, 1f);
+                spline.Evaluate(adjustedT, out _, out st, out up);
+            }
             
-            var length = math.lengthsq(st);
-            if (length == 0f || float.IsNaN(length))
-                st = spline.EvaluateTangent(math.clamp(evaluationT + (0.0001f * (t < 1f ? 1f : -1f)), 0f, 1f));
             st = math.normalize(st);
 
-            var rot = Quaternion.LookRotation(st);
+            var rot = quaternion.LookRotationSafe(st, up);
             var rad = math.radians(360f / count);
 
             for (int n = 0; n < count; ++n)
             {
                 var vertex = new K();
-                var p = new Vector3(math.cos(n * rad), math.sin(n * rad), 0f) * radius;
-                vertex.position = (Vector3)sp + (rot * p);
+                var p = new float3(math.cos(n * rad), math.sin(n * rad), 0f) * radius;
+                vertex.position = sp + math.rotate(rot, p);
                 vertex.normal = (vertex.position - (Vector3)sp).normalized;
 
                 // instead of inserting a seam, wrap UVs using a triangle wave so that texture wraps back onto itself
@@ -192,6 +197,71 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
+        /// Extrude a mesh along a list of splines in a tube-like shape.
+        /// </summary>
+        /// <param name="splines">The splines to extrude.</param>
+        /// <param name="mesh">A mesh that will be cleared and filled with vertex data for the shape.</param>
+        /// <param name="radius">The radius of the extruded mesh.</param>
+        /// <param name="sides">How many sides make up the radius of the mesh.</param>
+        /// <param name="segmentsPerUnit">The number of edge loops that comprise the length of one unit of the mesh.</param>
+        /// <param name="capped">Whether the start and end of the mesh is filled. This setting is ignored when spline is closed.</param>
+        /// <param name="range">
+        /// The section of the Spline to extrude. This value expects a normalized interpolation start and end.
+        /// I.e., [0,1] is the entire Spline, whereas [.5, 1] is the last half of the Spline.
+        /// </param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        public static void Extrude<T>(IReadOnlyList<T> splines, Mesh mesh, float radius, int sides, float segmentsPerUnit, bool capped, float2 range) where T : ISpline
+        {
+            mesh.Clear();
+            var meshDataArray = Mesh.AllocateWritableMeshData(1);
+            var data = meshDataArray[0];
+            data.subMeshCount = 1;
+
+            var totalVertexCount = 0;
+            var totalIndexCount = 0;
+            var settings = new Settings[splines.Count];
+            var span = Mathf.Abs(range.y - range.x);
+            var splineMeshOffsets = new (int indexStart, int vertexStart)[splines.Count];
+            for (int i = 0; i < splines.Count; ++i)
+            {
+                var spline = splines[i];
+
+                var segments = Mathf.Max((int)Mathf.Ceil(spline.GetLength() * span * segmentsPerUnit), 1);
+                settings[i] = new Settings(sides, segments, capped, spline.Closed, range, radius);
+
+                GetVertexAndIndexCount(settings[i], out var vertexCount, out var indexCount);
+
+                splineMeshOffsets[i] = (totalIndexCount, totalVertexCount);
+                totalVertexCount += vertexCount;
+                totalIndexCount += indexCount;
+            }
+
+            var indexFormat = totalVertexCount >= ushort.MaxValue ? IndexFormat.UInt32 : IndexFormat.UInt16;
+
+            data.SetIndexBufferParams(totalIndexCount, indexFormat);
+            data.SetVertexBufferParams(totalVertexCount, k_PipeVertexAttribs);
+
+            var vertices = data.GetVertexData<VertexData>();
+            if (indexFormat == IndexFormat.UInt16)
+            {
+                var indices = data.GetIndexData<UInt16>();
+                for (int i = 0; i < splines.Count; ++i)
+                    Extrude(splines[i], vertices, indices, settings[i], splineMeshOffsets[i].vertexStart, splineMeshOffsets[i].indexStart);
+            }
+            else
+            {
+                var indices = data.GetIndexData<UInt32>();
+                for (int i = 0; i < splines.Count; ++i)
+                    Extrude(splines[i], vertices, indices, settings[i], splineMeshOffsets[i].vertexStart, splineMeshOffsets[i].indexStart);
+            }
+
+            data.SetSubMesh(0, new SubMeshDescriptor(0, totalIndexCount));
+
+            Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
+            mesh.RecalculateBounds();
+        }
+        
+        /// <summary>
         /// Extrude a mesh along a spline in a tube-like shape.
         /// </summary>
         /// <param name="spline">The spline to extrude.</param>
@@ -235,8 +305,10 @@ namespace UnityEngine.Splines
         static void Extrude<TSplineType, TVertexType, TIndexType>(
                 TSplineType spline,
                 NativeArray<TVertexType> vertices,
-                NativeArray<TIndexType> indices,
-                Settings settings)
+                NativeArray<TIndexType> indices,                
+                Settings settings,
+                int vertexArrayOffset = 0,
+                int indicesArrayOffset = 0)
                 where TSplineType : ISpline
                 where TVertexType : struct, ISplineVertexData
                 where TIndexType : struct
@@ -257,20 +329,20 @@ namespace UnityEngine.Splines
                 throw new ArgumentOutOfRangeException(nameof(segments), "Segments must be greater than 2");
 
             if (vertices.Length != vertexCount)
-                throw new ArgumentOutOfRangeException($"Vertex array is incorrect size. Expected {vertexCount}, but received {vertices.Length}.");
-
+                throw new ArgumentOutOfRangeException($"Vertex array is incorrect size. Expected {vertexCount} or more, but received {vertices.Length}.");
+            
             if (indices.Length != indexCount)
-                throw new ArgumentOutOfRangeException($"Index array is incorrect size. Expected {indexCount}, but received {indices.Length}.");
+                throw new ArgumentOutOfRangeException($"Index array is incorrect size. Expected {indexCount} or more, but received {indices.Length}.");
 
             if (typeof(TIndexType) == typeof(UInt16))
             {
                 var ushortIndices = indices.Reinterpret<UInt16>();
-                WindTris(ushortIndices, settings);
+                WindTris(ushortIndices, settings, vertexArrayOffset, indicesArrayOffset);
             }
             else if (typeof(TIndexType) == typeof(UInt32))
             {
                 var ulongIndices = indices.Reinterpret<UInt32>();
-                WindTris(ulongIndices, settings);
+                WindTris(ulongIndices, settings, vertexArrayOffset, indicesArrayOffset);
             }
             else
             {
@@ -278,12 +350,12 @@ namespace UnityEngine.Splines
             }
 
             for (int i = 0; i < segments; ++i)
-                ExtrudeRing(spline, math.lerp(range.x, range.y, i / (segments - 1f)), vertices, i * sides, sides, radius);
+                ExtrudeRing(spline, math.lerp(range.x, range.y, i / (segments - 1f)), vertices, vertexArrayOffset + i * sides, sides, radius);
 
             if (capped)
             {
-                var capVertexStart = segments * sides;
-                var endCapVertexStart = (segments + 1) * sides;
+                var capVertexStart = vertexArrayOffset + segments * sides;
+                var endCapVertexStart = vertexArrayOffset + (segments + 1) * sides;
 
                 var rng = spline.Closed ? math.frac(range) : math.clamp(range, 0f, 1f);
                 ExtrudeRing(spline, rng.x, vertices, capVertexStart, sides, radius);
@@ -319,7 +391,7 @@ namespace UnityEngine.Splines
         }
 
         // Two overloads for winding triangles because there is no generic constraint for UInt{16, 32}
-        static void WindTris(NativeArray<UInt16> indices, Settings settings)
+        static void WindTris(NativeArray<UInt16> indices, Settings settings, int vertexArrayOffset = 0, int indexArrayOffset = 0)
         {
             var closed = settings.closed;
             var segments = settings.segments;
@@ -330,26 +402,26 @@ namespace UnityEngine.Splines
             {
                 for (int n = 0; n < sides; ++n)
                 {
-                    var index0 = i * sides + n;
-                    var index1 = i * sides + ((n + 1) % sides);
-                    var index2 = ((i+1) % segments) * sides + n;
-                    var index3 = ((i+1) % segments) * sides + ((n + 1) % sides);
+                    var index0 = vertexArrayOffset + i * sides + n;
+                    var index1 = vertexArrayOffset + i * sides + ((n + 1) % sides);
+                    var index2 = vertexArrayOffset + ((i+1) % segments) * sides + n;
+                    var index3 = vertexArrayOffset + ((i+1) % segments) * sides + ((n + 1) % sides);
 
-                    indices[i * sides * 6 + n * 6 + 0] = (UInt16) index0;
-                    indices[i * sides * 6 + n * 6 + 1] = (UInt16) index1;
-                    indices[i * sides * 6 + n * 6 + 2] = (UInt16) index2;
-                    indices[i * sides * 6 + n * 6 + 3] = (UInt16) index1;
-                    indices[i * sides * 6 + n * 6 + 4] = (UInt16) index3;
-                    indices[i * sides * 6 + n * 6 + 5] = (UInt16) index2;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 0] = (UInt16) index0;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 1] = (UInt16) index1;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 2] = (UInt16) index2;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 3] = (UInt16) index1;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 4] = (UInt16) index3;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 5] = (UInt16) index2;
                 }
             }
 
             if (capped)
             {
-                var capVertexStart = segments * sides;
-                var capIndexStart = sides * 6 * (segments-1);
-                var endCapVertexStart = (segments + 1) * sides;
-                var endCapIndexStart = (segments-1) * 6 * sides + (sides-2) * 3;
+                var capVertexStart = vertexArrayOffset + segments * sides;
+                var capIndexStart = indexArrayOffset + sides * 6 * (segments-1);
+                var endCapVertexStart = vertexArrayOffset + (segments + 1) * sides;
+                var endCapIndexStart = indexArrayOffset + (segments-1) * 6 * sides + (sides-2) * 3;
 
                 for(ushort i = 0; i < sides - 2; ++i)
                 {
@@ -365,7 +437,7 @@ namespace UnityEngine.Splines
         }
 
         // Two overloads for winding triangles because there is no generic constraint for UInt{16, 32}
-        static void WindTris(NativeArray<UInt32> indices, Settings settings)
+        static void WindTris(NativeArray<UInt32> indices, Settings settings, int vertexArrayOffset = 0, int indexArrayOffset = 0)
         {
             var closed = settings.closed;
             var segments = settings.segments;
@@ -376,26 +448,26 @@ namespace UnityEngine.Splines
             {
                 for (int n = 0; n < sides; ++n)
                 {
-                    var index0 = i * sides + n;
-                    var index1 = i * sides + ((n + 1) % sides);
-                    var index2 = ((i+1) % segments) * sides + n;
-                    var index3 = ((i+1) % segments) * sides + ((n + 1) % sides);
+                    var index0 = vertexArrayOffset + i * sides + n;
+                    var index1 = vertexArrayOffset + i * sides + ((n + 1) % sides);
+                    var index2 = vertexArrayOffset + ((i+1) % segments) * sides + n;
+                    var index3 = vertexArrayOffset + ((i+1) % segments) * sides + ((n + 1) % sides);
 
-                    indices[i * sides * 6 + n * 6 + 0] = (UInt32) index0;
-                    indices[i * sides * 6 + n * 6 + 1] = (UInt32) index1;
-                    indices[i * sides * 6 + n * 6 + 2] = (UInt32) index2;
-                    indices[i * sides * 6 + n * 6 + 3] = (UInt32) index1;
-                    indices[i * sides * 6 + n * 6 + 4] = (UInt32) index3;
-                    indices[i * sides * 6 + n * 6 + 5] = (UInt32) index2;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 0] = (UInt32) index0;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 1] = (UInt32) index1;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 2] = (UInt32) index2;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 3] = (UInt32) index1;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 4] = (UInt32) index3;
+                    indices[indexArrayOffset + i * sides * 6 + n * 6 + 5] = (UInt32) index2;
                 }
             }
 
             if (capped)
             {
-                var capVertexStart = segments * sides;
-                var capIndexStart = sides * 6 * (segments-1);
-                var endCapVertexStart = (segments + 1) * sides;
-                var endCapIndexStart = (segments-1) * 6 * sides + (sides-2) * 3;
+                var capVertexStart = vertexArrayOffset + segments * sides;
+                var capIndexStart = indexArrayOffset + sides * 6 * (segments-1);
+                var endCapVertexStart = vertexArrayOffset + (segments + 1) * sides;
+                var endCapIndexStart = indexArrayOffset + (segments-1) * 6 * sides + (sides-2) * 3;
 
                 for(ushort i = 0; i < sides - 2; ++i)
                 {

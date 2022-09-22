@@ -1,21 +1,10 @@
-.tangent-linear {
-	background-image: url("../Resources/Icons/d_Tangent_Linear.png");
-}
-
-.tangent-continuous {
-	background-image: url("../Resources/Icons/d_Tangent_Continuous.png");
-}
-
-.tangent-mirrored {
-	background-image: url("../Resources/Icons/d_Tangent_Mirrored.png");
-}
-
-.tangent-broken {
-	background-image: url("../Resources/Icons/d_Tangent_Broken.png");
-}
-
-.tangent-autosmooth {
-	background-image: url("../Resources/Icons/d_AutoSmoothKnot.png");
+ElementInspector {
+	--image-linear-tangent-mode: url("../Resources/Icons/d_Tangent_Linear.png");
+	--image-auto-smooth-tangent-mode: url("../Resources/Icons/d_AutoSmoothKnot.png");
+	--image-bezier-tangent-mode: url("../Resources/Icons/d_Tangent_Continuous.png");
+	--image-linear-tangent-mode-on: url("../Resources/Icons/d_Tangent_Linear On.png");
+	--image-auto-smooth-tangent-mode-on: url("../Resources/Icons/d_AutoSmoothKnot On.png");
+	--image-bezier-tangent-mode-on: url("../Resources/Icons/d_Tangent_Continuous On.png");
 }
 
 #PositionIcon {

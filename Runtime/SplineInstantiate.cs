@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
@@ -502,6 +503,9 @@ namespace UnityEngine.Splines
             }
         }
 
+        List<float> m_TimesCache = new();
+        List<float> m_LengthsCache = new();
+        
         void OnEnable()
         {
             if (m_Seed == 0)
@@ -583,7 +587,7 @@ namespace UnityEngine.Splines
 
         internal void SetSplineDirty(Spline spline)
         {
-            if (m_Container != null && spline == m_Container.Spline && m_AutoRefresh)
+            if (m_Container != null && m_Container.Splines.Contains(spline) && m_AutoRefresh)
                 UpdateInstances();
         }
 
@@ -672,211 +676,274 @@ namespace UnityEngine.Splines
             if (m_Container == null || m_ItemsToInstantiate.Count == 0)
                 return;
 
-            using (var nativeSpline = new NativeSpline(m_Container.Spline, m_Container.transform.localToWorldMatrix, Allocator.TempJob))
+            const float k_Epsilon = 0.001f;
+            Random.InitState(m_Seed);
+            int index = 0;
+            int indexOffset = 0;
+
+            m_LengthsCache.Clear();
+            var splineLength = 0f;
+            var totalSplineLength = 0f;
+            for (int splineIndex = 0; splineIndex < m_Container.Splines.Count; splineIndex++)
             {
-                float currentDist = 0f;
-                float splineLength = m_Container.CalculateLength();
+                var length = m_Container.CalculateLength(splineIndex);
+                m_LengthsCache.Add(length);
+                totalSplineLength += length;
+            }
 
-                Random.InitState(m_Seed);
-
-                //Spawning instances
-                var times = new List<float>();
-                int index = 0;
-                var spacing = Random.Range(m_Spacing.x, m_Spacing.y);
-                if (m_Method == Method.InstanceCount && spacing <= 1)
-                    currentDist = (int)spacing == 1 ? splineLength / 2f : splineLength + 1f;
-
-                while (currentDist <= splineLength)
+            var spacing = Random.Range(m_Spacing.x, m_Spacing.y);
+            var currentDist = 0f;
+            var instanceCountModeStep = 0f;
+            
+            if (m_Method == Method.InstanceCount)
+            {
+                // Advance dist by half length if we only need to spawn one item - we want to spawn it mid total spline length
+                if (spacing == 1)
+                    currentDist = totalSplineLength / 2f;
+                else if (spacing < 1) // Using less operator here as the spacing setters always clamp spacing to a minimum value of 0.1
                 {
-                    var prefabIndex = m_ItemsToInstantiate.Count == 1 ? 0 : GetPrefabIndex();
-                    m_CurrentItem = m_ItemsToInstantiate[prefabIndex];
-                    if (m_CurrentItem.Prefab == null)
-                        return;
-                    if (index >= m_Instances.Count)
+                    // If there's nothing to spawn, make currentDist larger than length to effectively skip prefab spawnning but still trigger previous spawn cleanup
+                    currentDist = totalSplineLength + 1f;
+                }
+
+                // Take into account the Closed property only if there's one spline in container
+                if (m_Container.Splines.Count == 1)
+                    instanceCountModeStep = totalSplineLength / (m_Container.Splines[0].Closed ? (int)spacing : (int)spacing - 1);
+                else
+                    instanceCountModeStep = totalSplineLength / ((int)spacing - 1);
+            }
+            
+            for (int splineIndex = 0; splineIndex < m_Container.Splines.Count; splineIndex++)
+            {
+                var spline = m_Container.Splines[splineIndex];
+                using (var nativeSpline = new NativeSpline(spline, m_Container.transform.localToWorldMatrix, Allocator.TempJob))
+                {
+                    splineLength = m_LengthsCache[splineIndex];
+                    var terminateSpawning = false;
+
+                    if (m_Method == Method.InstanceCount)
                     {
-#if UNITY_EDITOR
-                        var assetType = PrefabUtility.GetPrefabAssetType(m_CurrentItem.Prefab);
-                        if (assetType == PrefabAssetType.MissingAsset)
+                        if (currentDist > (splineLength + k_Epsilon) && currentDist <= (totalSplineLength + k_Epsilon))
                         {
-                            Debug.LogError($"Trying to instantiate a missing asset for item index [{prefabIndex}].");
-                            return;
+                            currentDist -= splineLength;
+                            terminateSpawning = true;
                         }
-
-                        if (assetType != PrefabAssetType.NotAPrefab)
-                            m_Instances.Add(PrefabUtility.InstantiatePrefab(m_CurrentItem.Prefab, transform) as GameObject);
-                        else
-#endif
-                            m_Instances.Add(Instantiate(m_CurrentItem.Prefab, transform));
-
-                        m_Instances[index].hideFlags |= HideFlags.HideInHierarchy;
                     }
-
-                    m_Instances[index].transform.localPosition = m_CurrentItem.Prefab.transform.localPosition;
-                    m_Instances[index].transform.localRotation = m_CurrentItem.Prefab.transform.localRotation;
-                    m_Instances[index].transform.localScale = m_CurrentItem.Prefab.transform.localScale;
-
-                    times.Add(currentDist / splineLength);
-
-                    if (m_Method == Method.SpacingDistance)
+                    else
+                        currentDist = 0f;
+                    
+                    m_TimesCache.Clear();
+                    
+                    while (currentDist <= (splineLength + k_Epsilon) && !terminateSpawning)
                     {
-                        spacing = Random.Range(m_Spacing.x, m_Spacing.y);
-                        currentDist += spacing;
-                    }
-                    else if (m_Method == Method.InstanceCount)
-                    {
-                        if (spacing > 1)
+                        if (!SpawnPrefab(index))
+                            break;
+                        
+                        m_TimesCache.Add(currentDist / splineLength);
+
+                        if (m_Method == Method.SpacingDistance)
                         {
-                            var previousDist = currentDist;
-                            currentDist += splineLength / (nativeSpline.Closed ? (int)spacing : (int)spacing - 1);
-                            if (previousDist < splineLength && currentDist > splineLength)
-                                currentDist = splineLength;
+                            spacing = Random.Range(m_Spacing.x, m_Spacing.y);
+                            currentDist += spacing;
                         }
-                        else
-                            currentDist += splineLength;
-                    }
-                    else if (m_Method == Method.LinearDistance)
-                    {
-                        //m_Spacing.y is set to NaN to trigger automatic computation
-                        if (float.IsNaN(m_Spacing.y))
+                        else if (m_Method == Method.InstanceCount)
                         {
-                            var meshfilter = m_Instances[index].GetComponent<MeshFilter>();
-                            var axis = Vector3.right;
-                            if (m_Forward == AlignAxis.ZAxis || m_Forward == AlignAxis.NegativeZAxis)
-                                axis = Vector3.forward;
-                            if (m_Forward == AlignAxis.YAxis || m_Forward == AlignAxis.NegativeYAxis)
-                                axis = Vector3.up;
-
-                            if (meshfilter == null)
+                            if (spacing > 1)
                             {
-                                meshfilter = m_Instances[index].GetComponentInChildren<MeshFilter>();
-                                if (meshfilter != null)
-                                    axis = Vector3.Scale(meshfilter.transform.InverseTransformDirection(m_Instances[index].transform.TransformDirection(axis)), meshfilter.transform.lossyScale);
-                            }
+                                var previousDist = currentDist;
+                                
+                                currentDist += instanceCountModeStep;
 
-                            if (meshfilter != null)
-                            {
-                                var bounds = meshfilter.sharedMesh.bounds;
-                                var filters = meshfilter.GetComponentsInChildren<MeshFilter>();
-                                foreach (var filter in filters)
+                                if (previousDist < splineLength && currentDist > (splineLength + k_Epsilon))
                                 {
-                                    var localBounds = filter.sharedMesh.bounds;
-                                    bounds.size = new Vector3(Mathf.Max(bounds.size.x, localBounds.size.x),
-                                        Mathf.Max(bounds.size.z, localBounds.size.z),
-                                        Mathf.Max(bounds.size.z, localBounds.size.z));
+                                    currentDist -= splineLength;
+                                    terminateSpawning = true;
+                                }
+                            }
+                            // If we're here, we're spawning 1 object or none, therefore add total length to currentDist
+                            // so that we no longer enter the while loop as the object has been spawned already
+                            else 
+                                currentDist += totalSplineLength;
+                        }
+                        else if (m_Method == Method.LinearDistance)
+                        {
+                            //m_Spacing.y is set to NaN to trigger automatic computation
+                            if (float.IsNaN(m_Spacing.y))
+                            {
+                                var meshfilter = m_Instances[index].GetComponent<MeshFilter>();
+                                var axis = Vector3.right;
+                                if (m_Forward == AlignAxis.ZAxis || m_Forward == AlignAxis.NegativeZAxis)
+                                    axis = Vector3.forward;
+                                if (m_Forward == AlignAxis.YAxis || m_Forward == AlignAxis.NegativeYAxis)
+                                    axis = Vector3.up;
+
+                                if (meshfilter == null)
+                                {
+                                    meshfilter = m_Instances[index].GetComponentInChildren<MeshFilter>();
+                                    if (meshfilter != null)
+                                        axis = Vector3.Scale(meshfilter.transform.InverseTransformDirection(m_Instances[index].transform.TransformDirection(axis)), meshfilter.transform.lossyScale);
                                 }
 
-                                spacing = Vector3.Scale(bounds.size, axis).magnitude;
+                                if (meshfilter != null)
+                                {
+                                    var bounds = meshfilter.sharedMesh.bounds;
+                                    var filters = meshfilter.GetComponentsInChildren<MeshFilter>();
+                                    foreach (var filter in filters)
+                                    {
+                                        var localBounds = filter.sharedMesh.bounds;
+                                        bounds.size = new Vector3(Mathf.Max(bounds.size.x, localBounds.size.x),
+                                            Mathf.Max(bounds.size.z, localBounds.size.z),
+                                            Mathf.Max(bounds.size.z, localBounds.size.z));
+                                    }
+
+                                    spacing = Vector3.Scale(bounds.size, axis).magnitude;
+                                }
                             }
+                            else
+                                spacing = Random.Range(m_Spacing.x, m_Spacing.y);
+
+                            nativeSpline.GetPointAtLinearDistance(m_TimesCache[index], spacing, out var nextT);
+                            currentDist = nextT >= 1f ? splineLength + 1f : nextT * splineLength;
                         }
-                        else
-                            spacing = Random.Range(m_Spacing.x, m_Spacing.y);
 
-                        nativeSpline.GetPointAtLinearDistance(times[index], spacing, out var nextT);
-                        currentDist = nextT >= 1f ? splineLength + 1f : nextT * splineLength;
+                        index++;
                     }
 
-                    index++;
-                }
-
-                //removing extra unnecessary instances
-                for (int u = m_Instances.Count - 1; u >= index; u--)
-                {
-                    if (m_Instances[u] != null)
+                    //removing extra unnecessary instances
+                    for (int i = m_Instances.Count - 1; i >= index; i--)
                     {
-#if UNITY_EDITOR
-                        DestroyImmediate(m_Instances[u]);
-#else
-                        Destroy(m_Instances[u]);
-#endif
-                        m_Instances.RemoveAt(u);
-                    }
-                }
-
-                //Positioning elements
-                for (int i = 0; i < index; i++)
-                {
-                    var instance = m_Instances[i];
-                    var splineT = times[i];
-
-                    nativeSpline.Evaluate(splineT, out var position, out var direction, out var splineUp);
-                    instance.transform.position = position;
-
-                    if (m_Method == Method.LinearDistance)
-                    {
-                        var nextPosition = nativeSpline.EvaluatePosition(i + 1 < index ? times[i + 1] : 1f);
-                        direction = nextPosition - position;
-                    }
-
-                    var up = math.normalizesafe(splineUp);
-                    var forward = math.normalizesafe(direction);
-                    if (m_Space == Space.World)
-                    {
-                        up = Vector3.up;
-                        forward = Vector3.forward;
-                    }
-                    else if (m_Space == Space.Local)
-                    {
-                        up = transform.TransformDirection(Vector3.up);
-                        forward = transform.TransformDirection(Vector3.forward);
-                    }
-
-                    // Correct forward and up vectors based on axis remapping parameters
-                    var remappedForward = math.normalizesafe(GetAxis(m_Forward));
-                    var remappedUp = math.normalizesafe(GetAxis(m_Up));
-                    var axisRemapRotation = Quaternion.Inverse(Quaternion.LookRotation(remappedForward, remappedUp));
-
-                    instance.transform.rotation = Quaternion.LookRotation(forward, up) * axisRemapRotation;
-
-                    var customUp = up;
-                    var customForward = forward;
-                    if (m_PositionOffset.hasOffset)
-                    {
-                        if (m_PositionOffset.hasCustomSpace)
-                            GetCustomSpaceAxis(m_PositionOffset.space, splineUp, direction, instance.transform, out customUp, out customForward);
-
-                        var offset = m_PositionOffset.GetNextOffset();
-                        var right = Vector3.Cross(customUp, customForward).normalized;
-                        instance.transform.position += offset.x * right + offset.y * (Vector3)customUp + offset.z * (Vector3)customForward;
-                    }
-
-                    if (m_ScaleOffset.hasOffset)
-                    {
-                        customUp = up;
-                        customForward = forward;
-                        if (m_ScaleOffset.hasCustomSpace)
-                            GetCustomSpaceAxis(m_ScaleOffset.space, splineUp, direction, instance.transform, out customUp, out customForward);
-
-                        customUp = instance.transform.InverseTransformDirection(customUp).normalized;
-                        customForward = instance.transform.InverseTransformDirection(customForward).normalized;
-
-                        var offset = m_ScaleOffset.GetNextOffset();
-                        var right = Vector3.Cross(customUp, customForward).normalized;
-                        instance.transform.localScale += offset.x * right + offset.y * (Vector3)customUp + offset.z * (Vector3)customForward;
-                        ;
-                    }
-
-                    if (m_RotationOffset.hasOffset)
-                    {
-                        customUp = up;
-                        customForward = forward;
-                        if (m_RotationOffset.hasCustomSpace)
+                        if (m_Instances[i] != null)
                         {
-                            GetCustomSpaceAxis(m_RotationOffset.space, splineUp, direction, instance.transform, out customUp, out customForward);
-                            if (m_RotationOffset.space == OffsetSpace.Object)
-                                axisRemapRotation = quaternion.identity;
+#if UNITY_EDITOR
+                            DestroyImmediate(m_Instances[i]);
+#else
+                            Destroy(m_Instances[i]);
+#endif
+                            m_Instances.RemoveAt(i);
+                        }
+                    }
+
+                    //Positioning elements
+                    for (int i = indexOffset; i < index; i++)
+                    {
+                        var instance = m_Instances[i];
+                        var splineT = m_TimesCache[i - indexOffset];
+
+                        nativeSpline.Evaluate(splineT, out var position, out var direction, out var splineUp);
+                        instance.transform.position = position;
+
+                        if (m_Method == Method.LinearDistance)
+                        {
+                            var nextPosition = nativeSpline.EvaluatePosition(i + 1 < index ? m_TimesCache[i + 1 - indexOffset] : 1f);
+                            direction = nextPosition - position;
                         }
 
-                        var offset = m_RotationOffset.GetNextOffset();
+                        var up = math.normalizesafe(splineUp);
+                        var forward = math.normalizesafe(direction);
+                        if (m_Space == Space.World)
+                        {
+                            up = Vector3.up;
+                            forward = Vector3.forward;
+                        }
+                        else if (m_Space == Space.Local)
+                        {
+                            up = transform.TransformDirection(Vector3.up);
+                            forward = transform.TransformDirection(Vector3.forward);
+                        }
 
-                        var right = Vector3.Cross(customUp, customForward).normalized;
-                        customForward = Quaternion.AngleAxis(offset.y, customUp) * Quaternion.AngleAxis(offset.x, right) * customForward;
-                        customUp = Quaternion.AngleAxis(offset.x, right) * Quaternion.AngleAxis(offset.z, customForward) * customUp;
-                        instance.transform.rotation = Quaternion.LookRotation(customForward, customUp) * axisRemapRotation;
+                        // Correct forward and up vectors based on axis remapping parameters
+                        var remappedForward = math.normalizesafe(GetAxis(m_Forward));
+                        var remappedUp = math.normalizesafe(GetAxis(m_Up));
+                        var axisRemapRotation = Quaternion.Inverse(Quaternion.LookRotation(remappedForward, remappedUp));
+
+                        instance.transform.rotation = Quaternion.LookRotation(forward, up) * axisRemapRotation;
+
+                        var customUp = up;
+                        var customForward = forward;
+                        if (m_PositionOffset.hasOffset)
+                        {
+                            if (m_PositionOffset.hasCustomSpace)
+                                GetCustomSpaceAxis(m_PositionOffset.space, splineUp, direction, instance.transform, out customUp, out customForward);
+
+                            var offset = m_PositionOffset.GetNextOffset();
+                            var right = Vector3.Cross(customUp, customForward).normalized;
+                            instance.transform.position += offset.x * right + offset.y * (Vector3)customUp + offset.z * (Vector3)customForward;
+                        }
+
+                        if (m_ScaleOffset.hasOffset)
+                        {
+                            customUp = up;
+                            customForward = forward;
+                            if (m_ScaleOffset.hasCustomSpace)
+                                GetCustomSpaceAxis(m_ScaleOffset.space, splineUp, direction, instance.transform, out customUp, out customForward);
+
+                            customUp = instance.transform.InverseTransformDirection(customUp).normalized;
+                            customForward = instance.transform.InverseTransformDirection(customForward).normalized;
+
+                            var offset = m_ScaleOffset.GetNextOffset();
+                            var right = Vector3.Cross(customUp, customForward).normalized;
+                            instance.transform.localScale += offset.x * right + offset.y * (Vector3)customUp + offset.z * (Vector3)customForward;
+                        }
+
+                        if (m_RotationOffset.hasOffset)
+                        {
+                            customUp = up;
+                            customForward = forward;
+                            if (m_RotationOffset.hasCustomSpace)
+                            {
+                                GetCustomSpaceAxis(m_RotationOffset.space, splineUp, direction, instance.transform, out customUp, out customForward);
+                                if (m_RotationOffset.space == OffsetSpace.Object)
+                                    axisRemapRotation = quaternion.identity;
+                            }
+
+                            var offset = m_RotationOffset.GetNextOffset();
+
+                            var right = Vector3.Cross(customUp, customForward).normalized;
+                            customForward = Quaternion.AngleAxis(offset.y, customUp) * Quaternion.AngleAxis(offset.x, right) * customForward;
+                            customUp = Quaternion.AngleAxis(offset.x, right) * Quaternion.AngleAxis(offset.z, customForward) * customUp;
+                            instance.transform.rotation = Quaternion.LookRotation(customForward, customUp) * axisRemapRotation;
+                        }
                     }
+
+                    indexOffset = index;
                 }
             }
 
             m_SplineDirty = false;
+        }
+
+        bool SpawnPrefab(int index)
+        {
+            var prefabIndex = m_ItemsToInstantiate.Count == 1 ? 0 : GetPrefabIndex();
+            m_CurrentItem = m_ItemsToInstantiate[prefabIndex];
+            
+            if (m_CurrentItem.Prefab == null)
+                return false;
+            
+            if (index >= m_Instances.Count)
+            {
+#if UNITY_EDITOR
+                var assetType = PrefabUtility.GetPrefabAssetType(m_CurrentItem.Prefab);
+                if (assetType == PrefabAssetType.MissingAsset)
+                {
+                    Debug.LogError($"Trying to instantiate a missing asset for item index [{prefabIndex}].");
+                    return false;
+                }
+
+                if (assetType != PrefabAssetType.NotAPrefab)
+                    m_Instances.Add(PrefabUtility.InstantiatePrefab(m_CurrentItem.Prefab, transform) as GameObject);
+                else
+#endif
+                    m_Instances.Add(Instantiate(m_CurrentItem.Prefab, transform));
+
+                m_Instances[index].hideFlags |= HideFlags.HideInHierarchy;
+            }
+
+            m_Instances[index].transform.localPosition = m_CurrentItem.Prefab.transform.localPosition;
+            m_Instances[index].transform.localRotation = m_CurrentItem.Prefab.transform.localRotation;
+            m_Instances[index].transform.localScale = m_CurrentItem.Prefab.transform.localScale;
+            
+            return true;
         }
 
         void GetCustomSpaceAxis(OffsetSpace space, float3 splineUp, float3 direction, Transform instanceTransform, out float3 customUp, out float3 customForward)

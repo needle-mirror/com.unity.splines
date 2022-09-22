@@ -32,7 +32,7 @@ namespace UnityEngine.Splines
         /// </summary>
         KnotRemoved
     }
-    
+
     /// <summary>
     /// The Spline class is a collection of <see cref="BezierKnot"/>, the closed/open state, and editing representation.
     /// </summary>
@@ -41,6 +41,7 @@ namespace UnityEngine.Splines
     {
         const TangentMode k_DefaultTangentMode = TangentMode.Broken;
         const BezierTangent k_DefaultMainTangent = BezierTangent.Out;
+        const int k_BatchModification = -1;
 
         [Serializable]
         sealed class MetaData
@@ -112,7 +113,7 @@ namespace UnityEngine.Splines
         /// First parameter is the target Spline that the event is raised for, second parameter is
         /// the knot index and the third parameter represents the type of change that occured.
         /// If the event does not target a specific knot, the second parameter will have the value of -1.
-        /// 
+        ///
         /// In the editor this callback can be invoked many times per-frame.
         /// Prefer to use <see cref="UnityEditor.Splines.EditorSplineUtility.AfterSplineWasModified"/> when
         /// working with splines in the editor.
@@ -261,6 +262,7 @@ namespace UnityEngine.Splines
         /// This function updates the tangents, but does not set the tangent mode.
         /// </remarks>
         /// <param name="index">The index of the knot to set tangent values for.</param>
+
         /// <param name="main">The tangent direction to align the In and Out tangent to when assigning Continuous
         /// or Mirrored tangent mode.</param>
         void ApplyTangentModeNoNotify(int index, BezierTangent main = k_DefaultMainTangent)
@@ -441,7 +443,7 @@ namespace UnityEngine.Splines
             int p = this.PreviousIndex(index), n = this.NextIndex(index);
             if(m_MetaData[p].Mode == TangentMode.AutoSmooth)
                 ApplyTangentModeNoNotify(p, main);
-            if(m_MetaData[this.NextIndex(n)].Mode == TangentMode.AutoSmooth)
+            if(m_MetaData[n].Mode == TangentMode.AutoSmooth)
                 ApplyTangentModeNoNotify(n, main);
             SetDirty();
         }
@@ -474,7 +476,12 @@ namespace UnityEngine.Splines
             SetDirty();
             Changed?.Invoke(this, -1, SplineModification.Default);
         }
-
+        
+        internal void SendSplineModificationEvent(SplineModification modificationEvent, int knotIndex = k_BatchModification)
+        {
+            Changed?.Invoke(this, knotIndex, modificationEvent);
+        }
+        
         /// <summary>
         /// Get a <see cref="BezierCurve"/> from a knot index.
         /// </summary>
@@ -591,7 +598,7 @@ namespace UnityEngine.Splines
             Changed?.Invoke(this, -1, SplineModification.Default);
             SendSizeChangeEvent(originalSize, newSize);
         }
-
+        
         /// <summary>
         /// Create an array of spline knots.
         /// </summary>
@@ -643,6 +650,10 @@ namespace UnityEngine.Splines
         /// <returns>An IEnumerator that is used to iterate the <see cref="BezierKnot"/> collection.</returns>
         public IEnumerator<BezierKnot> GetEnumerator() => m_Knots.GetEnumerator();
 
+        /// <summary>
+        /// Gets an enumerator that iterates through the <see cref="BezierKnot"/> collection.
+        /// </summary>
+        /// <returns>An IEnumerator that is used to iterate the <see cref="BezierKnot"/> collection.</returns>
         IEnumerator IEnumerable.GetEnumerator() => m_Knots.GetEnumerator();
 
         /// <summary>

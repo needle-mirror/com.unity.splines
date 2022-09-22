@@ -7,45 +7,74 @@ namespace UnityEditor.Splines
 {
     static class CurveHandles
     {
-        const int k_CurveDrawResolution = 32;
-        const float k_CurveLineWidth = 5f;
+        const int k_CurveDrawResolution = 72;
+        const float k_CurveLineWidth = 4f;
         const float k_PreviewCurveOpacity = 0.5f;
 
         static readonly Vector3[] s_CurveDrawingBuffer = new Vector3[k_CurveDrawResolution + 1];
+        static readonly Vector3[] s_FlowTriangleVertices = new Vector3[3];
 
+        /// <summary>
+        /// Creates handles for a BezierCurve.
+        /// </summary>
+        /// <param name="curve">The <see cref="BezierCurve"/> to create handles for.</param>
         public static void DrawPreview(BezierCurve curve)
         {
             if(Event.current.type == EventType.Repaint)
                 Draw(-1, curve, true, true);
         }
 
+        /// <summary>
+        /// Creates handles for a BezierCurve.
+        /// </summary>
+        /// <param name="curve">The <see cref="BezierCurve"/> to create handles for.</param>
+        /// <param name="activeSpline">Whether the curve is part of the active spline.</param>
         public static void Draw(BezierCurve curve, bool activeSpline)
         {
             if(Event.current.type == EventType.Repaint)
-                Draw(0, curve, true, activeSpline);
+                Draw(0, curve, false, activeSpline);
         }
 
-        public static void DrawWithHighlight(int controlID, BezierCurve curve, SelectableKnot a, SelectableKnot b, bool activeSpline)
+        /// <summary>
+        /// Creates highlights for a BezierCurve to make it easier to select.
+        /// </summary>
+        /// <param name="controlID">The controlID of the curve to create highlights for.</param>
+        /// <param name="curve">The <see cref="BezierCurve"/> to create highlights for.</param>
+        /// <param name="spline">The <see cref="ISpline"/> (if any) that the curve belongs to.</param>
+        /// <param name="curveIndex">The curve's index if it belongs to a spline - otherwise -1.</param>
+        /// <param name="knotA">The knot at the start of the curve.</param>
+        /// <param name="knotB">The knot at the end of the curve.</param>
+        /// <param name="activeSpline">Whether the curve is part of the active spline.</param>
+        public static void DrawWithHighlight(int controlID, BezierCurve curve, ISpline spline, int curveIndex, SelectableKnot knotA, SelectableKnot knotB, bool activeSpline)
         {
             var evt = Event.current;
             switch(evt.GetTypeForControl(controlID))
             {
                 case EventType.Layout:
-                    Draw(controlID, curve, true, activeSpline);
-                    break;
-
-                case EventType.Repaint:
-                    Draw(controlID, curve, true, activeSpline);
-                    if(HandleUtility.nearestControl == controlID)
+                case EventType.MouseMove:
+                    if (!SplineHandles.ViewToolActive() && activeSpline)
                     {
-                        SplineHandleUtility.GetNearestPointOnCurve(curve, out _, out var t);
-                        using(new ColorScope(Handles.preselectionColor))
-                            DoCurveHighlightCap(t <= .5f ? a : b);
+                        var dist = DistanceToCurve(curve);
+                        HandleUtility.AddControl(controlID, Mathf.Max(0, dist - SplineHandleUtility.pickingDistance));
+                        
+                        //Trigger repaint on MouseMove to update highlight visuals from SplineHandles
+                        if (evt.type == EventType.MouseMove && controlID == HandleUtility.nearestControl)
+                        {
+                            SplineHandleUtility.GetNearestPointOnCurve(curve, out _, out var t);
+                            var curveMidT = GetCurveMiddleInterpolation(curve, spline, curveIndex);
+                            var hoveredKnot = t <= curveMidT ? knotA : knotB;
+
+                            if (!(SplineHandleUtility.lastHoveredElement is SelectableKnot knot) || !knot.Equals(hoveredKnot))
+                            {
+                                SplineHandleUtility.SetLastHoveredElement(hoveredKnot, controlID);
+                                SceneView.RepaintAll();
+                            }
+                        }
                     }
                     break;
 
                 case EventType.MouseDown:
-                    if (HandleUtility.nearestControl == controlID)
+                    if (!SplineHandles.ViewToolActive() && HandleUtility.nearestControl == controlID)
                     {
                         //Clicking a knot selects it
                         if (evt.button != 0)
@@ -55,7 +84,7 @@ namespace UnityEditor.Splines
                         evt.Use();
 
                         SplineHandleUtility.GetNearestPointOnCurve(curve, out _, out var t);
-                        SplineSelectionUtility.HandleSelection(t <= .5f ? a : b, (EditorGUI.actionKey || evt.modifiers == EventModifiers.Shift), false);
+                        SplineSelectionUtility.HandleSelection(t <= .5f ? knotA : knotB, false);
                     }
 
                     break;
@@ -69,7 +98,86 @@ namespace UnityEditor.Splines
 
                     break;
             }
+        }
+        
+        /// <summary>
+        /// Draws curve and flow for a BezierCurve without the highlight.
+        /// </summary>
+        /// <param name="controlID">The controlID of the curve to create highlights for.</param>
+        /// <param name="curve">The <see cref="BezierCurve"/> to create highlights for.</param>
+        /// <param name="spline">The <see cref="ISpline"/> (if any) that the curve belongs to.</param>
+        /// <param name="curveIndex">The curve's index if it belongs to a spline - otherwise -1.</param>
+        /// <param name="knotA">The knot at the start of the curve.</param>
+        /// <param name="knotB">The knot at the end of the curve.</param>
+        /// <param name="activeSpline">Whether the curve is part of the active spline.</param>
+        internal static void DrawWithoutHighlight(
+            int controlID,
+            BezierCurve curve,
+            ISpline spline,
+            int curveIndex,
+            SelectableKnot knotA,
+            SelectableKnot knotB,
+            bool activeSpline)
+        {
+            var evt = Event.current;
+            switch (evt.GetTypeForControl(controlID))
+            {
+                case EventType.Repaint:
+                    Draw(controlID, curve, false, activeSpline);
+                    if (SplineHandleSettings.FlowDirectionEnabled && activeSpline)
+                        DrawFlow(controlID, curve, spline, curveIndex, math.rotate(knotA.Rotation, math.up()), math.rotate(knotB.Rotation, math.up()), activeSpline);
+                    break;
+            }
+        }
 
+        public static void DrawFlow(int controlID, BezierCurve curve, ISpline spline, int curveIndex, Vector3 upAtStart, Vector3 upAtEnd, bool activeSpline)
+        {
+            if(Event.current.type != EventType.Repaint)
+                return;
+
+            //We attenuate the spline display if a spline can be controlled (id != -1) and
+            //if it's not the current active spline
+            var attenuate = controlID != -1 && !activeSpline;
+
+            var curveMidT = GetCurveMiddleInterpolation(curve, spline, curveIndex);
+            var position = (Vector3)CurveUtility.EvaluatePosition(curve, curveMidT);
+            var tangent = ((Vector3)CurveUtility.EvaluateTangent(curve, curveMidT)).normalized;
+            var up = CurveUtility.EvaluateUpVector(curve, curveMidT, upAtStart, upAtEnd);
+            var rotation = Quaternion.LookRotation(tangent, up);
+
+            var arrowMaxSpline = .05f * CurveUtility.ApproximateLength(curve);
+            var size = HandleUtility.GetHandleSize(position) * .5f;
+
+            tangent = new Vector3(0, 0, .1f) * size;
+            var right = new Vector3(0.075f, 0, 0) * size;
+            var magnitude = tangent.magnitude;
+
+            if(magnitude > arrowMaxSpline)
+            {
+                var ratio = arrowMaxSpline / magnitude;
+                tangent *= ratio;
+                right *= ratio;
+            }
+
+            s_FlowTriangleVertices[0] = tangent;
+            s_FlowTriangleVertices[1] = - tangent + right;
+            s_FlowTriangleVertices[2] = - tangent - right;
+
+            var color = attenuate ? Handles.secondaryColor : SplineHandleUtility.lineColor;
+
+            using (new Handles.DrawingScope(color, Matrix4x4.TRS(position, rotation, Vector3.one)))
+            {
+                using (new ZTestScope(CompareFunction.Less))
+                    Handles.DrawAAConvexPolygon(s_FlowTriangleVertices);
+            }
+
+            color = attenuate ? Handles.secondaryColor : SplineHandleUtility.lineBehindColor;
+
+            using (new Handles.DrawingScope(color, Matrix4x4.TRS(position, rotation, Vector3.one)))
+            {
+                using (new ZTestScope(CompareFunction.Greater))
+                    Handles.DrawAAConvexPolygon(s_FlowTriangleVertices);
+            }
         }
 
         static void Draw(int controlID, BezierCurve curve, bool preview, bool activeSpline)
@@ -79,68 +187,35 @@ namespace UnityEditor.Splines
             switch (evt.type)
             {
                 case EventType.Layout:
-                    if (!Tools.viewToolActive)
+                case EventType.MouseMove:
+                    if (!SplineHandles.ViewToolActive() && activeSpline)
                     {
-                       var dist = DistanceToCurve(curve);
+                        var dist = DistanceToCurve(curve);
                         HandleUtility.AddControl(controlID, Mathf.Max(0, dist - SplineHandleUtility.pickingDistance));
                     }
                     break;
 
                 case EventType.Repaint:
-                    
-                    //We attenuate the spline display if a spline can be controlled (id != -1) and
-                    //if it's not the current active spline
-                    var attenuate = controlID != -1 && !activeSpline;
                     var prevColor = Handles.color;
+                    FillCurveDrawingBuffer(curve);
 
                     var color = SplineHandleUtility.lineColor;
-                    if (attenuate)
-                        color = Handles.secondaryColor;
                     if (preview)
                         color.a *= k_PreviewCurveOpacity;
 
-                    FillCurveDrawingBuffer(curve);
-
                     Handles.color = color;
-
                     using (new ZTestScope(CompareFunction.Less))
-                    {
-                        Handles.DrawAAPolyLine(k_CurveLineWidth, s_CurveDrawingBuffer);
-                    }
+                        Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, k_CurveLineWidth, s_CurveDrawingBuffer);
 
                     color = SplineHandleUtility.lineBehindColor;
-                    if (attenuate)
-                        color = Handles.secondaryColor;
                     if (preview)
                         color.a *= k_PreviewCurveOpacity;
 
                     Handles.color = color;
-
                     using (new ZTestScope(CompareFunction.Greater))
-                    {
-                        Handles.DrawAAPolyLine(k_CurveLineWidth, s_CurveDrawingBuffer);
-                    }
+                        Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, k_CurveLineWidth, s_CurveDrawingBuffer);
 
                     Handles.color = prevColor;
-                    break;
-            }
-        }
-
-        public static void CurveHandleCap(
-            int controlID,
-            BezierCurve curve,
-            float size,
-            EventType evt)
-        {
-            switch (evt)
-            {
-                case EventType.Layout:
-                case EventType.MouseMove:
-                    HandleUtility.AddControl(controlID, DistanceToCurve(curve));
-                    break;
-                case EventType.Repaint:
-                    FillCurveDrawingBuffer(curve);
-                    Handles.DrawAAPolyLine(size, s_CurveDrawingBuffer);
                     break;
             }
         }
@@ -173,6 +248,25 @@ namespace UnityEditor.Splines
             return dist;
         }
 
+        /// <summary>
+        /// Returns the interpolation value that corresponds to the middle (distance wise) of the curve.
+        /// If spline and curveIndex are provided, the function leverages the spline's LUTs, otherwise the LUT is built on the fly.
+        /// </summary>
+        /// <param name="curve">The curve to evaluate.</param>
+        /// <param name="spline">The ISpline that curve belongs to. Not used if curve is not part of any spline.</param>
+        /// <param name="curveIndex">The index of the curve if it's part of the spine.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        internal static float GetCurveMiddleInterpolation<T>(BezierCurve curve, T spline, int curveIndex) where T: ISpline
+        {
+            var curveMidT = 0f;
+            if (curveIndex >= 0)
+                curveMidT = spline.GetCurveInterpolation(curveIndex, spline.GetCurveLength(curveIndex) * 0.5f);
+            else
+                curveMidT = CurveUtility.GetDistanceToInterpolation(curve, CurveUtility.ApproximateLength(curve) * 0.5f);
+
+            return curveMidT;
+        }
+
         internal static void DoCurveHighlightCap(SelectableKnot knot)
         {
             if(Event.current.type != EventType.Repaint)
@@ -186,56 +280,66 @@ namespace UnityEditor.Splines
                 if(knot.KnotIndex > 0 || spline.Closed)
                 {
                     var curve = spline.GetCurve(spline.PreviousIndex(knot.KnotIndex)).Transform(localToWorld);
-                    DrawCurveHighlight(curve, 1f, 0.5f);
+                    var curveMiddleT = GetCurveMiddleInterpolation(curve, spline, spline.PreviousIndex(knot.KnotIndex));
+                    DrawCurveHighlight(curve, 1f, curveMiddleT);
                 }
 
                 if(knot.KnotIndex < spline.Count - 1  || spline.Closed)
                 {
                     var curve = spline.GetCurve(knot.KnotIndex).Transform(localToWorld);
-                    DrawCurveHighlight(curve, 0f, 0.5f);
+                    var curveMiddleT = GetCurveMiddleInterpolation(curve, spline, knot.KnotIndex);
+                    DrawCurveHighlight(curve, 0f, curveMiddleT);
                 }
             }
         }
 
-        internal static void DrawCurveHighlight(BezierCurve curve, float startT, float endT)
+        static void DrawCurveHighlight(BezierCurve curve, float startT, float endT)
         {
             FillCurveDrawingBuffer(curve);
 
-            var prevColor = Handles.color;
-
             var growing = startT <= endT;
-            var color = prevColor;
+            var color = Handles.color;
             color.a = growing ? 1f : 0f;
 
-            Handles.color = color;
             using (new ZTestScope(CompareFunction.Less))
-            {
-                for(int i = 1; i <= k_CurveDrawResolution; ++i)
-                {
-                    Handles.DrawAAPolyLine(k_CurveLineWidth, new []{s_CurveDrawingBuffer[i-1], s_CurveDrawingBuffer[i]});
-                    var current = ( (float)i / (float)k_CurveDrawResolution );
-                    if(growing)
-                    {
-                        if(current > endT)
-                            color.a = 0f;
-                        else if(current > startT)
-                            color.a = 1f - ( current - startT ) / ( endT - startT );
-                    }
-                    else
-                    {
-                        if(current > startT)
-                            color.a = 0f;
-                        else if(current > endT && current < startT)
-                            color.a =  (current - endT) /  (startT - endT);
-                    }
+                using (new Handles.DrawingScope(color))
+                    DrawAAPolyLineForCurveHighlight(color, startT, endT, 1f, growing);
 
-                    Handles.color = color;
-                }
-            }
-
-            Handles.color = prevColor;
+            using (new ZTestScope(CompareFunction.Greater))
+                using (new Handles.DrawingScope(color))
+                    DrawAAPolyLineForCurveHighlight(color, startT, endT, 0.3f, growing);
         }
 
+        static void DrawAAPolyLineForCurveHighlight(Color color, float startT, float endT, float colorAlpha, bool growing)
+        {
+            for (int i = 1; i <= k_CurveDrawResolution; ++i)
+            {
+                    Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, k_CurveLineWidth, new []{s_CurveDrawingBuffer[i-1], s_CurveDrawingBuffer[i]});
+                    
+                var current = ((float)i / (float)k_CurveDrawResolution);
+                if (growing)
+                {
+                    if (current > endT)
+                        color.a = 0f;
+                    else if (current > startT)
+                        color.a = (1f - (current - startT) / (endT - startT)) * colorAlpha;
+                }
+                else
+                {
+                    if (current < endT)
+                        color.a = 0f;
+                    else if (current > endT && current < startT)
+                        color.a = (current - endT) / (startT - endT) * colorAlpha;
+                }
+
+                Handles.color = color;
+            }
+        }
+
+        /// <summary>
+        /// Creates the set of control points that make up a curve.
+        /// </summary>
+        /// <param name="curve">The <see cref="BezierCurve"/> to create control points for.</param>
         public static void DrawControlNet(BezierCurve curve)
         {
             Handles.color = Color.green;

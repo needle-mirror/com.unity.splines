@@ -20,7 +20,6 @@ namespace UnityEditor.Splines
 
         static event Action s_ForceUpdateRequested;
         static bool s_FirstUpdateSinceDomainReload = true;
-        static VisualTreeAsset s_VisualTree;
         static IReadOnlyList<SplineInfo> m_SelectedSplines;
         internal static void SetSelectedSplines(IReadOnlyList<SplineInfo> splines)
         {

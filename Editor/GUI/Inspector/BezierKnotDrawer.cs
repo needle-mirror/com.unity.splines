@@ -11,8 +11,8 @@ namespace UnityEditor.Splines
     {
         readonly Float3PropertyField<SelectableKnot> m_Position;
         readonly Float3PropertyField<SelectableKnot> m_Rotation;
-        readonly TangentModeDropdown<SelectableKnot> m_Mode;
-        readonly BezierTangentModeDropdown<SelectableKnot> m_BezierMode;
+        readonly TangentModePropertyField<SelectableKnot> m_Mode;
+        readonly BezierTangentPropertyField<SelectableKnot> m_BezierMode;
         readonly TangentPropertyField m_TangentIn;
         readonly TangentPropertyField m_TangentOut;
 
@@ -41,19 +41,11 @@ namespace UnityEditor.Splines
 
             Add(new Separator());
 
-            Add(m_Mode = new TangentModeDropdown<SelectableKnot>());
-            m_Mode.changed += () =>
-            {
-                m_BezierMode.Update(targets);
-                UpdateTangentsState();
-            };
+            Add(m_Mode = new TangentModePropertyField<SelectableKnot>());
+            m_Mode.changed += Update;
 
-            Add(m_BezierMode = new BezierTangentModeDropdown<SelectableKnot>());
-            m_BezierMode.changed += () =>
-            {
-                m_Mode.Update(targets);
-                UpdateTangentsState();
-            };
+            Add(m_BezierMode = new BezierTangentPropertyField<SelectableKnot>());
+            m_BezierMode.changed += Update;
 
             Add(m_TangentIn = new TangentPropertyField("In", "TangentIn", BezierTangent.In));
             Add(m_TangentOut = new TangentPropertyField("Out", "TangentOut", BezierTangent.Out));
@@ -70,7 +62,7 @@ namespace UnityEditor.Splines
             if (targets.Count > 1)
                 return $"<b>({targets.Count}) Knots</b> selected";
             
-            return $"<b>Knot {target.KnotIndex}</b> selected";
+            return $"<b>Knot {target.KnotIndex}</b> (<b>Spline {target.SplineInfo.Index}</b>) selected";
         }
 
         public override void Update()
@@ -105,17 +97,14 @@ namespace UnityEditor.Splines
                 tangentOutSelectable |= SplineSelectionUtility.IsSelectable(targets[i].TangentOut);
             }
 
-            m_TangentIn.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
-            m_TangentOut.style.display = tangentsModifiable ? DisplayStyle.Flex : DisplayStyle.None;
+            m_TangentIn.SetEnabled(tangentsModifiable && tangentInSelectable);
+            m_TangentOut.SetEnabled(tangentsModifiable && tangentOutSelectable);
 
             if(tangentsModifiable)
             {
                 m_TangentIn.vector3field.SetEnabled(tangentsBroken);
                 m_TangentOut.vector3field.SetEnabled(tangentsBroken);
             }
-
-            m_TangentIn.SetEnabled(tangentInSelectable);
-            m_TangentOut.SetEnabled(tangentOutSelectable);
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Splines;
+using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
 {
@@ -51,12 +52,16 @@ namespace UnityEditor.Splines
 			m_Components = targets.Select(x => x as SplineExtrude).Where(y => y != null).ToArray();
 			m_AnyMissingMesh = m_Components.Any(x => x.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh == null);
 
-			EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
+			EditorSplineUtility.AfterSplineWasModified += OnSplineModified;           
+			ISplineContainer.SplineAdded += OnContainerSplineSetModified;
+			ISplineContainer.SplineRemoved += OnContainerSplineSetModified;
 		}
 
 		void OnDisable()
 		{
-			EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;
+			EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;            
+			ISplineContainer.SplineAdded -= OnContainerSplineSetModified;
+			ISplineContainer.SplineRemoved -= OnContainerSplineSetModified;
 		}
 
 		void OnSplineModified(Spline spline)
@@ -66,11 +71,23 @@ namespace UnityEditor.Splines
 
 			foreach (var extrude in m_Components)
 			{
-				if (extrude.Container != null && extrude.Container.Spline == spline)
+				if (extrude.Container != null && extrude.Splines.Contains(spline))
 					extrude.Rebuild();
 			}
 		}
 
+		void OnContainerSplineSetModified(ISplineContainer container, int spline)
+		{
+			if (EditorApplication.isPlayingOrWillChangePlaymode)
+				return;
+            
+			foreach (var extrude in m_Components)
+			{
+				if (extrude.Container == (Object)container)
+					extrude.Rebuild();
+			}
+		}
+		
 		public override void OnInspectorGUI()
 		{
 			serializedObject.Update();

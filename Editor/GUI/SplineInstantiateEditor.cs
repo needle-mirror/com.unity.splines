@@ -1,8 +1,10 @@
+using System.Linq;
 using System;
 using UnityEditor;
 using UnityEditor.Splines;
 using UnityEngine;
 using UnityEngine.Splines;
+using Object = UnityEngine.Object;
 
 class SplineInstantiateGizmoDrawer
 {
@@ -36,19 +38,19 @@ class InstantiableItemDrawer : PropertyDrawer
 
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
-        var prefabProperty = property.FindPropertyRelative("prefab");
-        var probaProperty = property.FindPropertyRelative("probability");
-        
+        var prefabProperty = property.FindPropertyRelative(nameof(SplineInstantiate.InstantiableItem.Prefab));
+        var probaProperty = property.FindPropertyRelative(nameof(SplineInstantiate.InstantiableItem.Probability));
+
         var headerLine = ReserveSpace(EditorGUIUtility.singleLineHeight, ref rect);
-        
+
         using(new SplineInstantiateEditor.LabelWidthScope(0f))
             EditorGUI.ObjectField(ReserveLineSpace(headerLine.width - 100, ref headerLine), prefabProperty, new GUIContent(""));
-        
+
         ReserveLineSpace(10, ref headerLine);
         EditorGUI.LabelField(ReserveLineSpace(15, ref headerLine), new GUIContent("%", k_ProbabilityTooltip));
         probaProperty.floatValue = EditorGUI.FloatField(ReserveLineSpace(60, ref headerLine), probaProperty.floatValue);
     }
-    
+
     static Rect ReserveSpace(float height, ref Rect total)
     {
         Rect current = total;
@@ -56,7 +58,7 @@ class InstantiableItemDrawer : PropertyDrawer
         total.y += height;
         return current;
     }
-    
+
     static Rect ReserveLineSpace(float width, ref Rect total)
     {
         Rect current = total;
@@ -70,7 +72,7 @@ class InstantiableItemDrawer : PropertyDrawer
 class ItemAxisDrawer : PropertyDrawer
 {
     static int s_LastUpAxis;
-    
+
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
         var enumValue = property.intValue;
@@ -82,10 +84,10 @@ class ItemAxisDrawer : PropertyDrawer
         }
         else
         {
-            property.intValue = (int)((SplineInstantiate.AlignAxis)EditorGUI.EnumPopup(rect, label, (SplineInstantiate.AlignAxis)enumValue, 
+            property.intValue = (int)((SplineInstantiate.AlignAxis)EditorGUI.EnumPopup(rect, label, (SplineInstantiate.AlignAxis)enumValue,
                 (item) =>
                 {
-                    int axisItem = (int)(SplineInstantiate.AlignAxis)item; 
+                    int axisItem = (int)(SplineInstantiate.AlignAxis)item;
                     return !(axisItem == s_LastUpAxis || axisItem == (s_LastUpAxis + 3) % 6);
                 }));
         }
@@ -101,12 +103,12 @@ class SplineInstantiateEditor : SplineComponentEditor
         Exact,
         Random
     }
-    
+
     SerializedProperty m_SplineContainer;
-    
+
     SerializedProperty m_ItemsToInstantiate;
     SerializedProperty m_InstantiateMethod;
-    
+
     SerializedProperty m_Space;
     SerializedProperty m_UpAxis;
     SerializedProperty m_ForwardAxis;
@@ -117,14 +119,14 @@ class SplineInstantiateEditor : SplineComponentEditor
     SerializedProperty m_AutoRefresh;
 
     static readonly string[] k_SpacingTypesLabels = new []
-    {        
-        L10n.Tr("Count"), 
+    {
+        L10n.Tr("Count"),
         L10n.Tr("Spacing (Spline)"),
         L10n.Tr("Spacing (Linear)")
     };
-    
+
     static readonly string k_Helpbox = L10n.Tr("Instantiated Objects need a SplineContainer target to be created.");
-    
+
     //Setup Section
     static readonly string k_Setup = L10n.Tr("Instantiated Object Setup");
     static readonly string k_ObjectUp = L10n.Tr("Up Axis");
@@ -139,7 +141,7 @@ class SplineInstantiateEditor : SplineComponentEditor
     static readonly string k_MethodTooltip = L10n.Tr("How instances are generated along the spline.");
     static readonly string k_Max = L10n.Tr("Max");
     static readonly string k_Min = L10n.Tr("Min");
-    
+
     SpawnType m_SpacingType;
 
     //Offsets
@@ -155,7 +157,7 @@ class SplineInstantiateEditor : SplineComponentEditor
     static readonly string k_Generation = L10n.Tr("Generation");
     static readonly string k_AutoRefresh = L10n.Tr("Auto Refresh Generation");
     static readonly string k_AutoRefreshTooltip = L10n.Tr("Automatically refresh the instances when the spline or the values are changed.");
-    
+
     static readonly string k_Randomize = L10n.Tr("Randomize");
     static readonly string k_RandomizeTooltip = L10n.Tr("Compute a new randomization of the instances along the spline.");
     static readonly string k_Regenerate = L10n.Tr("Regenerate");
@@ -173,43 +175,67 @@ class SplineInstantiateEditor : SplineComponentEditor
         Random
     };
 
+    SplineInstantiate[] m_Components;
+
     protected override void OnEnable()
     {
         base.OnEnable();
-        
+
         m_SplineContainer = serializedObject.FindProperty("m_Container");
-        
+
         m_ItemsToInstantiate = serializedObject.FindProperty("m_ItemsToInstantiate");
         m_InstantiateMethod = serializedObject.FindProperty("m_Method");
-        
+
         m_Space = serializedObject.FindProperty("m_Space");
         m_UpAxis = serializedObject.FindProperty("m_Up");
         m_ForwardAxis = serializedObject.FindProperty("m_Forward");
-        
+
         m_Spacing = serializedObject.FindProperty("m_Spacing");
-        
+
         m_PositionOffset = serializedObject.FindProperty("m_PositionOffset");
         m_RotationOffset = serializedObject.FindProperty("m_RotationOffset");
         m_ScaleOffset = serializedObject.FindProperty("m_ScaleOffset");
-        
+
         m_AutoRefresh = serializedObject.FindProperty("m_AutoRefresh");
 
         m_SpacingType = m_Spacing.vector2Value.x == m_Spacing.vector2Value.y ? SpawnType.Exact : SpawnType.Random;
 
+        m_Components = targets.Select(x => x as SplineInstantiate).Where(y => y != null).ToArray();
+
         EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
+        ISplineContainer.SplineAdded += OnContainerSplineSetModified;
+        ISplineContainer.SplineRemoved += OnContainerSplineSetModified;
     }
 
     void OnDisable()
     {
         EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;
+        ISplineContainer.SplineAdded -= OnContainerSplineSetModified;
+        ISplineContainer.SplineRemoved -= OnContainerSplineSetModified;
     }
-    
+
     void OnSplineModified(Spline spline)
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             return;
 
-        ( (SplineInstantiate)target ).SetSplineDirty(spline);
+        foreach (var instantiate in m_Components)
+        {
+            if (instantiate.Container != null && instantiate.Container.Splines.Contains(spline))
+                instantiate.SetSplineDirty(spline);
+        }
+    }
+
+    void OnContainerSplineSetModified(ISplineContainer container, int spline)
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            return;
+
+        foreach (var instantiate in m_Components)
+        {
+            if (instantiate.Container == (Object)container)
+                instantiate.UpdateInstances();
+        }
     }
 
     public override void OnInspectorGUI()
@@ -219,7 +245,7 @@ class SplineInstantiateEditor : SplineComponentEditor
         var splineInstantiate = ((SplineInstantiate)target);
         var dirtyInstances = false;
         var updateInstances = false;
-        
+
         EditorGUILayout.PropertyField(m_SplineContainer);
         if(m_SplineContainer.objectReferenceValue == null)
             EditorGUILayout.HelpBox(k_Helpbox, MessageType.Warning);
@@ -232,7 +258,7 @@ class SplineInstantiateEditor : SplineComponentEditor
         dirtyInstances |= DoInstantiateSection();
 
         updateInstances |= DisplayOffsets();
-        
+
         HorizontalLine( Color.grey );
         EditorGUILayout.LabelField(k_Generation, EditorStyles.boldLabel);
         EditorGUI.indentLevel++;
@@ -256,10 +282,10 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorGUILayout.Space();
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.Separator();
-        
+
         if(dirtyInstances)
             splineInstantiate.SetDirty();
-        
+
         if(updateInstances)
             splineInstantiate.UpdateInstances();
     }
@@ -282,19 +308,19 @@ class SplineInstantiateEditor : SplineComponentEditor
             if(m_ForwardAxis.intValue == m_UpAxis.intValue || m_ForwardAxis.intValue == ( m_UpAxis.intValue + 3 ) % 6)
                 m_ForwardAxis.intValue = ( m_ForwardAxis.intValue + 1 ) % 6;
         }
-        
+
         EditorGUILayout.PropertyField(m_Space, new GUIContent(k_AlignTo, k_AlignToTooltip));
         EditorGUI.indentLevel--;
     }
- 
+
     bool DoInstantiateSection()
     {
         var dirty = false;
         Vector2 spacingV2 = m_Spacing.vector2Value;
-        
+
         HorizontalLine( Color.grey );
         EditorGUILayout.LabelField(k_Instantiation, EditorStyles.boldLabel);
-        
+
         EditorGUI.indentLevel++;
         EditorGUI.BeginChangeCheck();
         EditorGUILayout.PropertyField(m_InstantiateMethod, new GUIContent(k_Method, k_MethodTooltip), EditorStyles.boldFont );
@@ -305,13 +331,13 @@ class SplineInstantiateEditor : SplineComponentEditor
                 m_Spacing.vector2Value = new Vector2(spacingV2.x, float.NaN);
             dirty = true;
         }
-        
+
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.PrefixLabel(new GUIContent(k_SpacingTypesLabels[m_InstantiateMethod.intValue]));
         EditorGUI.indentLevel--;
 
         GUILayout.Space(2f);
-        
+
         EditorGUI.BeginChangeCheck();
 
         float spacingX = m_Spacing.vector2Value.x;
@@ -319,20 +345,20 @@ class SplineInstantiateEditor : SplineComponentEditor
         if(isExact || m_InstantiateMethod.intValue != (int)SplineInstantiate.Method.LinearDistance)
         {
            using(new LabelWidthScope(30f))
-                spacingX = (SplineInstantiate.Method)m_InstantiateMethod.intValue == SplineInstantiate.Method.InstanceCount ? 
-                    EditorGUILayout.IntField(new GUIContent(isExact ? L10n.Tr("Dist") : k_Min), (int)m_Spacing.vector2Value.x, GUILayout.MinWidth(50f)) : 
+                spacingX = (SplineInstantiate.Method)m_InstantiateMethod.intValue == SplineInstantiate.Method.InstanceCount ?
+                    EditorGUILayout.IntField(new GUIContent(isExact ? string.Empty : k_Min), (int)m_Spacing.vector2Value.x, GUILayout.MinWidth(50f)) :
                     EditorGUILayout.FloatField(new GUIContent(isExact ? L10n.Tr("Dist") : k_Min), m_Spacing.vector2Value.x, GUILayout.MinWidth(50f));
         }
         if(isExact)
         {
             spacingV2 = new Vector2(spacingX, spacingX);
-        }   
+        }
         else if(m_InstantiateMethod.intValue != (int)SplineInstantiate.Method.LinearDistance)
         {
             using(new LabelWidthScope(30f))
             {
-                var spacingY = (SplineInstantiate.Method)m_InstantiateMethod.intValue == SplineInstantiate.Method.InstanceCount ? 
-                    EditorGUILayout.IntField(new GUIContent(k_Max), (int)m_Spacing.vector2Value.y, GUILayout.MinWidth(50f)) : 
+                var spacingY = (SplineInstantiate.Method)m_InstantiateMethod.intValue == SplineInstantiate.Method.InstanceCount ?
+                    EditorGUILayout.IntField(new GUIContent(k_Max), (int)m_Spacing.vector2Value.y, GUILayout.MinWidth(50f)) :
                     EditorGUILayout.FloatField(new GUIContent(k_Max), m_Spacing.vector2Value.y, GUILayout.MinWidth(50f));
 
                 if(spacingX > m_Spacing.vector2Value.y)
@@ -343,7 +369,7 @@ class SplineInstantiateEditor : SplineComponentEditor
                 spacingV2 = new Vector2(spacingX, spacingY);
             }
         }
-        
+
         if(EditorGUI.EndChangeCheck())
             m_Spacing.vector2Value = spacingV2;
 
@@ -360,7 +386,7 @@ class SplineInstantiateEditor : SplineComponentEditor
                 m_Spacing.vector2Value = new Vector2(spacingV2.x, spacingV2.x);
             else if(m_InstantiateMethod.intValue == (int)SplineInstantiate.Method.LinearDistance)
                 m_Spacing.vector2Value = new Vector2(spacingV2.x, float.NaN);
-            
+
             dirty = true;
         }
 
@@ -374,7 +400,7 @@ class SplineInstantiateEditor : SplineComponentEditor
     {
         bool changed = false;
         newFoldoutValue = foldoutValue;
-        
+
         EditorGUILayout.BeginHorizontal();
 
         using(new LabelWidthScope(0f))
@@ -395,7 +421,7 @@ class SplineInstantiateEditor : SplineComponentEditor
                 setupProperty.intValue = (int)setup;
                 changed = true;
             }
-            
+
             EditorGUILayout.Space(10f);
             using(new EditorGUI.DisabledScope(!hasOffset))
             {
@@ -439,7 +465,7 @@ class SplineInstantiateEditor : SplineComponentEditor
 
                     var minProperty = offsetProperty.FindPropertyRelative("min");
                     var maxProperty = offsetProperty.FindPropertyRelative("max");
-                    
+
                     var minPropertyValue = minProperty.vector3Value;
                     var maxPropertyValue = maxProperty.vector3Value;
 
@@ -447,7 +473,7 @@ class SplineInstantiateEditor : SplineComponentEditor
                     SerializedProperty randomProperty;
                     for(int i = 0; i < 3; i++)
                     {
-                        string label = i == 0 ? "X" : i == 1 ? "Y" : "Z"; 
+                        string label = i == 0 ? "X" : i == 1 ? "Y" : "Z";
                         EditorGUILayout.BeginHorizontal();
                         using(new LabelWidthScope(30f))
                             EditorGUILayout.LabelField(label);
@@ -468,7 +494,7 @@ class SplineInstantiateEditor : SplineComponentEditor
                                     maxPropertyValue[i] = min;
                                 if(max < minPropertyValue[i])
                                     minPropertyValue[i] = max;
-                                
+
                                 minPropertyValue[i] = min;
                                 maxPropertyValue[i] = max;
 
@@ -482,7 +508,7 @@ class SplineInstantiateEditor : SplineComponentEditor
                             EditorGUI.BeginChangeCheck();
                             using(new LabelWidthScope(30f))
                                 min = EditorGUILayout.FloatField("is ", minPropertyValue[i], GUILayout.MinWidth(193f), GUILayout.MaxWidth(193f));
-                            
+
                             if(EditorGUI.EndChangeCheck())
                             {
                                 minPropertyValue[i] = min;
@@ -504,7 +530,7 @@ class SplineInstantiateEditor : SplineComponentEditor
                             randomProperty.boolValue = isOffsetRandom == OffsetType.Random;
                             changed = true;
                         }
-                        
+
                         EditorGUILayout.EndHorizontal();
                     }
                 }
@@ -513,14 +539,14 @@ class SplineInstantiateEditor : SplineComponentEditor
 
         return changed;
     }
-    
+
     bool DisplayOffsets()
     {
         HorizontalLine( Color.grey );
         var updateNeeded = DoOffsetProperties(m_PositionOffset, new GUIContent(k_PositionOffset, k_PositionOffsetTooltip), m_PositionFoldout, out m_PositionFoldout);
         updateNeeded |=  DoOffsetProperties(m_RotationOffset, new GUIContent(k_RotationOffset, k_RotationOffsetTooltip), m_RotationFoldout, out m_RotationFoldout);
         updateNeeded |= DoOffsetProperties(m_ScaleOffset, new GUIContent(k_ScaleOffset, k_ScaleOffsetTooltip), m_ScaleFoldout, out m_ScaleFoldout);
-        
+
         return updateNeeded;
     }
 }

@@ -1,20 +1,17 @@
 # Create a spline
 
-Splines are paths made up of control points called knots. You can place knots onto the surface of objects or [align them to the grid](https://docs.unity3d.com/Manual/GridSnapping.html). Knots can include tangents which control the curvature of path at that knot.
+Splines are paths made up of control points called knots. Segments connect knots to other knots. You can place knots onto the surface of objects or [align them to the grid](https://docs.unity3d.com/Manual/GridSnapping.html). Knots can include tangents which control the curvature of the segment at that knot.
 
-By default, new splines have **Auto Smooth** enabled. 
-
-To create a spline GameObject:
+To create a spline:
 
 > [!NOTE]
-> Before you add a knot to a spline, its default location is 0, 0, 0. After you create the spline's first knot, the spline takes that knot's location. 
+> Before you add a knot to a spline, the spline's default location is 0, 0, 0. After you create the spline's first knot, the spline takes that knot's location. 
 
 1. Do one of the following: 
-    * Go to **GameObject** > **Spline** > **Draw Spline Tool**.
-    * In the Hierarchy window, right-click and select **Spline** > **Draw Spline Tool**.
-1. Click in the Scene view to create knots for the spline's path to follow. If you want to add a curve to the path, click and drag to create a knot with tangents.
+    * Go to **GameObject** &gt; **Spline** &gt; **Draw Splines Tool**.
+    * In the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html), right-click and select **Spline** &gt; **Draw Splines Tool**.
+1. Click in the [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html) to create knots for the spline's path to follow. If you want to add a curve to the knot's segment, click and drag to create a knot with tangents.
    
     > [!TIP]
-    > When you use the Draw Spline Tool, if you click on the surface of a GameObject, the knot snaps to that surface. Otherwise, the knot snaps to the grid.
-1. To exit the **Draw Spline Tool**, select the **Draw Spline Tool** in the tools overlay or press Escape.
-
+    > When you use the Draw Splines Tool, if you click on the surface of a GameObject, the knot snaps to that surface. Otherwise, the knot snaps to the grid.
+1. To exit the **Draw Splines Tool**, select the **Draw Splines Tool** in the Tools overlay or press Escape.

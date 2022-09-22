@@ -36,32 +36,29 @@ namespace UnityEditor.Splines
             switch (evt.GetTypeForControl(id))
             {
                 case EventType.Layout:
-                    if (!Tools.viewToolActive)
+                case EventType.MouseMove:
+                    HandleUtility.AddDefaultControl(id);
+
+                    if (m_Mode != Mode.None)
                     {
-                        HandleUtility.AddDefaultControl(id);
-
-                        if (m_Mode != Mode.None)
+                        // If we've started rect select in Add or Subtract modes, then if we were in a Replace
+                        // mode just before (i.e. the shift or action has been released temporarily),
+                        // we need to bring back the pre rect selection elements into current selection.
+                        if (m_InitialMode != Mode.Replace && RefreshSelectionMode())
                         {
-                            // If we've started rect select in Add or Subtract modes, then if we were in a Replace
-                            // mode just before (i.e. the shift or action has been released temporarily),
-                            // we need to bring back the pre rect selection elements into current selection.
-                            if (m_InitialMode != Mode.Replace && RefreshSelectionMode())
+                            SplineSelection.Clear();
+                            s_SplineElementsCompareSet.Clear();
+
+                            if (m_Mode != Mode.Replace)
                             {
-                                SplineSelection.Clear();
-                                s_SplineElementsCompareSet.Clear();
-
-                                if (m_Mode != Mode.Replace)
-                                {
-                                    foreach (var element in s_PreRectSelectionElements)
-                                        SplineSelection.Add(element);
-                                }
-
-                                m_Rect = GetRectFromPoints(m_StartPos, evt.mousePosition);
-                                UpdateSelection(m_Rect, splines);
+                                foreach (var element in s_PreRectSelectionElements)
+                                    SplineSelection.Add(element);
                             }
+
+                            m_Rect = GetRectFromPoints(m_StartPos, evt.mousePosition);
+                            UpdateSelection(m_Rect, splines);
                         }
                     }
-
                     break;
 
                 case EventType.Repaint:
@@ -74,6 +71,9 @@ namespace UnityEditor.Splines
                     break;
 
                 case EventType.MouseDown:
+                    if (SplineHandles.ViewToolActive())
+                        return;
+
                     if (HandleUtility.nearestControl == id && evt.button == 0)
                     {
                         m_StartPos = evt.mousePosition;
@@ -107,7 +107,7 @@ namespace UnityEditor.Splines
             }
         }
 
-        protected virtual void BeginSelection(IReadOnlyList<SplineInfo> splines)
+        void BeginSelection(IReadOnlyList<SplineInfo> splines)
         {
             RefreshSelectionMode();
             m_InitialMode = m_Mode;
@@ -123,7 +123,7 @@ namespace UnityEditor.Splines
                 SplineSelection.GetElements(splines, s_PreRectSelectionElements);
         }
 
-        protected virtual void UpdateSelection(Rect rect, IReadOnlyList<SplineInfo> splines)
+        void UpdateSelection(Rect rect, IReadOnlyList<SplineInfo> splines)
         {
             //Get all elements in rect
             s_SplineElementsBuffer.Clear();
@@ -131,7 +131,8 @@ namespace UnityEditor.Splines
             {
                 var splineData = splines[i];
                 for (int j = 0; j < splineData.Spline.Count; ++j)
-                    GetElementSelection(rect, splineData, j, s_SplineElementsBuffer);
+                    if(!SplineSelection.HasActiveSplineSelection() || SplineSelection.Contains(splineData))
+                        GetElementSelection(rect, splineData, j, s_SplineElementsBuffer);
             }
 
             foreach (var splineElement in s_SplineElementsBuffer)
@@ -211,7 +212,7 @@ namespace UnityEditor.Splines
             }
         }
 
-        protected virtual void EndSelection(Rect rect, IReadOnlyList<SplineInfo> splines)
+        void EndSelection(Rect rect, IReadOnlyList<SplineInfo> splines)
         {
             m_Mode = m_InitialMode = Mode.None;
         }

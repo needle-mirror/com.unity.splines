@@ -5,6 +5,82 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.0.0-pre.4] - 2022-09-22
+
+### Added
+
+- Added a new public static class, `InterpolatorUtility`, to improve the discoverability of `IInterpolator` implementations.
+- Removed the disc that displayed around selected knots.
+- Added a disc that displays when hovering over a tangent.
+- Added transparency to the disc that displays when a knot or tangent is hovered on if the disc occludes an object in the scene.
+- Added spline index to the Element Inspector when a spline element is selected.
+- Updated public API documentation.
+- Added the functionality to disable specific Spline tool handles.
+- Added spline selection from the Spline Inspector.
+- Updated built-in Spline components (Instantiate and Extrude) to support spline containers with multiple splines.
+- Added the functionality to to delete tangents.
+
+### Changed
+
+- Modified spline element handles to use `Element Color`.
+- [STO-2681] Attenuated the color of the tangents and the curve highlights when they are behind objects.
+- Modified the `Draw Splines Tool` to clear any Spline element selection when it is activated.
+- Spline element handles now use the `Element Selection` and `Element Preselection` colors.
+- [STO-2731] Fixed View Tool not working when Spline Context was active.
+- Changed tangent's shapes to diamonds.
+- [STO-2728] Changed the label of the `SplineAnimate` component's `World` alignment mode to `World Space` in the Inspector.
+- Modified the `Knot Placement Tool` to have live preview for segments with auto-smooth knots.
+- Dependency on Unity Physics Module is now optional.
+- Reduced the size of the flow indicator handle.
+- Changed default colors and thickness for spline elements and curves.
+- Improved the line visibility of handles and segments.
+- Changed Burst from required dependency to optional.
+- Burst compile `SplineJobs.EvaluationPosition` when Burst package is available.
+
+### Fixed
+
+- [STO-2729] Fixed an issue where reordering knots would break knot links until moved.
+- [STO-2725] Fixed a bug where knots, discs, and the normal line of knots would use incorrect colors.
+- [STO-2726] Fixed a bug where knots handles were drawn under curves handles.
+- [STO-2693] Fixed a bug that prevented users from adding and reordering knots in the Inspector when the spline comes from a class that inherits from `ISplineContainer`.
+- [STO-2727] Corrected a typo in the Loop Mode of the `SplineAnimate`.
+- [STO-2656] Fixed a bug where hovering on linked knots would display discs on each linked knot.
+- [STO-2714] Fixed transformation tools not working correctly when spline has non-uniform scale.
+- [STO-2679] Fixed the segmentation of the curve highlight.
+- [STO-2665] Fixed sample scenes not rendering correctly when URP or HDRP was used.
+- [STO-2702] Removed the **Dist** label in the Inspector when the `SplineInstantiate` component is set to `Exact`.
+- [STO-2706] Fixed a bug where selecting a knot from the inspector was desynchronizing the tool selection.
+- [STO-2655] Fixed a bug that caused knots to highlight with the wrong color.
+- [STO-2696] Fixed a bug where clearing knot selection was not updating in the inspector.
+- [STO-2680] Fixed a bug where `SplineMesh.Extrude` would create twisted mesh geometry.
+- [STO-2701] Fixed a bug where `LoftRoadBehavior` would either throw exception or loft incorrectly when spline was linear or shorter than unit length.
+- [STO-2689] Fixed the behavior of the spline inspector selection when clicking on a selected element.
+- [STO-2705] Fixed a bug where `SplineInstantiate` was not instantiating correctly when the instantiation method was set to `Method.InstanceCount`.
+- [STO-2698] Fixed a bug that could cause a knot link to desync if a linked knot was modified in the Inspector.
+- [STO-2688] Fixed a delay in the scene view update after changing selection from the spline inspector.
+- [STO-2685] Fixed a bug where `LoftRoadBehavior `would throw exceptions with knots that had linear tangents.
+- [STO-2682] Unified `Draw Splines Tool` naming across menus and documentation.
+- [SPLB-53] Fixed a bug where flow arrows and curve highlights would not be centered on a spline's segments between knots.
+- [SPLB-51] Fixed SplineUtility.GetNearestPoint method returning a wrong t value.
+- Fixed a bug where the spline inspector was not working if the `Spline` object was not stored in a ISplineContainer.
+- [STO-2490] Made active element selection consistent with standard Editor behavior for GameObjects. Now you can hold Shift and click a knot to set it as the active element.
+- [STO-2632] Fixed Spline Selection Undo when selecting a single element.
+- [STO-2658] Fixed a bug that would delay the color change when you hover over a segment.
+- [SPLB-32] Fixed a bug where a tangent's Magnitude field in the `Element Inspector` created NaN values.
+- [SPLB-44] Fixed a bug where tangent selection would remain after changing to a mode without modifiable tangents.
+- [SPLB-34] Fixed a bug where knots from separate splines would link to the wrong knot.
+- [SPLB-30] Fixed incorrect auto-smooth knots on reversed splines.
+- Fixed a warning when opening Splines 2.0 project ('Variable never used').
+- Fixed a bug where the SplineContainer reorderable list broke the LinkKnots collection.
+- Fixed a bug that caused the Inspector to display incorrect spline indexes.
+- Fixed spline selection intercepting scene view navigation shortcuts.
+- Fixed a bug where setting SplineInstantiate component's instantiation items with the Inspector would have no effect.
+- Fixed a potential exception that occurred when opening scenes with splines created in the 1.0 version of this package.
+- Fixed tangent and knot handles incorrectly highlighting while a tool is engaged.
+- Fixed compile errors in sample scenes when building player.
+- Fixed "Draw Spline Tool" menu item missing ellipsis.
+- Fixed `Spline Tool Context` not working with `ISplineContainer` implementations that do define a valid `KnotCollection`.
+
 ## [2.0.0-pre.2] - 2022-05-11
 
 ### Added
@@ -15,6 +91,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Modified rounding to be based on camera distance.
+- [STO-2704] Changed `SplineUtility.GetBounds` to account for tangent positions when calculating bounds.
+- Updated the design of the tangent mode fields in the Element Inspector.
 - Added a dropdown menu to select tangent modes to the Element Inspector.
 - Updated the `Draw Splines Tool` to display only one tangent when a new knot is created.
 - Simplified tangents in the `Draw Splines Tool` by removing the interactable handle . 

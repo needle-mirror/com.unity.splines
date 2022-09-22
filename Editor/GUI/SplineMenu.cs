@@ -60,13 +60,13 @@ namespace UnityEditor.Splines
             ToolManager.SetActiveTool<KnotPlacementTool>();
         }
 
-        [MenuItem(k_MenuPath + "/Square", false, k_MenuPriority + 1)]
+        [MenuItem(k_MenuPath + "/Square", false, k_MenuPriority + 11)]
         static void CreateSquare(MenuCommand command)
         {
             CreateSplineGameObject(command, SplineFactory.CreateSquare(1f));
         }
 
-        [MenuItem(k_MenuPath + "/Circle", false, k_MenuPriority + 2)]
+        [MenuItem(k_MenuPath + "/Circle", false, k_MenuPriority + 12)]
         static void CreateCircle(MenuCommand command)
         {
             // .36 is just an eye-balled approximation

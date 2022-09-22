@@ -66,6 +66,10 @@ namespace UnityEngine.Splines
         /// <returns>An IEnumerator that is used to iterate the <see cref="BezierKnot"/> collection.</returns>
         public IEnumerator<BezierKnot> GetEnumerator() => m_Knots.GetEnumerator();
 
+        /// <summary>
+        /// Gets an enumerator that iterates through the <see cref="BezierKnot"/> collection.
+        /// </summary>
+        /// <returns>An IEnumerator that is used to iterate the <see cref="BezierKnot"/> collection.</returns>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <summary>

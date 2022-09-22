@@ -53,7 +53,8 @@ namespace UnityEditor.Splines
             get
             {
                 yield return "Tool Settings/Pivot Mode";
-                yield return "Spline Tool Settings/Handle Rotation";
+                yield return "Spline Tool Settings/Handle Rotation";                
+                yield return "Spline Tool Settings/Handle Visuals";
             }
         }
     }

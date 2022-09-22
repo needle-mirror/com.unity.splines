@@ -3,6 +3,7 @@ using UnityEditor.SettingsManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Splines;
+using Unity.Mathematics;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
@@ -42,14 +43,16 @@ namespace UnityEditor.Splines
     static class SplineHandleUtility
     {
         [UserSetting]
-        internal static UserSetting<Color> s_LineNormalFrontColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalInFrontColor", Color.white, SettingsScope.User);
+        internal static UserSetting<Color> s_LineNormalFrontColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalInFrontColor", new Color(0f, 0f, 0f, 1.0f), SettingsScope.User);
 
         [UserSetting]
-        internal static UserSetting<Color> s_LineNormalBehindColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalBehindColor", new Color(0.98f, 0.62f, 0.62f, 0.4f), SettingsScope.User);
-
+        internal static UserSetting<Color> s_LineNormalBehindColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalBehindColor", new Color(0f, 0f, 0f, 0.4f), SettingsScope.User);
+        
+#if !UNITY_2022_2_OR_NEWER
         [UserSetting]
-        internal static UserSetting<Color> s_KnotColor = new UserSetting<Color>(PathSettings.instance, "Handles.KnotDefaultColor", new Color(.4f, 1f, .95f, 1f), SettingsScope.User);
-
+        internal static UserSetting<Color> s_KnotColor = new UserSetting<Color>(PathSettings.instance, "Handles.KnotDefaultColor", new Color(0f, 224f / 255f, 1f, 1f), SettingsScope.User);
+#endif
+        
         [UserSetting]
         internal static UserSetting<Color> s_TangentColor = new UserSetting<Color>(PathSettings.instance, "Handles.TangentDefaultColor", Color.black, SettingsScope.User);
 
@@ -58,25 +61,28 @@ namespace UnityEditor.Splines
         {
             s_LineNormalFrontColor.value = SettingsGUILayout.SettingsColorField("Curve Color", s_LineNormalFrontColor, searchContext);
             s_LineNormalBehindColor.value = SettingsGUILayout.SettingsColorField("Curve Color Behind Surface", s_LineNormalBehindColor, searchContext);
+#if !UNITY_2022_2_OR_NEWER
             s_KnotColor.value = SettingsGUILayout.SettingsColorField("Knot Color", s_KnotColor, searchContext);
+#endif
             s_TangentColor.value = SettingsGUILayout.SettingsColorField("Tangent Color", s_TangentColor, searchContext);
         }
 
         public static Color lineBehindColor => s_LineNormalBehindColor;
         public static Color lineColor => s_LineNormalFrontColor;
+#if !UNITY_2022_2_OR_NEWER
         public static Color knotColor => s_KnotColor;
+#endif
         public static Color tangentColor => s_TangentColor;
 
         public const float pickingDistance = 8f;
-        public const float handleWidthDefault = 2f;
-        public const float handleWidthHover = 4f;
+        public const float handleWidth = 4f;
         public const float aliasedLineSizeMultiplier = 0.5f;
         public const float sizeFactor = 0.15f;
         public const float knotDiscRadiusFactorDefault = 0.06f;
         public const float knotDiscRadiusFactorHover = 0.07f;
         public const float knotDiscRadiusFactorSelected = 0.085f;
 
-        public static readonly Texture2D thickTangentLineAATex = Resources.Load<Texture2D>(k_TangentLineAATexPath);
+        public static readonly Texture2D denseLineAATex = Resources.Load<Texture2D>(k_TangentLineAATexPath);
 
         const string k_TangentLineAATexPath = "Textures/TangentLineAATex";
         const int k_MaxDecimals = 15;
@@ -86,18 +92,36 @@ namespace UnityEditor.Splines
         const float k_KnotPickingDistance = 18f;
 
         static readonly Vector3[] s_LineBuffer = new Vector3[2];
-        public static SelectableTangent lastHoveredTangent { get; private set; }
-        public static int lastHoveredTangentID { get; private set; }
 
-        internal static bool IsLastHoveredTangent(SelectableTangent tangent)
+        public static ISplineElement lastHoveredElement { get; private set; }
+        public static int lastHoveredElementId { get; private set; }
+
+        internal static bool ShouldShowTangent(SelectableTangent tangent)
         {
-            return tangent.Equals(lastHoveredTangent);
+            if (!SplineSelectionUtility.IsSelectable(tangent) || Mathf.Approximately(math.length(tangent.LocalDirection), 0f))
+                return false;
+
+            if (SplineHandleSettings.ShowAllTangents)
+                return true;
+
+            return SplineSelection.IsSelectedOrAdjacentToSelected(tangent);
+        }
+        
+        internal static void ResetLastHoveredElement()
+        {
+            lastHoveredElementId = -1;
+            lastHoveredElement = null;
+        }
+        
+        internal static bool IsLastHoveredElement<T>(T element)
+        {
+            return element.Equals(lastHoveredElement);
         }
 
-        internal static void SetLastHoveredTangent(SelectableTangent tangent, int controlId)
+        internal static void SetLastHoveredElement<T>(T element, int controlId) where T : ISplineElement
         {
-            lastHoveredTangentID = controlId;
-            lastHoveredTangent = tangent;
+            lastHoveredElementId = controlId;
+            lastHoveredElement = element;
         }
 
         internal static Ray TransformRay(Ray ray, Matrix4x4 matrix)
@@ -200,15 +224,6 @@ namespace UnityEditor.Splines
             return Mathf.Max(0, Vector2.Distance(screenPos, Event.current.mousePosition) - radius);
         }
 
-        internal static Vector3 RoundBasedOnMinimumDifference(Vector3 position)
-        {
-            var minDiff = GetMinDifference(position);
-            position.x = RoundBasedOnMinimumDifference(position.x, minDiff.x);
-            position.y = RoundBasedOnMinimumDifference(position.y, minDiff.y);
-            position.z = RoundBasedOnMinimumDifference(position.z, minDiff.z);
-            return position;
-        }
-
         internal static Vector3 GetMinDifference(Vector3 position)
         {
             return Vector3.one * (HandleUtility.GetHandleSize(position) / 80f);
@@ -294,7 +309,7 @@ namespace UnityEditor.Splines
 
             s_AAWireDiscBuffer[s_AAWireDiscBuffer.Length - 1] = s_AAWireDiscBuffer[0];
 
-            var tex = thickness > 2f ? thickTangentLineAATex : null;
+            var tex = thickness > 2f ? denseLineAATex : null;
             Handles.DrawAAPolyLine(tex, thickness, s_AAWireDiscBuffer);
         }
     }

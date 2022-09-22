@@ -339,16 +339,38 @@ namespace UnityEngine.Splines
         /// <returns>The bounds of a spline.</returns>
         public static Bounds GetBounds<T>(this T spline) where T : ISpline
         {
+            return GetBounds(spline, float4x4.identity);
+        }
+        
+        /// <summary>
+        /// Creates a bounding box for a spline.
+        /// </summary>
+        /// <param name="spline">The spline to calculate bounds for.</param>
+        /// <param name="transform">The matrix to transform the spline's elements with.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <returns>The bounds of a spline.</returns>
+        public static Bounds GetBounds<T>(this T spline, float4x4 transform) where T : ISpline
+        {
             if (spline.Count < 1)
                 return default;
 
             var knot = spline[0];
-            Bounds bounds = new Bounds(knot.Position, Vector3.zero);
+            Bounds bounds = new Bounds(math.transform(transform, knot.Position), Vector3.zero);
+            
+            // Only encapsulate first tangentIn if the spline is closed - otherwise it's not contributing to the spline's shape.
+            if (spline.Closed)
+                bounds.Encapsulate(math.transform(transform, knot.Position + math.rotate(knot.Rotation, knot.TangentIn)));
+            bounds.Encapsulate(math.transform(transform, knot.Position + math.rotate(knot.Rotation, knot.TangentOut)));
 
             for (int i = 1, c = spline.Count; i < c; ++i)
             {
                 knot = spline[i];
-                bounds.Encapsulate(knot.Position);
+                bounds.Encapsulate(math.transform(transform, knot.Position));
+                bounds.Encapsulate(math.transform(transform, knot.Position + math.rotate(knot.Rotation, knot.TangentIn)));
+                
+                // Encapsulate last tangentOut if the spline is closed - otherwise it's not contributing to the spline's shape.
+                if (spline.Closed || (!spline.Closed && i < c - 1))
+                    bounds.Encapsulate(math.transform(transform, knot.Position + math.rotate(knot.Rotation, knot.TangentOut)));
             }
 
             return bounds;
@@ -390,9 +412,16 @@ namespace UnityEngine.Splines
             t = math.dot(p - a, b - a) / l2;
 
             if (t < 0.0)
+            {
+                t = 0f;
                 return a;
+            }
+
             if (t > 1.0)
+            {
+                t = 1f;
                 return b;
+            }
 
             return a + t * (b - a);
         }
@@ -404,16 +433,25 @@ namespace UnityEngine.Splines
             float dot = math.dot(rd, relativePoint);
             return ro + rd * dot;
         }
-
+        /// <summary>
+        /// Gets the number of segments for a specified spline length and resolution.
+        /// </summary>
+        /// <param name="length">The length of the spline to consider.</param>
+        /// <param name="resolution">The value used to calculate the number of segments for a length. This is calculated
+        /// as max(MIN_SEGMENTS, min(MAX_SEGMENTS, sqrt(length) * resolution)).
+        /// </param>
+        /// <returns>
+        /// The number of segments for a length and resolution.
+        /// </returns>
         [Obsolete("Use "+nameof(GetSubdivisionCount)+" instead.", false)]
         public static int GetSegmentCount(float length, int resolution) => GetSubdivisionCount(length,resolution);
 
         /// <summary>
-        /// Use this function to calculate the number of subdivisions for a given spline length and resolution.
+        /// Gets the number of subdivisions for a spline length and resolution.
         /// </summary>
-        /// <param name="length">A distance value in <see cref="PathIndexUnit"/>.</param>
-        /// <param name="resolution">A value used to calculate the number of subdivisions for a length. This is calculated
-        /// as max(MIN_SUBDIVISIONS, min(MAX_SUBDIVISIONS, sqrt(length) * resolution)).
+        /// <param name="length">The length of the spline to consider.</param>
+        /// <param name="resolution">The resolution to consider. Higher resolutions result in more
+        /// precise representations. However, higher resolutions have higher performance requirements.
         /// </param>
         /// <returns>
         /// The number of subdivisions as calculated for given length and resolution.
@@ -756,17 +794,49 @@ namespace UnityEngine.Splines
             }
         }
 
+        /// <summary>
+        /// Gets the index of a knot that precedes a spline index. This method uses the <see cref="Spline.Count"/> 
+        /// and <see cref="Spline.Closed"/> properties to ensure that it returns the correct index of the knot.
+        /// </summary>
+        /// <param name="spline">The spline to consider.</param>
+        /// <param name="index">The current index to consider.</param>
+        /// <typeparam name="T">A type that implements ISpline.</typeparam>
+        /// <returns>Returns a knot index that precedes the `index` on the considered spline.</returns>    
         public static int PreviousIndex<T>(this T spline, int index) where T : ISpline
             => PreviousIndex(index, spline.Count, spline.Closed);
 
+        /// <summary>
+        /// Gets the index of a knot that follows a spline index. This method uses the <see cref="Spline.Count"/> and
+        /// <see cref="Spline.Closed"/> properties to ensure that it returns the correct index of the knot.
+        /// </summary>
+        /// <param name="spline">The spline to consider.</param>
+        /// <param name="index">The current index to consider.</param>
+        /// <typeparam name="T">A type that implements ISpline.</typeparam>
+        /// <returns>The knot index after `index` on the considered spline.</returns>
         public static int NextIndex<T>(this T spline, int index) where T : ISpline
             => NextIndex(index, spline.Count, spline.Closed);
 
-        public static BezierKnot Next<T>(this T spline, int index) where T : ISpline
-            => spline[NextIndex(spline, index)];
-
+        /// <summary>
+        /// Gets the <see cref="BezierKnot"/> before spline[index]. This method uses the <see cref="Spline.Count"/>
+        /// and <see cref="Spline.Closed"/> properties to ensure that it returns the correct knot.
+        /// </summary>
+        /// <param name="spline">The spline to consider.</param>
+        /// <param name="index">The current index to consider.</param>
+        /// <typeparam name="T">A type that implements ISpline.</typeparam>
+        /// <returns>The knot before the knot at spline[index].</returns>
         public static BezierKnot Previous<T>(this T spline, int index) where T : ISpline
             => spline[PreviousIndex(spline, index)];
+
+        /// <summary>
+        /// Gets the <see cref="BezierKnot"/> after spline[index]. This method uses the <see cref="Spline.Count"/>
+        /// and <see cref="Spline.Closed"/> properties to ensure that it returns the correct knot.
+        /// </summary>
+        /// <param name="spline">The spline to consider.</param>
+        /// <param name="index">The current index to consider.</param>
+        /// <typeparam name="T">A type that implements ISpline.</typeparam>
+        /// <returns>The knot after the knot at spline[index].</returns>
+        public static BezierKnot Next<T>(this T spline, int index) where T : ISpline
+            => spline[NextIndex(spline, index)];
 
         internal static int PreviousIndex(int index, int count, bool wrap)
         {
@@ -858,24 +928,30 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Creates a new spline and adds it to the SplineContainer.
+        /// Creates a new spline and adds it to the  <see cref="ISplineContainer"/>.
         /// </summary>
-        /// <param name="container">The target SplineContainer.</param>
-        /// <return>Returns the spline that was created and added to the container.</return>
+        /// <param name="container">The target container.</param>
+        /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
+        /// <returns>Returns the spline that was created and added to the container.</returns>
         public static Spline AddSpline<T>(this T container) where T : ISplineContainer
         {
             var splines = new List<Spline>(container.Splines);
             var spline = new Spline();
             splines.Add(spline);
             container.Splines = splines;
+#if UNITY_EDITOR
+            ISplineContainer.SplineAdded?.Invoke(container, splines.Count - 1);
+#endif
             return spline;
         }
 
-        /// Removes a spline from a SplineContainer.
+        /// <summary>
+        /// Removes a spline from a <see cref="ISplineContainer"/>.
         /// </summary>
-        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="container">The target container.</param>
         /// <param name="splineIndex">The index of the spline to remove from the SplineContainer.</param>
-        /// <return>Returns true if the spline was removed from the container.</return>
+        /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
+        /// <returns>Returns true if the spline was removed from the container.</returns>
         public static bool RemoveSplineAt<T>(this T container, int splineIndex) where T : ISplineContainer
         {
             if (splineIndex < 0 || splineIndex >= container.Splines.Count)
@@ -886,15 +962,19 @@ namespace UnityEngine.Splines
             container.KnotLinkCollection.SplineRemoved(splineIndex);
 
             container.Splines = splines;
+#if UNITY_EDITOR
+            ISplineContainer.SplineRemoved?.Invoke(container, splineIndex);
+#endif
             return true;
         }
 
         /// <summary>
-        /// Removes a spline from a SplineContainer.
+        /// Removes a spline from a <see cref="ISplineContainer"/>.
         /// </summary>
         /// <param name="container">The target SplineContainer.</param>
         /// <param name="spline">The spline to remove from the SplineContainer.</param>
-        /// <return>Returns true if the spline was removed from the container.</return>
+        /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
+        /// <returns>Returns true if the spline was removed from the container.</returns>
         public static bool RemoveSpline<T>(this T container, Spline spline) where T : ISplineContainer
         {
             var splines = new List<Spline>(container.Splines);
@@ -906,6 +986,9 @@ namespace UnityEngine.Splines
             container.KnotLinkCollection.SplineRemoved(index);
 
             container.Splines = splines;
+#if UNITY_EDITOR
+            ISplineContainer.SplineRemoved?.Invoke(container, index);
+#endif
             return true;
         }
 
@@ -916,10 +999,11 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Synchronizes the position of all knots linked to the knot at `index`.
+        /// Sets the position of all knots linked to the knot at `index` in an <see cref="ISplineContainer"/> to the same position.
         /// </summary>
-        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="container">The target container.</param>
         /// <param name="index">The `SplineKnotIndex` of the knot to use to synchronize the positions.</param>
+        /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
         public static void SetLinkedKnotPosition<T>(this T container, SplineKnotIndex index) where T : ISplineContainer
         {
             if (!container.KnotLinkCollection.TryGetKnotLinks(index, out var knots))
@@ -940,11 +1024,12 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Links two knots in a SplineContainer. The two knots can be on different splines, but both must be in the referenced SplineContainer.
+        /// Links two knots in an <see cref="ISplineContainer"/>. The two knots can be on different splines, but both must be in the referenced SplineContainer.
         /// If these knots are linked to other knots, all existing links are kept and updated.
         /// </summary>
         /// <param name="container">The target SplineContainer.</param>
         /// <param name="knotA">The first knot to link.</param>
+        /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
         /// <param name="knotB">The second knot to link.</param>
         public static void LinkKnots<T>(this T container, SplineKnotIndex knotA,  SplineKnotIndex knotB) where T : ISplineContainer
         {
@@ -952,10 +1037,11 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Unlinks several knots from a SplineContainer. A knot in `knots` disconnects from other knots it was linked to.
+        /// Unlinks several knots from an <see cref="ISplineContainer"/>. A knot in `knots` disconnects from other knots it was linked to.
         /// </summary>
         /// <param name="container">The target SplineContainer.</param>
         /// <param name="knots">The knot to unlink.</param>
+        /// <typeparam name="T">A type implementing <see cref="ISplineContainer"/>.</typeparam>
         public static void UnlinkKnots<T>(this T container, IReadOnlyList<SplineKnotIndex> knots) where T : ISplineContainer
         {
             foreach (var knot in knots)

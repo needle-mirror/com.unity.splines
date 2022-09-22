@@ -2,3 +2,14 @@ apiRules:
   - exclude:
       uidRegex: Tests$
       type: Namespace
+  - exclude:
+      uidRegex: Debug$
+      type: Namespace
+  - exclude:
+      hasAttribute:
+        uid: System.ObsoleteAttribute
+      type: Member
+  - exclude:
+      hasAttribute:
+        uid: System.ObsoleteAttribute
+      type: Type

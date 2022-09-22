@@ -28,6 +28,7 @@ namespace UnityEditor.Splines
         /// </summary>
         [Obsolete("Use AfterSplineWasModified instead.", false)]
         public static event Action<Spline> afterSplineWasModified;
+
         /// <summary>
         /// Invoked once per-frame if a spline property has been modified.
         /// </summary>
@@ -39,7 +40,7 @@ namespace UnityEditor.Splines
         internal static event Action<SelectableKnot> knotRemoved;
 
         [UserSetting]
-        internal static Pref<TangentMode> s_DefaultTangentMode = new ("Splines.DefaultTangentMode", TangentMode.AutoSmooth);
+        internal static Pref<TangentMode> s_DefaultTangentMode = new("Splines.DefaultTangentMode", TangentMode.AutoSmooth);
 
         /// <summary>
         /// Represents the default TangentMode used to place or insert knots. If the user does not define tangent
@@ -101,7 +102,7 @@ namespace UnityEditor.Splines
         /// Get a <see cref="SplineInfo"/> representation of the splines in a list of targets.
         /// </summary>
         /// <param name="targets">A list of Objects inheriting from <see cref="ISplineContainer"/>.</param>
-        /// <param name="results">An array to store the <see cref="SplineInfo"/> of splines found in the targets.</param>
+        /// <param name="results">A list to store the <see cref="SplineInfo"/> of splines found in the targets.</param>
         internal static void GetSplinesFromTargets(IEnumerable<Object> targets, List<SplineInfo> results)
         {
             results.Clear();
@@ -115,11 +116,24 @@ namespace UnityEditor.Splines
         /// Get a <see cref="SplineInfo"/> representation of the splines in a target.
         /// </summary>
         /// <param name="target">An Object inheriting from <see cref="ISplineContainer"/>.</param>
-        /// <param name="results">An array to store the <see cref="SplineInfo"/> of splines found in the targets.</param>
+        /// <param name="results">A list to store the <see cref="SplineInfo"/> of splines found in the targets.</param>
         internal static void GetSplinesFromTarget(Object target, List<SplineInfo> results)
         {
             results.Clear();
             GetSplineInfosFromContainer(target, results);
+        }
+
+        /// <summary>
+        /// Get a <see cref="SplineInfo"/> representation of the splines in a target.
+        /// </summary>
+        /// <param name="target">An Object inheriting from <see cref="ISplineContainer"/>.</param>
+        /// <param name="results">A list to store the <see cref="SplineInfo"/> of splines found in the targets.</param>
+        /// <returns>True if a at least a spline was found in the target.</returns>
+        internal static bool TryGetSplinesFromTarget(Object target, List<SplineInfo> results)
+        {
+            results.Clear();
+            GetSplineInfosFromContainer(target, results);
+            return results.Count > 0;
         }
 
         /// <summary>
@@ -162,7 +176,25 @@ namespace UnityEditor.Splines
             }
         }
 
-        internal static Bounds GetBounds<T>(IReadOnlyList<T> elements, bool useKnotPositionForTangents)
+        internal static Bounds GetBounds(IReadOnlyList<SplineInfo> splines)
+        {
+            Bounds bounds = default;
+            bool initialized = false;
+
+            for (int i = 0; i < splines.Count; ++i)
+            {
+                var spline = splines[i].Spline;
+
+                if (spline.Count > 0 && !initialized)
+                    bounds = spline.GetBounds(splines[i].LocalToWorld);
+                else
+                    bounds.Encapsulate(spline.GetBounds(splines[i].LocalToWorld));
+            }
+
+            return bounds;
+        }
+
+        internal static Bounds GetElementBounds<T>(IReadOnlyList<T> elements, bool useKnotPositionForTangents)
             where T : ISplineElement
         {
             if (elements == null)
@@ -233,7 +265,7 @@ namespace UnityEditor.Splines
             return math.lengthsq(tangent) < float.Epsilon ? DefaultTangentMode : TangentMode.Mirrored;
         }
 
-        static SelectableKnot AddKnotToTheEndInternal(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentOut, int index, int previousIndex)
+        static SelectableKnot AddKnotInternal(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentOut, int index, int previousIndex)
         {
             var spline = splineInfo.Spline;
 
@@ -254,6 +286,7 @@ namespace UnityEditor.Splines
             {
                 localRotation = math.mul(math.inverse(math.quaternion(localToWorld)), quaternion.LookRotationSafe(tangentOut, normal));
                 var tangentMagnitude = math.length(tangentOut);
+
                 // Tangents are always assumed to be +/- forward when TangentMode is not Broken.
                 var localTangentIn = new float3(0f, 0f, -tangentMagnitude);
                 var localTangentOut = new float3(0f, 0f, tangentMagnitude);
@@ -276,7 +309,7 @@ namespace UnityEditor.Splines
                 spline[previousIndex] = current;
             }
 
-            var knot = new SelectableKnot(splineInfo, spline.Count - 1);
+            var knot = new SelectableKnot(splineInfo, index);
             SplineSelection.Set(knot);
 
             return knot;
@@ -284,12 +317,12 @@ namespace UnityEditor.Splines
 
         internal static SelectableKnot AddKnotToTheEnd(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentOut)
         {
-            return AddKnotToTheEndInternal(splineInfo, worldPosition, normal, tangentOut, splineInfo.Spline.Count, splineInfo.Spline.Count - 1);
+            return AddKnotInternal(splineInfo, worldPosition, normal, tangentOut, splineInfo.Spline.Count, splineInfo.Spline.Count - 1);
         }
 
         internal static SelectableKnot AddKnotToTheStart(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentIn)
         {
-            return AddKnotToTheEndInternal(splineInfo, worldPosition, normal, -tangentIn, 0, 1);
+            return AddKnotInternal(splineInfo, worldPosition, normal, -tangentIn, 0, 1);
         }
 
         internal static void RemoveKnot(SelectableKnot knot)
@@ -301,6 +334,31 @@ namespace UnityEditor.Splines
                 knot.SplineInfo.Container.RemoveSplineAt(knot.SplineInfo.Index);
 
             knotRemoved?.Invoke(knot);
+        }
+
+        // Zero out the given tangent and switch knot's tangent mode to Continous if it's Mirrored.
+        internal static void ClearTangent(SelectableTangent tangent)
+        {
+            var spline = tangent.SplineInfo.Spline;
+            var knotIndex = tangent.Owner.KnotIndex;
+            var selectableKnot = tangent.Owner;
+            var bezierKnot = spline[knotIndex];
+
+            if (selectableKnot.Mode == TangentMode.Mirrored)
+                selectableKnot.Mode = TangentMode.Continuous;
+
+            switch (tangent.TangentIndex)
+            {
+                case (int)BezierTangent.In:
+                    bezierKnot.TangentIn = float3.zero;
+                    break;
+
+                case (int)BezierTangent.Out:
+                    bezierKnot.TangentOut = float3.zero;
+                    break;
+            }
+
+            spline[knotIndex] = bezierKnot;
         }
 
         // Calculate curve control points in world space given a new end knot.
@@ -359,7 +417,7 @@ namespace UnityEditor.Splines
         internal static BezierCurve GetPreviewCurveFromEnd(SplineInfo info, int from, float3 toWorldPoint, float3 toWorldTangent, TangentMode toMode)
         {
             var tangentOut = info.Spline[from].TangentOut;
-            if(info.Spline.Closed && (from == 0 || AreKnotLinked( new SelectableKnot(info, from), new SelectableKnot(info, 0))))
+            if (info.Spline.Closed && (from == 0 || AreKnotLinked(new SelectableKnot(info, from), new SelectableKnot(info, 0))))
             {
                 var fromKnot = info.Spline[from];
                 tangentOut = -fromKnot.TangentIn;
@@ -372,7 +430,7 @@ namespace UnityEditor.Splines
         internal static BezierCurve GetPreviewCurveFromStart(SplineInfo info, int from, float3 toWorldPoint, float3 toWorldTangent, TangentMode toMode)
         {
             var tangentIn = info.Spline[from].TangentIn;
-            if(info.Spline.Closed && (from == info.Spline.Count - 1  || AreKnotLinked( new SelectableKnot(info, from), new SelectableKnot(info, info.Spline.Count - 1))))
+            if (info.Spline.Closed && (from == info.Spline.Count - 1 || AreKnotLinked(new SelectableKnot(info, from), new SelectableKnot(info, info.Spline.Count - 1))))
             {
                 var fromKnot = info.Spline[from];
                 tangentIn = -fromKnot.TangentOut;
@@ -397,20 +455,130 @@ namespace UnityEditor.Splines
             return SplineUtility.GetKnotRotation(tangent, normal);
         }
 
+        //Get the affected curves when trying to add a knot on an existing segment
+        //internal static void GetAffectedCurves(SplineCurveHit hit, Dictionary<Spline, Dictionary<int, List<BezierKnot>>> affectedCurves)
+        internal static void GetAffectedCurves(SplineCurveHit hit, List<(Spline s, int index, List<BezierKnot> knots)> affectedCurves)
+        {
+            var spline = hit.PreviousKnot.SplineInfo.Spline;
+            var curveIndex = hit.PreviousKnot.KnotIndex;
+            var hitLocalPosition = hit.PreviousKnot.SplineInfo.Transform.InverseTransformPoint(hit.Position);
+
+            var previewKnots = new List<BezierKnot>();
+
+            var sKnot = hit.PreviousKnot;
+            var bKnot = new BezierKnot(sKnot.LocalPosition, sKnot.TangentIn.LocalPosition, sKnot.TangentOut.LocalPosition, sKnot.LocalRotation);
+
+            var insertedKnot = GetInsertedKnotPreview(hit.PreviousKnot.SplineInfo, hit.NextKnot.KnotIndex, hit.T, out var leftTangent, out var rightTangent);
+
+            if (spline.GetTangentMode(sKnot.KnotIndex) == TangentMode.AutoSmooth)
+            {
+                var previousKnot = spline.Previous(sKnot.KnotIndex);
+                var previousKnotIndex = spline.PreviousIndex(sKnot.KnotIndex);
+                bKnot = SplineUtility.GetAutoSmoothKnot(sKnot.LocalPosition, previousKnot.Position, hitLocalPosition);
+
+                affectedCurves.Add((spline, previousKnotIndex, new List<BezierKnot>() { previousKnot, bKnot }));
+            }
+            else
+                bKnot.TangentOut = math.mul(math.inverse(sKnot.LocalRotation), leftTangent);
+
+            previewKnots.Add(bKnot);
+
+            previewKnots.Add(insertedKnot);
+            var affectedCurveIndex = affectedCurves.FindIndex(x => x.s == spline && x.index == curveIndex);
+            if (affectedCurveIndex >= 0)
+                affectedCurves.RemoveAt(affectedCurveIndex);
+            affectedCurves.Add((spline, curveIndex, previewKnots));
+
+            sKnot = hit.NextKnot;
+            bKnot = new BezierKnot(sKnot.LocalPosition, sKnot.TangentIn.LocalPosition, sKnot.TangentOut.LocalPosition, sKnot.LocalRotation);
+
+            if (spline.GetTangentMode(sKnot.KnotIndex) == TangentMode.AutoSmooth)
+            {
+                var nextKnot = spline.Next(sKnot.KnotIndex);
+                bKnot = SplineUtility.GetAutoSmoothKnot(sKnot.LocalPosition, hitLocalPosition, nextKnot.Position);
+
+                affectedCurves.Add((spline, sKnot.KnotIndex, new List<BezierKnot>() { bKnot, nextKnot }));
+            }
+            else
+                bKnot.TangentIn = math.mul(math.inverse(sKnot.LocalRotation), rightTangent);
+
+
+            previewKnots.Add(bKnot);
+        }
+
+        internal static void GetAffectedCurves(SplineInfo splineInfo, Vector3 knotPosition, SelectableKnot lastKnot, int previousKnotIndex, List<(Spline s, int index, List<BezierKnot> knots)> affectedCurves)
+        {
+            var spline = splineInfo.Spline;
+            if (spline != null)
+            {
+                var lastKnotIndex = lastKnot.KnotIndex;
+                var inverted = previousKnotIndex > lastKnot.KnotIndex;
+
+                var affectedCurveIndex = affectedCurves.FindIndex(x => x.s == spline && x.index == (inverted ? lastKnotIndex : previousKnotIndex));
+
+                var lastTangentMode = spline.GetTangentMode(lastKnotIndex);
+                if (lastTangentMode == TangentMode.AutoSmooth)
+                {
+                    var previousKnot = spline[previousKnotIndex];
+                    var autoSmoothKnot = inverted ? SplineUtility.GetAutoSmoothKnot(lastKnot.LocalPosition, knotPosition, previousKnot.Position) : SplineUtility.GetAutoSmoothKnot(lastKnot.LocalPosition, previousKnot.Position, knotPosition);
+
+                    if (affectedCurveIndex < 0)
+                    {
+                        if (inverted)
+                            affectedCurves.Insert(0, (spline, lastKnot.KnotIndex, new List<BezierKnot>() { autoSmoothKnot, previousKnot }));
+                        else
+                            affectedCurves.Add((spline, previousKnotIndex, new List<BezierKnot>() { previousKnot, autoSmoothKnot }));
+                    }
+                    else
+                    {
+                        //The segment as already some changes due to some modifications on the previous knots in the previews
+                        //So we only want to adapt the last knot in that case
+                        var knots = affectedCurves[affectedCurveIndex].knots;
+                        knots[inverted ? 0 : 1] = autoSmoothKnot;
+                    }
+                }
+            }
+        }
+
+        internal static BezierKnot GetInsertedKnotPreview(SplineInfo splineInfo, int index, float t, out Vector3 leftOutTangent, out Vector3 rightInTangent)
+        {
+            var spline = splineInfo.Spline;
+
+            var previousIndex = SplineUtility.PreviousIndex(index, spline.Count, spline.Closed);
+            var previous = spline[previousIndex];
+
+            var curveToSplit = new BezierCurve(previous, spline[index]);
+            CurveUtility.Split(curveToSplit, t, out var leftCurve, out var rightCurve);
+
+            var nextIndex = SplineUtility.NextIndex(index, spline.Count, spline.Closed);
+            var next = spline[nextIndex];
+
+            var up = CurveUtility.EvaluateUpVector(curveToSplit, t, math.rotate(previous.Rotation, math.up()), math.rotate(next.Rotation, math.up()));
+            var rotation = quaternion.LookRotationSafe(math.normalizesafe(rightCurve.Tangent0), up);
+            var inverseRotation = math.inverse(rotation);
+
+            leftOutTangent = leftCurve.Tangent0;
+            rightInTangent = rightCurve.Tangent1;
+
+            return new BezierKnot(leftCurve.P3, math.mul(inverseRotation, leftCurve.Tangent1), math.mul(inverseRotation, rightCurve.Tangent0), rotation);
+        }
+
         internal static SelectableKnot InsertKnot(SplineInfo splineInfo, int index, float t)
         {
             var spline = splineInfo.Spline;
             if (spline == null || index < 0)
                 return default;
 
-            var curveToSplit = new BezierCurve(spline[SplineUtility.PreviousIndex(index, spline.Count, spline.Closed)], spline[index]);
+            var previousIndex = SplineUtility.PreviousIndex(index, spline.Count, spline.Closed);
+            var previous = spline[previousIndex];
+
+            var curveToSplit = new BezierCurve(previous, spline[index]);
             CurveUtility.Split(curveToSplit, t, out var leftCurve, out var rightCurve);
 
-            spline.Insert(index, default);
+            //Inserting the knot at the right position to compute correctly auto-smooth tangents
+            spline.Insert(index, new BezierKnot(leftCurve.P3));
 
-            var previousIndex = SplineUtility.PreviousIndex(index, spline.Count, spline.Closed);
             var nextIndex = SplineUtility.NextIndex(index, spline.Count, spline.Closed);
-            var previous = spline[previousIndex];
             var next = spline[nextIndex];
 
             if (spline.GetTangentMode(previousIndex) == TangentMode.Mirrored)
@@ -419,8 +587,10 @@ namespace UnityEditor.Splines
             if (spline.GetTangentMode(nextIndex) == TangentMode.Mirrored)
                 spline.SetTangentMode(nextIndex, TangentMode.Continuous);
 
-            previous.TangentOut = math.mul(math.inverse(previous.Rotation), leftCurve.Tangent0);
-            next.TangentIn = math.mul(math.inverse(next.Rotation), rightCurve.Tangent1);
+            if (AreTangentsModifiable(splineInfo.Spline.GetTangentMode(previousIndex)))
+                previous.TangentOut = math.mul(math.inverse(previous.Rotation), leftCurve.Tangent0);
+            if (AreTangentsModifiable(splineInfo.Spline.GetTangentMode(nextIndex)))
+                next.TangentIn = math.mul(math.inverse(next.Rotation), rightCurve.Tangent1);
 
             var up = CurveUtility.EvaluateUpVector(curveToSplit, t, math.rotate(previous.Rotation, math.up()), math.rotate(next.Rotation, math.up()));
             var rotation = quaternion.LookRotationSafe(math.normalizesafe(rightCurve.Tangent0), up);
@@ -450,6 +620,12 @@ namespace UnityEditor.Splines
             var container = knot.SplineInfo.Container;
             knots.Clear();
 
+            if (container.KnotLinkCollection == null)
+            {
+                knots.Add(knot);
+                return;
+            }
+
             var linkedKnots = container.KnotLinkCollection.GetKnotLinks(new SplineKnotIndex(knot.SplineInfo.Index, knot.KnotIndex));
             foreach (var index in linkedKnots)
                 knots.Add(new SelectableKnot(new SplineInfo(container, index.Spline), index.Knot));
@@ -467,14 +643,16 @@ namespace UnityEditor.Splines
                 for (int j = i + 1; j < knots.Count; ++j)
                 {
                     var otherKnot = knots[j];
+
                     // Do not link knots from different containers
                     if (otherKnot.SplineInfo.Container != container)
-                      continue;
+                        continue;
 
                     var otherSplineInfo = otherKnot.SplineInfo;
+
                     // Do not link same knots
                     if (otherSplineInfo.Spline == spline && otherKnot.KnotIndex == knot.KnotIndex)
-                    continue;
+                        continue;
 
                     var otherSplineKnotIndex = new SplineKnotIndex() { Spline = otherKnot.SplineInfo.Index, Knot = otherKnot.KnotIndex };
 
@@ -529,7 +707,7 @@ namespace UnityEditor.Splines
             return false;
         }
 
-        internal static bool TryGetNearestKnot(IReadOnlyList<SplineInfo> splines, Vector2 mousePosition, out SelectableKnot knot, float maxDistance = SplineHandleUtility.pickingDistance)
+        internal static bool TryGetNearestKnot(IReadOnlyList<SplineInfo> splines, out SelectableKnot knot, float maxDistance = SplineHandleUtility.pickingDistance)
         {
             float nearestDist = float.MaxValue;
             SelectableKnot nearest = knot = default;
@@ -556,7 +734,7 @@ namespace UnityEditor.Splines
             return true;
         }
 
-        internal static bool TryGetNearestPositionOnCurve(IReadOnlyList<SplineInfo> splines, Vector2 mousePosition, out SplineCurveHit hit, float maxDistance = SplineHandleUtility.pickingDistance)
+        internal static bool TryGetNearestPositionOnCurve(IReadOnlyList<SplineInfo> splines, out SplineCurveHit hit, float maxDistance = SplineHandleUtility.pickingDistance)
         {
             SplineCurveHit nearestHit = hit = default;
             BezierCurve nearestCurve = default;
@@ -603,10 +781,10 @@ namespace UnityEditor.Splines
         internal static bool TryDuplicateSpline(SelectableKnot fromKnot, SelectableKnot toKnot, out int newSplineIndex)
         {
             newSplineIndex = -1;
-            if(!(fromKnot.IsValid() && toKnot.IsValid()))
+            if (!(fromKnot.IsValid() && toKnot.IsValid()))
                 return false;
 
-            if(!fromKnot.SplineInfo.Equals(toKnot.SplineInfo))
+            if (!fromKnot.SplineInfo.Equals(toKnot.SplineInfo))
             {
                 Debug.LogError("Duplicate failed: The 2 knots must be on the same Spline.");
                 return false;
@@ -632,6 +810,7 @@ namespace UnityEditor.Splines
                 if (container.KnotLinkCollection.TryGetKnotLinks(new SplineKnotIndex(originalSplineIndex, i), out _))
                     container.KnotLinkCollection.Link(new SplineKnotIndex(originalSplineIndex, i), new SplineKnotIndex(newSplineIndex, i - startIndex));
             }
+
             return true;
         }
 
@@ -654,14 +833,14 @@ namespace UnityEditor.Splines
                     return firstKnot;
 
                 // If the knot wasn't the first one we also need need to link both ends of the spline to keep the same spline we had before
-                LinkKnots(new List<SelectableKnot> {firstKnot, lastKnot});
+                LinkKnots(new List<SelectableKnot> { firstKnot, lastKnot });
             }
 
             // If not closed, split does nothing one of the ends of the spline
             else if (knot.KnotIndex == 0 || knot.KnotIndex == knot.SplineInfo.Spline.Count - 1)
                 return knot;
 
-            if(TryDuplicateSpline(knot, new SelectableKnot(knot.SplineInfo, knot.SplineInfo.Spline.Count - 1), out int splineIndex))
+            if (TryDuplicateSpline(knot, new SelectableKnot(knot.SplineInfo, knot.SplineInfo.Spline.Count - 1), out int splineIndex))
             {
                 formerSpline.Resize(knot.KnotIndex + 1);
                 return new SelectableKnot(new SplineInfo(knot.SplineInfo.Container, knot.SplineInfo.Container.Splines.Count - 1), 0);
@@ -694,7 +873,8 @@ namespace UnityEditor.Splines
             var isOtherKnotAtStart = otherKnot.KnotIndex == 0;
 
             //Reverse spline if needed, this is needed when the 2 knots are both starts or ends of their respective spline
-            if(isActiveKnotAtStart == isOtherKnotAtStart)
+            if (isActiveKnotAtStart == isOtherKnotAtStart)
+
                 //We give more importance to the active knot, so we reverse the spline associated to otherKnot
                 ReverseFlow(otherKnot.SplineInfo);
 
@@ -702,12 +882,13 @@ namespace UnityEditor.Splines
             var links = new List<List<SelectableKnot>>();
 
             // Get all LinkedKnots on the splines
-            for(int i = 0; i < activeKnot.SplineInfo.Spline.Count; ++i)
+            for (int i = 0; i < activeKnot.SplineInfo.Spline.Count; ++i)
             {
                 links.Add(new List<SelectableKnot>());
                 GetKnotLinks(new SelectableKnot(activeKnot.SplineInfo, i), links[i]);
             }
-            for(int i = 0; i < otherKnot.SplineInfo.Spline.Count; ++i)
+
+            for (int i = 0; i < otherKnot.SplineInfo.Spline.Count; ++i)
             {
                 var otherLinks = new List<SelectableKnot>();
                 links.Add(otherLinks);
@@ -715,7 +896,7 @@ namespace UnityEditor.Splines
             }
 
             //Unlink all knots in the spline
-            foreach(var linkedKnots in links)
+            foreach (var linkedKnots in links)
                 UnlinkKnots(linkedKnots);
 
             //Save relevant data before joining the splines
@@ -725,21 +906,21 @@ namespace UnityEditor.Splines
             var otherSpline = otherKnot.SplineInfo.Spline;
             var otherSplineIndex = otherKnot.SplineInfo.Index;
             var otherSplineCount = otherSpline.Count;
-            if(otherSplineCount > 1)
+            if (otherSplineCount > 1)
             {
                 //Join Splines
-                if(isActiveKnotAtStart)
+                if (isActiveKnotAtStart)
                 {
                     //All position from the other spline must be added before the knot A
                     //Don't copy the last knot of the other spline as this is the one to join
-                    for(int i = otherSplineCount - 2; i >= 0 ; i--)
-                        activeSpline.Insert(0,otherSpline[i], otherSpline.GetTangentMode(i));
+                    for (int i = otherSplineCount - 2; i >= 0; i--)
+                        activeSpline.Insert(0, otherSpline[i], otherSpline.GetTangentMode(i));
                 }
                 else
                 {
                     //All position from the other spline must be added after the knot A
                     //Don't copy the first knot of the other spline as this is the one to join
-                    for(int i = 1; i < otherSplineCount; i++)
+                    for (int i = 1; i < otherSplineCount; i++)
                         activeSpline.Add(otherSpline[i], otherSpline.GetTangentMode(i));
                 }
             }
@@ -751,30 +932,31 @@ namespace UnityEditor.Splines
             //Restore links
             foreach (var linkedKnots in links)
             {
-                if(linkedKnots.Count == 1)
+                if (linkedKnots.Count == 1)
                     continue;
 
-                for(int i = 0; i < linkedKnots.Count; ++i)
+                for (int i = 0; i < linkedKnots.Count; ++i)
                 {
                     var knot = linkedKnots[i];
-                    if(knot.SplineInfo.Index == activeSplineIndex || knot.SplineInfo.Index == otherSplineIndex)
+                    if (knot.SplineInfo.Index == activeSplineIndex || knot.SplineInfo.Index == otherSplineIndex)
                     {
                         var newIndex = knot.KnotIndex;
 
-                        if(knot.SplineInfo.Index == activeSplineIndex && isActiveKnotAtStart)
+                        if (knot.SplineInfo.Index == activeSplineIndex && isActiveKnotAtStart)
                             newIndex += otherSplineCount - 1;
 
-                        if(knot.SplineInfo.Index == otherSplineIndex && !isActiveKnotAtStart)
+                        if (knot.SplineInfo.Index == otherSplineIndex && !isActiveKnotAtStart)
                             newIndex += activeSplineCount - 1;
 
                         linkedKnots[i] = new SelectableKnot(activeSplineInfo, newIndex);
                     }
                     else
                     {
-                        if(knot.SplineInfo.Index > otherSplineIndex)
-                            linkedKnots[i] = new SelectableKnot(new SplineInfo(knot.SplineInfo.Container, knot.SplineInfo.Index - 1),knot.KnotIndex);
+                        if (knot.SplineInfo.Index > otherSplineIndex)
+                            linkedKnots[i] = new SelectableKnot(new SplineInfo(knot.SplineInfo.Container, knot.SplineInfo.Index - 1), knot.KnotIndex);
                     }
                 }
+
                 LinkKnots(linkedKnots);
             }
 
@@ -794,14 +976,14 @@ namespace UnityEditor.Splines
             var splineLinks = new List<List<SelectableKnot>>();
 
             // GetAll LinkedKnots on the spline
-            for(int previousKnotIndex = 0; previousKnotIndex < spline.Count; ++previousKnotIndex)
+            for (int previousKnotIndex = 0; previousKnotIndex < spline.Count; ++previousKnotIndex)
             {
                 splineLinks.Add(new List<SelectableKnot>());
                 GetKnotLinks(new SelectableKnot(splineInfo, previousKnotIndex), splineLinks[previousKnotIndex]);
             }
 
             //Unlink all knots in the spline
-            foreach(var linkedKnots in splineLinks)
+            foreach (var linkedKnots in splineLinks)
                 UnlinkKnots(linkedKnots);
 
             // Reverse order and tangents
@@ -816,13 +998,13 @@ namespace UnityEditor.Splines
 
                 // Reverse the tangents to keep the same shape while reversing the order
                 knot.Rotation = math.mul(reverseRotation, knot.Rotation);
-                if(tangentModes[previousKnotIndex] is TangentMode.Broken)
+                if (tangentModes[previousKnotIndex] is TangentMode.Broken)
                 {
                     var localRot = quaternion.AxisAngle(math.up(), math.radians(180));
-                    knot.TangentIn = math.rotate(localRot,tangentOut);
-                    knot.TangentOut = math.rotate(localRot,tangentIn);
+                    knot.TangentIn = math.rotate(localRot, tangentOut);
+                    knot.TangentOut = math.rotate(localRot, tangentIn);
                 }
-                else if(tangentModes[previousKnotIndex] is TangentMode.Continuous)
+                else if (tangentModes[previousKnotIndex] is TangentMode.Continuous)
                 {
                     knot.TangentIn = -tangentOut;
                     knot.TangentOut = -tangentIn;
@@ -836,15 +1018,16 @@ namespace UnityEditor.Splines
             //Redo all links
             foreach (var linkedKnots in splineLinks)
             {
-                if(linkedKnots.Count == 1)
+                if (linkedKnots.Count == 1)
                     continue;
 
-                for(int i = 0; i < linkedKnots.Count; ++i)
+                for (int i = 0; i < linkedKnots.Count; ++i)
                 {
                     var knot = linkedKnots[i];
-                    if(knot.SplineInfo.Equals(splineInfo))
+                    if (knot.SplineInfo.Equals(splineInfo))
                         linkedKnots[i] = new SelectableKnot(splineInfo, spline.Count - 1 - knot.KnotIndex);
                 }
+
                 LinkKnots(linkedKnots);
             }
 
@@ -857,6 +1040,25 @@ namespace UnityEditor.Splines
             for (int i = 0; i < elements.Count; ++i)
                 splines.Add(elements[i].SplineInfo);
             return splines;
+        }
+
+        internal static void GetAdjacentTangents<T>(
+            T element,
+            out SelectableTangent previousOut,
+            out SelectableTangent currentIn,
+            out SelectableTangent currentOut,
+            out SelectableTangent nextIn)
+            where T : ISplineElement
+        {
+            var knot = GetKnot(element);
+            var spline = knot.SplineInfo.Spline;
+            bool isFirstKnot = knot.KnotIndex == 0 && !spline.Closed;
+            bool isLastKnot = knot.KnotIndex == spline.Count - 1 && !spline.Closed;
+
+            previousOut = isFirstKnot ? default : new SelectableTangent(knot.SplineInfo, spline.PreviousIndex(knot.KnotIndex), BezierTangent.Out);
+            currentIn = isFirstKnot ? default : knot.TangentIn;
+            currentOut = isLastKnot ? default : knot.TangentOut;
+            nextIn = isLastKnot ? default : new SelectableTangent(knot.SplineInfo, spline.NextIndex(knot.KnotIndex), BezierTangent.In);
         }
     }
 }

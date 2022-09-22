@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Splines;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
@@ -9,27 +10,43 @@ namespace UnityEditor.Splines
     {
         public static event Action changed;
 
-        static readonly HashSet<Object> s_ObjectSet = new HashSet<Object>();
+        static readonly HashSet<Object> s_ObjectSet = new HashSet<Object>();        
+        static Object[] s_SelectedTargetsBuffer = new Object[0];
 
         static SelectionContext context => SelectionContext.instance;
         static List<SelectableSplineElement> selection => context.selection;
-
+        public static int Count => selection.Count;
+        
+        static HashSet<SelectableTangent> s_AdjacentTangentCache = new HashSet<SelectableTangent>();
+        
         static int s_SelectionVersion;
 
+        public static List<SplineInfo> SelectedSplines => selectedSplines;
+        static List<SplineInfo> selectedSplines = new ();
+        internal static event Action splineSelectionChanged;
+        
         static SplineSelection()
         {
             context.version = 0;
 
             Undo.undoRedoPerformed += OnUndoRedoPerformed;
             EditorSplineUtility.knotInserted += OnKnotInserted;
-            EditorSplineUtility.knotRemoved += OnKnotRemoved;
+            EditorSplineUtility.knotRemoved += OnKnotRemoved;            
+            Selection.selectionChanged += OnSelectionChanged;
+            RebuildAdjacentCache();
         }
-
+        
+        static void OnSelectionChanged()
+        {
+            ClearSplineSelection();
+        }
+        
         static void OnUndoRedoPerformed()
         {
             if (context.version != s_SelectionVersion)
             {
-                s_SelectionVersion = context.version;
+                s_SelectionVersion = context.version;                
+                ClearSplineSelection();
                 NotifySelectionChanged();
             }
         }
@@ -49,8 +66,6 @@ namespace UnityEditor.Splines
             if (notify)
                 NotifySelectionChanged();
         }
-
-        public static int Count => selection.Count;
 
         public static bool HasAny<T>(IReadOnlyList<SplineInfo> targets)
             where T : struct, ISplineElement
@@ -80,6 +95,15 @@ namespace UnityEditor.Splines
                 for (int j = 0; j < targets.Count; ++j)
                     if (TryGetElement(selection[i], targets[j], out T result))
                         results.Add(result);
+        }
+        
+        public static void GetElements<T>(SplineInfo target, ICollection<T> results)
+            where T : ISplineElement
+        {
+            results.Clear();
+            for (int i = 0; i < Count; ++i)
+                if (TryGetElement(selection[i], target, out T result))
+                    results.Add(result);
         }
 
         static bool TryGetElement<T>(SelectableSplineElement element, SplineInfo splineInfo, out T value)
@@ -115,7 +139,6 @@ namespace UnityEditor.Splines
             return false;
         }
 
-        static Object[] s_SelectedTargetsBuffer = new Object[0];
         internal static Object[] GetAllSelectedTargets()
         {
             s_ObjectSet.Clear();
@@ -205,8 +228,6 @@ namespace UnityEditor.Splines
         public static void AddRange<T>(IEnumerable<T> elements)
             where T : ISplineElement
         {
-            IncrementVersion();
-
             bool changed = false;
             foreach (var element in elements)
             {
@@ -318,7 +339,8 @@ namespace UnityEditor.Splines
                         {
                             changed = true;
                             IncrementVersion();
-                        }
+                        }                    
+                        ClearSplineSelection();
                         selection.RemoveAt(i);
                     }
                 }
@@ -343,18 +365,27 @@ namespace UnityEditor.Splines
                     selection[i] = knot;
                 }
             }
+            RebuildAdjacentCache();
         }
 
         //Used when deleting an element in spline
         static void OnKnotRemoved(SelectableKnot removed)
         {
+            bool changed = false;
             for (var i = selection.Count - 1; i >= 0; --i)
             {
                 var knot = selection[i];
                 if (knot.target == removed.SplineInfo.Target && knot.targetIndex == removed.SplineInfo.Index)
                 {
                     if (knot.knotIndex == removed.KnotIndex)
+                    {
+                        if (!changed)
+                        {
+                            changed = true;
+                            IncrementVersion();
+                        }
                         selection.RemoveAt(i);
+                    }
                     else if (knot.knotIndex >= removed.KnotIndex)
                     {
                         --knot.knotIndex;
@@ -362,6 +393,10 @@ namespace UnityEditor.Splines
                     }
                 }
             }
+            RebuildAdjacentCache();
+
+            if (changed)
+                NotifySelectionChanged();
         }
 
         static void IncrementVersion()
@@ -374,7 +409,128 @@ namespace UnityEditor.Splines
 
         static void NotifySelectionChanged()
         {
+            RebuildAdjacentCache();
             changed?.Invoke();
+        }
+        
+        static bool TryGetSplineInfo(SelectableSplineElement element, out SplineInfo splineInfo)
+        {
+            //Checking null in case the object was destroyed
+            if (element.target != null && element.target is ISplineContainer container)
+            {
+                splineInfo = new SplineInfo(container, element.targetIndex);
+                return true;
+            }
+
+            splineInfo = default;
+            return false;
+        }
+
+        static bool TryCast(SelectableSplineElement element, out SelectableTangent result)
+        {
+            if (TryGetSplineInfo(element, out var splineInfo) && element.tangentIndex >= 0)
+            {
+                result = new SelectableTangent(splineInfo, element.knotIndex, element.tangentIndex);
+                return true;
+            }
+
+            result = default;
+            return false;
+        }
+
+        static bool TryCast(SelectableSplineElement element, out SelectableKnot result)
+        {
+            if (TryGetSplineInfo(element, out var splineInfo) && element.tangentIndex < 0)
+            {
+                result = new SelectableKnot(splineInfo, element.knotIndex);
+                return true;
+            }
+
+            result = default;
+            return false;
+        }
+
+        internal static bool IsSelectedOrAdjacentToSelected(SelectableTangent tangent)
+        {
+            return s_AdjacentTangentCache.Contains(tangent);
+        }
+
+        static void RebuildAdjacentCache()
+        {
+            s_AdjacentTangentCache.Clear();
+
+            foreach (var element in selection)
+            {
+                SelectableTangent previousOut, currentIn, currentOut, nextIn;
+                if (TryCast(element, out SelectableKnot knot))
+                    EditorSplineUtility.GetAdjacentTangents(knot, out previousOut, out currentIn, out currentOut, out nextIn);
+                else if (TryCast(element, out SelectableTangent tangent))
+                    EditorSplineUtility.GetAdjacentTangents(tangent, out previousOut, out currentIn, out currentOut, out nextIn);
+                else 
+                    continue; 
+
+                s_AdjacentTangentCache.Add(previousOut);
+                s_AdjacentTangentCache.Add(currentIn);
+                s_AdjacentTangentCache.Add(currentOut);
+                s_AdjacentTangentCache.Add(nextIn);
+            }
+        }
+        
+        internal static void ClearSplineSelection()
+        {
+            selectedSplines.Clear();
+            splineSelectionChanged?.Invoke();
+        }
+
+        internal static bool HasActiveSplineSelection()
+        {
+            return selectedSplines.Count > 0;
+        }
+
+        internal static bool Contains(SplineInfo info)
+        {
+            return selectedSplines.Contains(info);
+        }
+
+        static void ValidateSelection(SplineInfo info, Func<SplineInfo, SelectableSplineElement, bool> validateFunc)
+        {
+            var changed = false;
+            for (var i = selection.Count - 1; i >= 0; --i)
+            {
+                if(validateFunc(info, selection[i]))
+                {
+                    selection.RemoveAt(i);
+                    changed = true;
+                }
+            }
+            if(changed)
+                NotifySelectionChanged();
+        }
+
+        static bool ValidateOnAdd(SplineInfo _, SelectableSplineElement knot)
+        {
+            //Remove from selection if the knot is not in the selectedSpline collection
+            return selectedSplines.FindIndex(si => si.Target == knot.target && si.Index == knot.targetIndex) < 0;
+        }
+
+        internal static void Add(SplineInfo info)
+        {
+            selectedSplines.Add(info);
+            ValidateSelection(info, ValidateOnAdd);
+            splineSelectionChanged?.Invoke();
+        }
+
+        static bool ValidateOnRemove(SplineInfo info, SelectableSplineElement knot)
+        {
+            //Remove from selection if the knot is in the spline being removed from the splineSelection
+            return knot.target == info.Target && knot.targetIndex == info.Index;
+        }
+
+        internal static void Remove(SplineInfo info)
+        {
+            ValidateSelection(info, ValidateOnRemove);
+            selectedSplines.Remove(info);
+            splineSelectionChanged?.Invoke();
         }
     }
 }
