@@ -215,7 +215,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Minimum spacing between 2 generated instances,
-        /// if equal to the maxSpacing, then all instances will have the exact same spacing
+        /// if equal to the maxSpacing, then all instances will have the exact same spacing.
         /// </summary>
         float MinSpacing
         {
@@ -245,12 +245,12 @@ namespace UnityEngine.Splines
         AlignAxis m_Up = AlignAxis.YAxis;
 
         /// <summary>
-        /// Up axis of the object, by default set to the Y Axis
+        /// Up axis of the object, by default set to the y-axis.
         /// </summary>
         [Obsolete("Use UpAxis instead.", false)]
         public AlignAxis upAxis => UpAxis;
         /// <summary>
-        /// Up axis of the object, by default set to the Y Axis
+        /// Up axis of the object, by default set to the y-axis.
         /// </summary>
         public AlignAxis UpAxis
         {

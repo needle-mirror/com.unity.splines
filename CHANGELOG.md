@@ -5,7 +5,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [2.0.0-pre.4] - 2022-09-22
+## [2.0.0] - 2022-09-27
 
 ### Added
 
@@ -24,12 +24,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Modified spline element handles to use `Element Color`.
 - [STO-2681] Attenuated the color of the tangents and the curve highlights when they are behind objects.
-- Modified the `Draw Splines Tool` to clear any Spline element selection when it is activated.
+- Modified the `Draw Splines Tool` to clear any Spline element selection when it activates.
 - Spline element handles now use the `Element Selection` and `Element Preselection` colors.
 - [STO-2731] Fixed View Tool not working when Spline Context was active.
 - Changed tangent's shapes to diamonds.
 - [STO-2728] Changed the label of the `SplineAnimate` component's `World` alignment mode to `World Space` in the Inspector.
-- Modified the `Knot Placement Tool` to have live preview for segments with auto-smooth knots.
+- Modified the `Knot Placement Tool` to have live preview for segments with auto-smoothed knots.
 - Dependency on Unity Physics Module is now optional.
 - Reduced the size of the flow indicator handle.
 - Changed default colors and thickness for spline elements and curves.
@@ -74,12 +74,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed a bug where the SplineContainer reorderable list broke the LinkKnots collection.
 - Fixed a bug that caused the Inspector to display incorrect spline indexes.
 - Fixed spline selection intercepting scene view navigation shortcuts.
-- Fixed a bug where setting SplineInstantiate component's instantiation items with the Inspector would have no effect.
+- Fixed a bug where setting the Spline Instantiate component's instantiation items with the Inspector would have no effect.
 - Fixed a potential exception that occurred when opening scenes with splines created in the 1.0 version of this package.
 - Fixed tangent and knot handles incorrectly highlighting while a tool is engaged.
 - Fixed compile errors in sample scenes when building player.
-- Fixed "Draw Spline Tool" menu item missing ellipsis.
-- Fixed `Spline Tool Context` not working with `ISplineContainer` implementations that do define a valid `KnotCollection`.
+- Added an ellipsis to the Draw Spline Tool menu item label.
+- Fixed `Spline Tool Context` not working with `ISplineContainer` implementations that define a valid `KnotCollection`.
 
 ## [2.0.0-pre.2] - 2022-05-11
 
