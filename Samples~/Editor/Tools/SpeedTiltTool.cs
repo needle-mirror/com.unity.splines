@@ -315,8 +315,11 @@ namespace Unity.Splines.Examples
                 if (!m_TiltInUse)
                     color.a = 0.33f;
 
-                using (new Handles.DrawingScope(color))
-                    Handles.ArrowHandleCap(-1, Vector3.zero, Quaternion.FromToRotation(Vector3.forward, inValue), 1f, EventType.Repaint);
+                if (Event.current.type == EventType.Repaint)
+                {
+                    using (new Handles.DrawingScope(color))
+                        Handles.ArrowHandleCap(-1, Vector3.zero, Quaternion.FromToRotation(Vector3.forward, inValue), 1f, EventType.Repaint);
+                }
 
                 var rotation = Handles.Disc(controlID, dataPointRotation, Vector3.zero, Vector3.forward, 1, false, 0);
 

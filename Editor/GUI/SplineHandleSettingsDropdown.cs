@@ -1,5 +1,7 @@
-﻿using UnityEditor.Toolbars;
+using UnityEditor.EditorTools;
+using UnityEditor.Toolbars;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines
 {
@@ -15,11 +17,19 @@ namespace UnityEditor.Splines
             icon = (Texture2D)content.image;
 
             clicked += OnClick;
+            
+            RegisterCallback<AttachToPanelEvent>(AttachToPanel);
         }
 
         void OnClick()
         {
             SplineHandleSettingsWindow.Show(worldBound);
+        }
+        
+        void AttachToPanel(AttachToPanelEvent evt)
+        {
+            var toolType = ToolManager.activeToolType;
+            SetEnabled(toolType != typeof(KnotPlacementTool));
         }
     }
 }

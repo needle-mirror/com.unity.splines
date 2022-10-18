@@ -10,42 +10,43 @@ namespace UnityEditor.Splines
     {
         public static event Action changed;
 
-        static readonly HashSet<Object> s_ObjectSet = new HashSet<Object>();        
+        static readonly HashSet<Object> s_ObjectSet = new HashSet<Object>();
         static Object[] s_SelectedTargetsBuffer = new Object[0];
 
         static SelectionContext context => SelectionContext.instance;
         static List<SelectableSplineElement> selection => context.selection;
+
         public static int Count => selection.Count;
-        
+
         static HashSet<SelectableTangent> s_AdjacentTangentCache = new HashSet<SelectableTangent>();
-        
+
         static int s_SelectionVersion;
 
         public static List<SplineInfo> SelectedSplines => selectedSplines;
         static List<SplineInfo> selectedSplines = new ();
         internal static event Action splineSelectionChanged;
-        
+
         static SplineSelection()
         {
             context.version = 0;
 
             Undo.undoRedoPerformed += OnUndoRedoPerformed;
             EditorSplineUtility.knotInserted += OnKnotInserted;
-            EditorSplineUtility.knotRemoved += OnKnotRemoved;            
+            EditorSplineUtility.knotRemoved += OnKnotRemoved;
             Selection.selectionChanged += OnSelectionChanged;
             RebuildAdjacentCache();
         }
-        
+
         static void OnSelectionChanged()
         {
             ClearSplineSelection();
         }
-        
+
         static void OnUndoRedoPerformed()
         {
             if (context.version != s_SelectionVersion)
             {
-                s_SelectionVersion = context.version;                
+                s_SelectionVersion = context.version;
                 ClearSplineSelection();
                 NotifySelectionChanged();
             }
@@ -96,7 +97,7 @@ namespace UnityEditor.Splines
                     if (TryGetElement(selection[i], targets[j], out T result))
                         results.Add(result);
         }
-        
+
         public static void GetElements<T>(SplineInfo target, ICollection<T> results)
             where T : ISplineElement
         {
@@ -213,16 +214,17 @@ namespace UnityEditor.Splines
             selection.Insert(0, new SelectableSplineElement(element));
             NotifySelectionChanged();
         }
-
-        public static void Add<T>(T element)
+        
+        public static bool Add<T>(T element)
             where T : ISplineElement
         {
             if (Contains(element))
-                return;
+                return false;
 
             IncrementVersion();
             selection.Insert(0, new SelectableSplineElement(element));
             NotifySelectionChanged();
+            return true;
         }
 
         public static void AddRange<T>(IEnumerable<T> elements)
@@ -307,7 +309,7 @@ namespace UnityEditor.Splines
         {
             return s_ObjectSet.Contains(splineObject);
         }
-
+        
         internal static void UpdateObjectSelection(IEnumerable<Object> targets)
         {
             s_ObjectSet.Clear();
@@ -318,14 +320,16 @@ namespace UnityEditor.Splines
             bool changed = false;
             for (int i = Count - 1; i >= 0; --i)
             {
-                if (!s_ObjectSet.Contains(selection[i].target))
+                bool removeElement = false;
+                if (!EditorSplineUtility.Exists(selection[i].target as ISplineContainer, selection[i].targetIndex))
                 {
-                    if (!changed)
-                    {
-                        changed = true;
-                        IncrementVersion();
-                    }
-                    selection.RemoveAt(i);
+                    removeElement = true;
+                }
+                else if (!s_ObjectSet.Contains(selection[i].target))
+                {
+                    
+                    ClearSplineSelection();
+                    removeElement = true;
                 }
                 else if(selection[i].tangentIndex > 0)
                 {
@@ -333,21 +337,26 @@ namespace UnityEditor.Splines
                     // or tangent mode has been updated
                     var spline = SplineToolContext.GetSpline(selection[i].target, selection[i].targetIndex);
 
-                    if(!EditorSplineUtility.AreTangentsModifiable(spline.GetTangentMode(selection[i].knotIndex)))
+                    removeElement = !EditorSplineUtility.AreTangentsModifiable(spline.GetTangentMode(selection[i].knotIndex));
+                }
+
+                if (removeElement)
+                {
+                    if (!changed)
                     {
-                        if (!changed)
-                        {
-                            changed = true;
-                            IncrementVersion();
-                        }                    
-                        ClearSplineSelection();
-                        selection.RemoveAt(i);
+                        changed = true;
+                        IncrementVersion();
                     }
+
+                    selection.RemoveAt(i);
                 }
             }
 
             if (changed)
+            {
+                RebuildAdjacentCache();
                 NotifySelectionChanged();
+            }
         }
 
         //Used when inserting new elements in spline
@@ -412,7 +421,7 @@ namespace UnityEditor.Splines
             RebuildAdjacentCache();
             changed?.Invoke();
         }
-        
+
         static bool TryGetSplineInfo(SelectableSplineElement element, out SplineInfo splineInfo)
         {
             //Checking null in case the object was destroyed
@@ -459,15 +468,15 @@ namespace UnityEditor.Splines
         {
             s_AdjacentTangentCache.Clear();
 
-            foreach (var element in selection)
+            foreach(var element in selection)
             {
                 SelectableTangent previousOut, currentIn, currentOut, nextIn;
-                if (TryCast(element, out SelectableKnot knot))
+                if(TryCast(element, out SelectableKnot knot))
                     EditorSplineUtility.GetAdjacentTangents(knot, out previousOut, out currentIn, out currentOut, out nextIn);
-                else if (TryCast(element, out SelectableTangent tangent))
+                else if(TryCast(element, out SelectableTangent tangent))
                     EditorSplineUtility.GetAdjacentTangents(tangent, out previousOut, out currentIn, out currentOut, out nextIn);
-                else 
-                    continue; 
+                else
+                    continue;
 
                 s_AdjacentTangentCache.Add(previousOut);
                 s_AdjacentTangentCache.Add(currentIn);
@@ -475,7 +484,7 @@ namespace UnityEditor.Splines
                 s_AdjacentTangentCache.Add(nextIn);
             }
         }
-        
+
         internal static void ClearSplineSelection()
         {
             selectedSplines.Clear();

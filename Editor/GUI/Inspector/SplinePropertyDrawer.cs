@@ -1,6 +1,6 @@
-﻿using System;
-using System.Text.RegularExpressions;
+using System;
 using System.Collections.Generic;
+﻿using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -70,7 +70,7 @@ namespace UnityEditor.Splines
                 foreach (var obj in property.serializedObject.targetObjects)
                 {
                     var val = fieldInfo.GetValue(obj);
-                    if(val is Spline[] splines)
+                    if (val is Spline[] splines)
                     {
                         foreach (var spline in splines)
                         {

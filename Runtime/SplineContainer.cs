@@ -54,6 +54,12 @@ namespace UnityEngine.Splines
         /// </summary>
         public KnotLinkCollection KnotLinkCollection => m_Knots;
 
+        /// <summary>
+        /// Gets or sets the <see cref="Spline"/> at <paramref name="index"/>.
+        /// </summary>
+        /// <param name="index">The zero-based index of the element to get or set.</param>
+        public Spline this[int index] => m_Splines[index];
+
         void OnEnable()
         {
             Spline.Changed += OnSplineChanged;
@@ -132,7 +138,8 @@ namespace UnityEngine.Splines
         /// <param name="tangent">The output variable for the float3 tangent at t.</param>
         /// <param name="upVector">The output variable for the float3 up direction at t.</param>
         /// <returns>True if a valid set of output variables is computed and false otherwise.</returns>
-        public bool Evaluate(int splineIndex, float t, out float3 position,  out float3 tangent,  out float3 upVector)            => Evaluate(Splines[splineIndex], t, out position, out tangent, out upVector);
+        public bool Evaluate(int splineIndex, float t, out float3 position,  out float3 tangent,  out float3 upVector)
+            => Evaluate(Splines[splineIndex], t, out position, out tangent, out upVector);
 
         /// <summary>
         /// Gets the interpolated position, direction, and upDirection at ratio t for a spline.  This method gets the three  
@@ -255,7 +262,7 @@ namespace UnityEngine.Splines
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed up direction.</returns>
         public float3 EvaluateUpVector(int splineIndex, float t) => EvaluateUpVector(Splines[splineIndex], t);
-
+        
         /// <summary>
         /// Evaluates the up vector of a point, t, on a given spline, in world space.
         /// </summary>
@@ -277,6 +284,7 @@ namespace UnityEngine.Splines
             return transform.TransformDirection(SplineUtility.EvaluateUpVector(spline, t));
         }
 
+
         /// <summary>
         /// Evaluates the acceleration vector of a point, t, on a spline in world space.
         /// </summary>
@@ -292,6 +300,7 @@ namespace UnityEngine.Splines
         /// <returns>The computed acceleration vector.</returns>
         public float3 EvaluateAcceleration(int splineIndex, float t) => EvaluateAcceleration(Splines[splineIndex], t);
 
+        /// <summary>
         /// Evaluates the acceleration vector of a point, t, on a given Spline,  in world space.
         /// </summary>
         /// <param name="spline">The Spline to evaluate.</param>
@@ -301,13 +310,13 @@ namespace UnityEngine.Splines
         {
             if (spline == null)
                 return float3.zero;
-
+            
             if (IsScaled)
             {
                 using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
                 return SplineUtility.EvaluateAcceleration(nativeSpline, t);
             }
-
+            
             return transform.TransformVector(SplineUtility.EvaluateAcceleration(spline, t));
         }
 
@@ -324,12 +333,9 @@ namespace UnityEngine.Splines
         /// <returns>The length of `Splines[splineIndex]` in world space</returns>
         public float CalculateLength(int splineIndex)
         {
-            if (Splines[splineIndex] == null)
-                return 0;
-
             return SplineUtility.CalculateLength(Splines[splineIndex], transform.localToWorldMatrix);
         }
-        
+
         /// <summary>
         /// See ISerializationCallbackReceiver.
         /// </summary>

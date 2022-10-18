@@ -63,24 +63,6 @@ namespace Unity.Splines.Examples
             }
         }
 
-        [SerializeField]
-        PointSplineData m_LookAtPoints;
-        [Obsolete("Use LookAtPoints instead.", false)]
-        public PointSplineData lookAtPoints => LookAtPoints;
-        public PointSplineData LookAtPoints
-        {
-            get
-            {
-                if (m_LookAtPoints == null)
-                    m_LookAtPoints = GetComponent<PointSplineData>();
-
-                return m_LookAtPoints;
-            }
-        }
-
-        [SerializeField]
-        Transform m_LookTransform;
-
         float m_CurrentOffset;
         float m_CurrentSpeed;
         float m_SplineLength;
@@ -135,9 +117,6 @@ namespace Unity.Splines.Examples
                 }
             }
 
-            if (LookAtPoints != null)
-                LookAtPoints.Container = Container;
-
             if (DriftData != null)
                 DriftData.Container = Container;
         }
@@ -175,13 +154,6 @@ namespace Unity.Splines.Examples
 
             var rot = Quaternion.LookRotation(direction, upSplineDirection);
             m_CarToAnimate.transform.rotation = Quaternion.LookRotation(direction, rot * up);
-
-            if (LookAtPoints != null && m_LookTransform != null && m_LookAtPoints.Count > 0)
-            {
-                var lookAtPoint = m_LookAtPoints.Points.Evaluate(m_Spline, m_CurrentOffset, PathIndexUnit.Normalized, new Interpolators.LerpFloat2());
-                direction = math.normalize(new float3(lookAtPoint.x, 0f, lookAtPoint.y) - (float3)m_LookTransform.position);
-                m_LookTransform.transform.rotation = Quaternion.LookRotation(direction, up);
-            }
         }
     }
 }

@@ -65,7 +65,7 @@ namespace UnityEngine.Splines
                 var adjustedT = math.clamp(evaluationT + (0.0001f * (t < 1f ? 1f : -1f)), 0f, 1f);
                 spline.Evaluate(adjustedT, out _, out st, out up);
             }
-            
+
             st = math.normalize(st);
 
             var rot = quaternion.LookRotationSafe(st, up);
@@ -195,7 +195,7 @@ namespace UnityEngine.Splines
             Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
             mesh.RecalculateBounds();
         }
-
+        
         /// <summary>
         /// Extrude a mesh along a list of splines in a tube-like shape.
         /// </summary>
@@ -225,19 +225,19 @@ namespace UnityEngine.Splines
             for (int i = 0; i < splines.Count; ++i)
             {
                 var spline = splines[i];
-
+                
                 var segments = Mathf.Max((int)Mathf.Ceil(spline.GetLength() * span * segmentsPerUnit), 1);
                 settings[i] = new Settings(sides, segments, capped, spline.Closed, range, radius);
-
+            
                 GetVertexAndIndexCount(settings[i], out var vertexCount, out var indexCount);
 
                 splineMeshOffsets[i] = (totalIndexCount, totalVertexCount);
                 totalVertexCount += vertexCount;
                 totalIndexCount += indexCount;
             }
-
+            
             var indexFormat = totalVertexCount >= ushort.MaxValue ? IndexFormat.UInt32 : IndexFormat.UInt16;
-
+            
             data.SetIndexBufferParams(totalIndexCount, indexFormat);
             data.SetVertexBufferParams(totalVertexCount, k_PipeVertexAttribs);
 
@@ -254,13 +254,13 @@ namespace UnityEngine.Splines
                 for (int i = 0; i < splines.Count; ++i)
                     Extrude(splines[i], vertices, indices, settings[i], splineMeshOffsets[i].vertexStart, splineMeshOffsets[i].indexStart);
             }
-
+            
             data.SetSubMesh(0, new SubMeshDescriptor(0, totalIndexCount));
 
             Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
             mesh.RecalculateBounds();
         }
-        
+
         /// <summary>
         /// Extrude a mesh along a spline in a tube-like shape.
         /// </summary>
@@ -305,7 +305,7 @@ namespace UnityEngine.Splines
         static void Extrude<TSplineType, TVertexType, TIndexType>(
                 TSplineType spline,
                 NativeArray<TVertexType> vertices,
-                NativeArray<TIndexType> indices,                
+                NativeArray<TIndexType> indices,
                 Settings settings,
                 int vertexArrayOffset = 0,
                 int indicesArrayOffset = 0)
@@ -318,7 +318,6 @@ namespace UnityEngine.Splines
             var segments = settings.segments;
             var range = settings.range;
             var capped = settings.capped;
-            var closed = settings.closed;
 
             GetVertexAndIndexCount(settings, out var vertexCount, out var indexCount);
 
@@ -327,11 +326,11 @@ namespace UnityEngine.Splines
 
             if (segments < 2)
                 throw new ArgumentOutOfRangeException(nameof(segments), "Segments must be greater than 2");
-
-            if (vertices.Length != vertexCount)
-                throw new ArgumentOutOfRangeException($"Vertex array is incorrect size. Expected {vertexCount} or more, but received {vertices.Length}.");
             
-            if (indices.Length != indexCount)
+            if (vertices.Length < vertexCount)
+                throw new ArgumentOutOfRangeException($"Vertex array is incorrect size. Expected {vertexCount} or more, but received {vertices.Length}.");
+
+            if (indices.Length < indexCount)
                 throw new ArgumentOutOfRangeException($"Index array is incorrect size. Expected {indexCount} or more, but received {indices.Length}.");
 
             if (typeof(TIndexType) == typeof(UInt16))

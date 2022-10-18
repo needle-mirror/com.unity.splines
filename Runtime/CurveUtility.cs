@@ -6,7 +6,7 @@ namespace UnityEngine.Splines
     /// <summary>
     /// A collection of methods for extracting information about <see cref="BezierCurve"/> types.
     /// </summary>
-	public static class CurveUtility
+    public static class CurveUtility
     {
         struct FrenetFrame
         {
@@ -321,7 +321,7 @@ namespace UnityEngine.Splines
 
             return nextRMFrame;
         }
-        
+
         static readonly DistanceToInterpolation[] k_DistanceLUT = new DistanceToInterpolation[24];
 
         /// <summary>
@@ -374,6 +374,64 @@ namespace UnityEngine.Splines
             }
 
             return 1f;
+        }
+
+        /// <summary>
+        /// Gets the point on a <see cref="BezierCurve"/> nearest to a ray.
+        /// </summary>
+        /// <param name="curve">The <see cref="BezierCurve"/> to compare.</param>
+        /// <param name="ray">The input ray.</param>
+        /// <param name="resolution">The number of line segments on this curve that are rasterized when testing
+        /// for the nearest point. A higher value is more accurate, but slower to calculate.</param>
+        /// <returns>Returns the nearest position on the curve to a ray.</returns>
+        public static float3 GetNearestPoint(BezierCurve curve, Ray ray, int resolution = 16)
+        {
+            GetNearestPoint(curve, ray, out var position, out _, resolution);
+            return position;
+        }
+
+        /// <summary>
+        /// Gets the point on a <see cref="BezierCurve"/> nearest to a ray.
+        /// </summary>
+        /// <param name="curve">The <see cref="BezierCurve"/> to compare.</param>
+        /// <param name="ray">The input ray.</param>
+        /// <param name="position">The nearest position on the curve to a ray.</param>
+        /// <param name="interpolation">The ratio from range 0 to 1 along the curve at which the nearest point is located.</param>
+        /// <param name="resolution">The number of line segments that this curve will be rasterized to when testing
+        /// for nearest point. A higher value will be more accurate, but slower to calculate.</param>
+        /// <returns>The distance from ray to nearest point on a <see cref="BezierCurve"/>.</returns>
+        public static float GetNearestPoint(BezierCurve curve, Ray ray, out float3 position, out float interpolation, int resolution = 16)
+        {
+            float bestDistSqr = float.PositiveInfinity;
+            float bestLineParam = 0f;
+
+            interpolation = 0f;
+            position = float3.zero;
+
+            float3 a = EvaluatePosition(curve, 0f);
+            float3 ro = ray.origin, rd = ray.direction;
+
+            for (int i = 1; i < resolution; ++i)
+            {
+                float t = i / (resolution - 1f);
+                float3 b = EvaluatePosition(curve, t);
+
+                var (rayPoint, linePoint) = SplineMath.RayLineNearestPoint(ro, rd, a, b, out _, out var lineParam);
+                var distSqr = math.lengthsq(linePoint - rayPoint);
+
+                if (distSqr < bestDistSqr)
+                {
+                    position = linePoint;
+                    bestDistSqr = distSqr;
+                    bestLineParam = lineParam;
+                    interpolation = t;
+                }
+
+                a = b;
+            }
+
+            interpolation += bestLineParam * (1f / (resolution - 1f));
+            return math.sqrt(bestDistSqr);
         }
     }
 }

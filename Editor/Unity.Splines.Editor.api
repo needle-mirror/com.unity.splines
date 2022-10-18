@@ -14,6 +14,7 @@ namespace UnityEditor.Splines
         public static event System.Action<UnityEngine.Splines.Spline> AfterSplineWasModified;
         public static UnityEngine.Splines.TangentMode DefaultTangentMode { get; }
         public static void RegisterSplineDataChanged<T>(System.Action<UnityEngine.Splines.SplineData<T>> action);
+        public static void SetKnotPlacementTool();
         public static void UnregisterSplineDataChanged<T>(System.Action<UnityEngine.Splines.SplineData<T>> action);
     }
 
@@ -43,6 +44,16 @@ namespace UnityEditor.Splines
         public static void DoCurve(int controlID, UnityEngine.Splines.BezierCurve curve);
         public static void DoSpline<T>(T spline) where T : UnityEngine.Splines.ISpline;
         public static void DoSpline<T>(int controlID, T spline) where T : UnityEngine.Splines.ISpline;
+    }
+
+    public class SplineMeshHandle<T> : System.IDisposable where T : UnityEngine.Splines.ISpline
+    {
+        public SplineMeshHandle() {}
+        public void Dispose();
+        public void Do(T spline, float size, int resolution = 10);
+        public void Do(int controlID, T spline, float size, int resolution = 10);
+        public void Do(T spline, float size, UnityEngine.Color color, int resolution = 10);
+        public void Do(int controlID, T spline, float size, UnityEngine.Color color, int resolution = 10);
     }
 
     [UnityEditor.EditorTools.EditorToolContext(@"Spline", typeof(UnityEngine.Splines.ISplineContainer))] [UnityEngine.Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineContext.png")] public sealed class SplineToolContext : UnityEditor.EditorTools.EditorToolContext

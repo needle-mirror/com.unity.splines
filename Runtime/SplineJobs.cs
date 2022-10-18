@@ -137,7 +137,7 @@ namespace UnityEngine.Splines
         ///
         /// This method creates a temporary NativeSpline copy of the spline to be evaluated. In some cases, this can
         /// be more resource intensive than iterating and evaluating a spline on a single thread. For the best performance,
-        /// pass an existing NativeSpline instance to the <param name="spline"></param>
+        /// pass an existing NativeSpline instance to the <paramref name="spline"/>
         /// parameter.
         /// </remarks>
         /// <param name="spline">The spline to evaluate. If you pass a NativeSpline, it must be allocated

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
-using UnityEngine;
 using UnityEngine.UIElements;
 #if !UNITY_2022_1_OR_NEWER
 using UnityEditor.UIElements;
@@ -67,7 +66,7 @@ namespace UnityEditor.Splines
         void ApplyX(ChangeEvent<float> evt)
         {
             EditorSplineUtility.RecordObjects(m_Elements, SplineInspectorOverlay.SplineChangeUndoMessage);
-            
+
             ElementInspector.ignoreKnotCallbacks = true;
             for (int i = 0; i < m_Elements.Count; ++i)
             {

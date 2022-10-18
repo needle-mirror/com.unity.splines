@@ -10,7 +10,7 @@ namespace UnityEngine.Splines
     public struct SplineKnotIndex : IEquatable<SplineKnotIndex>
     {
         /// <summary>
-        /// The index of the spline in the <see cref="ISplineContainer.Splines">.
+        /// The index of the spline in the <see cref="SplineContainer.Splines"/>.
         /// </summary>
         public int Spline;
 
@@ -40,7 +40,6 @@ namespace UnityEngine.Splines
         {
             return indexA.Equals(indexB);
         }
-
 
         /// <summary>
         /// Checks if two indices are not equal.

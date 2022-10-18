@@ -1,10 +1,8 @@
 using System.Linq;
-using System;
 using UnityEditor;
 using UnityEditor.Splines;
 using UnityEngine;
 using UnityEngine.Splines;
-using Object = UnityEngine.Object;
 
 class SplineInstantiateGizmoDrawer
 {
@@ -177,10 +175,8 @@ class SplineInstantiateEditor : SplineComponentEditor
 
     SplineInstantiate[] m_Components;
 
-    protected override void OnEnable()
+    protected void OnEnable()
     {
-        base.OnEnable();
-
         m_SplineContainer = serializedObject.FindProperty("m_Container");
 
         m_ItemsToInstantiate = serializedObject.FindProperty("m_ItemsToInstantiate");
@@ -197,7 +193,6 @@ class SplineInstantiateEditor : SplineComponentEditor
         m_ScaleOffset = serializedObject.FindProperty("m_ScaleOffset");
 
         m_AutoRefresh = serializedObject.FindProperty("m_AutoRefresh");
-
         m_SpacingType = m_Spacing.vector2Value.x == m_Spacing.vector2Value.y ? SpawnType.Exact : SpawnType.Random;
 
         m_Components = targets.Select(x => x as SplineInstantiate).Where(y => y != null).ToArray();
@@ -259,7 +254,6 @@ class SplineInstantiateEditor : SplineComponentEditor
 
         updateInstances |= DisplayOffsets();
 
-        HorizontalLine( Color.grey );
         EditorGUILayout.LabelField(k_Generation, EditorStyles.boldLabel);
         EditorGUI.indentLevel++;
         EditorGUILayout.PropertyField(m_AutoRefresh, new GUIContent(k_AutoRefresh, k_AutoRefreshTooltip));
@@ -273,6 +267,7 @@ class SplineInstantiateEditor : SplineComponentEditor
         {
             Undo.RecordObjects(targets, "Changing SplineInstantiate seed");
             splineInstantiate.Randomize();
+            updateInstances = true;
         }
 
         if(GUILayout.Button(new GUIContent(k_Regenerate, k_RegenerateTooltip), GUILayout.MaxWidth(100f)))
@@ -283,16 +278,21 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.Separator();
 
-        if(dirtyInstances)
+        if (dirtyInstances)
+        {
             splineInstantiate.SetDirty();
+            SceneView.RepaintAll();
+        }
 
-        if(updateInstances)
+        if (updateInstances)
+        {
             splineInstantiate.UpdateInstances();
+            SceneView.RepaintAll();
+        }
     }
 
     void DoSetupSection()
     {
-        HorizontalLine(Color.grey);
         EditorGUILayout.LabelField(k_Setup, EditorStyles.boldLabel);
         GUILayout.Space(5f);
         EditorGUI.indentLevel++;
@@ -318,7 +318,6 @@ class SplineInstantiateEditor : SplineComponentEditor
         var dirty = false;
         Vector2 spacingV2 = m_Spacing.vector2Value;
 
-        HorizontalLine( Color.grey );
         EditorGUILayout.LabelField(k_Instantiation, EditorStyles.boldLabel);
 
         EditorGUI.indentLevel++;
@@ -542,7 +541,6 @@ class SplineInstantiateEditor : SplineComponentEditor
 
     bool DisplayOffsets()
     {
-        HorizontalLine( Color.grey );
         var updateNeeded = DoOffsetProperties(m_PositionOffset, new GUIContent(k_PositionOffset, k_PositionOffsetTooltip), m_PositionFoldout, out m_PositionFoldout);
         updateNeeded |=  DoOffsetProperties(m_RotationOffset, new GUIContent(k_RotationOffset, k_RotationOffsetTooltip), m_RotationFoldout, out m_RotationFoldout);
         updateNeeded |= DoOffsetProperties(m_ScaleOffset, new GUIContent(k_ScaleOffset, k_ScaleOffsetTooltip), m_ScaleFoldout, out m_ScaleFoldout);

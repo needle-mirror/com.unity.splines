@@ -16,7 +16,6 @@ namespace UnityEditor.Splines
         const float k_TangentHandleWidth = 2f;
         const float k_TangentRotWidthDefault = 1.5f;
         const float k_TangentRotDiscWidth = 3f;
-        const float k_TangentRotDiscRadius = 0.18f;
 
         public static void DrawInformativeTangent(SelectableTangent tangent, bool active = true)
         {
@@ -27,7 +26,7 @@ namespace UnityEditor.Splines
         {
             if (Event.current.type != EventType.Repaint)
                 return;
-            
+
 #if UNITY_2022_2_OR_NEWER
             var tangentColor = Handles.elementColor;
 #else
@@ -35,7 +34,7 @@ namespace UnityEditor.Splines
 #endif
             if (!active)
                 tangentColor = Handles.secondaryColor;
-            
+
 #if UNITY_2022_2_OR_NEWER
             var tangentArmColor = tangentColor == Handles.elementColor
                 ? SplineHandleUtility.tangentColor
@@ -60,9 +59,11 @@ namespace UnityEditor.Splines
             }
         }
 
-        public static void Draw(Vector3 position, Vector3 knotPosition, bool active = true)
+        public static void Draw(Vector3 position, Vector3 knotPosition, float3 normal, bool active = true)
         {
-            Draw(-1, position, Quaternion.identity,  knotPosition, false, false, false, TangentMode.Broken, active);
+            var knotToTangentDirection = position - knotPosition;
+            var rotation = quaternion.LookRotationSafe(knotToTangentDirection, normal);
+            Draw(-1, position, rotation, knotPosition, false, false, false, TangentMode.Broken, active);
         }
 
         public static void Draw(int controlId, SelectableTangent tangent, bool active = true)
@@ -71,7 +72,7 @@ namespace UnityEditor.Splines
             Draw(
                 controlId,
                 tangent.Position,
-                TransformOperation.CalculateElementSpaceHandleRotation(math.length(tangent.LocalPosition) > 0 ? (ISplineElement)tangent : tangent.Owner),
+                EditorSplineUtility.GetElementRotation(math.length(tangent.LocalPosition) > 0 ? (ISplineElement)tangent : tangent.Owner),
                 owner.Position,
                 SplineSelection.Contains(tangent),
                 SplineSelection.Contains(tangent.OppositeTangent),
@@ -86,8 +87,8 @@ namespace UnityEditor.Splines
                 return;
 
             var size = HandleUtility.GetHandleSize(position);
-            var hovered = GUIUtility.hotControl == 0 && HandleUtility.nearestControl == controlId;
-                
+            var hovered = SplineHandleUtility.IsHoverAvailableForSplineElement() && SplineHandleUtility.IsElementHovered(controlId);
+
 #if UNITY_2022_2_OR_NEWER
             var tangentColor = Handles.elementColor;
             if (hovered)
@@ -101,33 +102,34 @@ namespace UnityEditor.Splines
             else if (selected)
                 tangentColor = Handles.selectedColor;
 #endif
-            
             if (!active)
                 tangentColor = Handles.secondaryColor;
 
-#if UNITY_2022_2_OR_NEWER   
-            var tangentArmColor = tangentColor == Handles.elementColor
-                ? SplineHandleUtility.tangentColor
-                : tangentColor;
-#else
-            var tangentArmColor = tangentColor == SplineHandleUtility.knotColor
-                ? SplineHandleUtility.tangentColor
-                : tangentColor;
-#endif
-            
-            if (tangentArmColor == SplineHandleUtility.tangentColor && oppositeSelected && mode != TangentMode.Broken )
 #if UNITY_2022_2_OR_NEWER
-                tangentArmColor = Handles.elementSelectionColor;
+            var tangentArmColor = tangentColor == Handles.elementColor ?
+                SplineHandleUtility.tangentColor :
+                tangentColor;
 #else
-                tangentArmColor = Handles.selectedColor;
+            var tangentArmColor = tangentColor == SplineHandleUtility.knotColor ?
+                SplineHandleUtility.tangentColor :
+                tangentColor;
 #endif
-            if (tangentArmColor == SplineHandleUtility.tangentColor && oppositeHovered && mode == TangentMode.Mirrored)
+
+            if (mode == TangentMode.Mirrored)
+            {
 #if UNITY_2022_2_OR_NEWER
-                tangentArmColor = Handles.elementPreselectionColor;
+                if(oppositeHovered)
+                    tangentArmColor = Handles.elementPreselectionColor;
+                else if(tangentArmColor == SplineHandleUtility.tangentColor && oppositeSelected)
+                    tangentArmColor = Handles.elementSelectionColor;
 #else
-                tangentArmColor = Handles.preselectionColor;
+                if(oppositeHovered)
+                    tangentArmColor = Handles.preselectionColor;
+                else if(tangentArmColor == SplineHandleUtility.tangentColor && oppositeSelected)
+                    tangentArmColor = Handles.selectedColor;
 #endif
-            
+            }
+
             var rotationDiscWidth = k_TangentRotWidthDefault;
             if (hovered)
                 rotationDiscWidth = k_TangentRotDiscWidth;
@@ -173,69 +175,71 @@ namespace UnityEditor.Splines
                         SplineHandleUtility.DrawAAWireDisc(Vector3.zero, Vector3.up, tangentHandleOffset, rotationDiscWidth);
                 }
             }
+        }
 
-            static void DrawTangentArm(Vector3 position, Vector3 knotPosition, float size, TangentMode mode, bool selected, bool hovered, bool oppositeSelected, bool oppositeHovered)
+        static void DrawTangentArm(Vector3 position, Vector3 knotPosition, float size, TangentMode mode, bool selected, bool hovered, bool oppositeSelected, bool oppositeHovered)
+        {
+            var width = k_TangentLineWidthDefault;
+            if (!DirectManipulation.IsDragging)
             {
-                var width = k_TangentLineWidthDefault;
                 if (selected || (mode != TangentMode.Broken && oppositeSelected))
                     width = k_TangentLineWidthSelected;
                 else if (hovered || (mode != TangentMode.Broken && oppositeHovered))
                     width = k_TangentLineWidthHover;
-
-                var startPos = knotPosition;
-                var toTangent = position - knotPosition;
-                var toTangentNorm = math.normalize(toTangent);
-                var length = math.length(toTangent);
-
-                var knotHandleSize = HandleUtility.GetHandleSize(startPos);
-                var knotHandleOffset = knotHandleSize * k_TangentStartOffsetFromKnot;
-                var tangentHandleOffset = size * k_TangentEndOffsetFromHandle;
-                // Reduce the length slightly, so that there's some space between tangent line endings and handles.
-                length = Mathf.Max(0f, length - knotHandleOffset - tangentHandleOffset);
-                startPos += (Vector3)toTangentNorm * knotHandleOffset;
-                
-                SplineHandleUtility.DrawLineWithWidth(startPos + (Vector3)toTangentNorm * length, startPos, width,  SplineHandleUtility.denseLineAATex);
             }
 
-            static void DrawTangentShape(float size, bool selected)
-            {
-                var midVector = new Vector3(-.5f, 0, .5f);
-                if (selected)
-                {
-                    var factor = 0.7f;
-                    var radius = (selected ? SplineHandleUtility.knotDiscRadiusFactorSelected : SplineHandleUtility.knotDiscRadiusFactorHover) * size;
-                    // As Handles.DrawAAConvexPolygon has no thickness parameter, we're drawing a AA Polyline here so that the polygon has thickness when viewed from a shallow angle.
-                    Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, 
-                        k_TangentHandleWidth,
-                        factor * radius * midVector,
-                        factor * radius * Vector3.forward,
-                        factor * radius * Vector3.right,
-                        -factor * radius * Vector3.forward,
-                        -factor * radius * Vector3.right,
-                        factor * radius * midVector);
-                    Handles.DrawAAConvexPolygon(
-                        radius * midVector,
-                        radius * Vector3.forward,
-                        radius * Vector3.right,
-                        -radius * Vector3.forward,
-                        -radius * Vector3.right,
-                        radius * midVector);
-                }
-                else
-                {
-                    var radius = SplineHandleUtility.knotDiscRadiusFactorDefault * size;
-                    //Starting the polyline in the middle of a segment and not to a corner to get an invisible connection.
-                    //Otherwise the connection is really visible in the corner as a small part is missing there.
-                    Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex,
-                        k_TangentHandleWidth,
-                        radius * midVector,
-                        radius * Vector3.forward,
-                        radius * Vector3.right,
-                        -radius * Vector3.forward,
-                        -radius * Vector3.right,
-                        radius * midVector);
+            var startPos = knotPosition;
+            var toTangent = position - knotPosition;
+            var toTangentNorm = math.normalize(toTangent);
+            var length = math.length(toTangent);
 
-                }
+            var knotHandleSize = HandleUtility.GetHandleSize(startPos);
+            var knotHandleOffset = knotHandleSize * k_TangentStartOffsetFromKnot;
+            var tangentHandleOffset = size * k_TangentEndOffsetFromHandle;
+            // Reduce the length slightly, so that there's some space between tangent line endings and handles.
+            length = Mathf.Max(0f, length - knotHandleOffset - tangentHandleOffset);
+            startPos += (Vector3)toTangentNorm * knotHandleOffset;
+
+            SplineHandleUtility.DrawLineWithWidth(startPos + (Vector3)toTangentNorm * length, startPos, width, SplineHandleUtility.denseLineAATex);
+        }
+
+        static void DrawTangentShape(float size, bool selected)
+        {
+            var midVector = new Vector3(-.5f, 0, .5f);
+            if (selected)
+            {
+                var factor = 0.7f;
+                var radius = (selected ? SplineHandleUtility.knotDiscRadiusFactorSelected : SplineHandleUtility.knotDiscRadiusFactorHover) * size;
+                // As Handles.DrawAAConvexPolygon has no thickness parameter, we're drawing a AA Polyline here so that the polygon has thickness when viewed from a shallow angle.
+                Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex,
+                    k_TangentHandleWidth,
+                    factor * radius * midVector,
+                    factor * radius * Vector3.forward,
+                    factor * radius * Vector3.right,
+                    -factor * radius * Vector3.forward,
+                    -factor * radius * Vector3.right,
+                    factor * radius * midVector);
+                Handles.DrawAAConvexPolygon(
+                    radius * midVector,
+                    radius * Vector3.forward,
+                    radius * Vector3.right,
+                    -radius * Vector3.forward,
+                    -radius * Vector3.right,
+                    radius * midVector);
+            }
+            else
+            {
+                var radius = SplineHandleUtility.knotDiscRadiusFactorDefault * size;
+                //Starting the polyline in the middle of a segment and not to a corner to get an invisible connection.
+                //Otherwise the connection is really visible in the corner as a small part is missing there.
+                Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex,
+                    k_TangentHandleWidth,
+                    radius * midVector,
+                    radius * Vector3.forward,
+                    radius * Vector3.right,
+                    -radius * Vector3.forward,
+                    -radius * Vector3.right,
+                    radius * midVector);
             }
         }
     }

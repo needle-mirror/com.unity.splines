@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEditor.EditorTools;
 using UnityEditor.Overlays;
 using UnityEngine;
-using UnityEngine.Splines;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines

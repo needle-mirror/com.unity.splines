@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using UnityEngine;
 
 namespace UnityEngine.Splines
 {
@@ -43,7 +42,7 @@ namespace UnityEngine.Splines
 
         [SerializeField, Tooltip("The section of the Spline to extrude.")]
         Vector2 m_Range = new Vector2(0f, 1f);
-
+        
         Mesh m_Mesh;
         bool m_RebuildRequested;
         float m_NextScheduledRebuild;
@@ -64,6 +63,7 @@ namespace UnityEngine.Splines
         /// </summary>
         [Obsolete("Use RebuildOnSplineChange instead.", false)]
         public bool rebuildOnSplineChange => RebuildOnSplineChange;
+
         /// <summary>
         /// Enable to regenerate the extruded mesh when the target Spline is modified. Disable this option if the Spline
         /// will not be modified at runtime.
@@ -191,7 +191,7 @@ namespace UnityEngine.Splines
             if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
                 Debug.LogError("SplineExtrude.createMeshInstance is disabled, but there is no valid mesh assigned. " +
                     "Please create or assign a writable mesh asset.");
-            
+
             Rebuild();
         }
 

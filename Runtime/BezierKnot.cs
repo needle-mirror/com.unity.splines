@@ -4,7 +4,7 @@ using Unity.Mathematics;
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// This struct contains position and tangent data for a knot.
+    /// This struct contains position and tangent data for a knot. The position is a scalar point and the tangents are vectors.
     /// The <see cref="Spline"/> class stores a collection of BezierKnot that form a series of connected
     /// <see cref="BezierCurve"/>. Each knot contains a Position, Tangent In, and Tangent Out. When a Spline is not
     /// closed, the first and last knots will contain an extraneous tangent (in and out, respectively).
@@ -20,13 +20,13 @@ namespace UnityEngine.Splines
         public float3 Position;
 
         /// <summary>
-        /// The tangent leading into this knot. On a cubic bezier curve, this value is used to calculate
+        /// The tangent vector that leads into this knot. On a cubic Bezier curve, this value is used to calculate
         /// <see cref="BezierCurve.P2"/> when used as the second knot in a curve.
         /// </summary>
         public float3 TangentIn;
 
         /// <summary>
-        /// The tangent following this knot. On a cubic bezier curve, this value is used to calculate
+        /// The tangent vector that follows this knot. On a cubic Bezier curve, this value is used to calculate
         /// <see cref="BezierCurve.P1"/> when used as the first knot in a curve.
         /// </summary>
         public float3 TangentOut;
@@ -40,12 +40,19 @@ namespace UnityEngine.Splines
         /// Create a new BezierKnot struct.
         /// </summary>
         /// <param name="position">The position of the knot relative to the spline.</param>
-        public BezierKnot(float3 position)
+        public BezierKnot(float3 position): this(position, 0f, 0f, quaternion.identity)
         {
-            Position = position;
-            TangentIn = float3.zero;
-            TangentOut = float3.zero;
-            Rotation = quaternion.identity;
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="BezierKnot"/> struct.
+        /// </summary>
+        /// <param name="position">The position of the knot relative to the spline.</param>
+        /// <param name="tangentIn">The leading tangent to this knot.</param>
+        /// <param name="tangentOut">The following tangent to this knot.</param>
+        public BezierKnot(float3 position, float3 tangentIn, float3 tangentOut)
+            : this(position, tangentIn, tangentOut, quaternion.identity)
+        {
         }
 
         /// <summary>

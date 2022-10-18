@@ -9,6 +9,9 @@ namespace UnityEditor.Splines
 {
     sealed class BezierKnotDrawer : ElementDrawer<SelectableKnot>
     {
+        static readonly string k_PositionTooltip = L10n.Tr("Knot Position");
+        static readonly string k_RotationTooltip = L10n.Tr("Knot Rotation");
+
         readonly Float3PropertyField<SelectableKnot> m_Position;
         readonly Float3PropertyField<SelectableKnot> m_Rotation;
         readonly TangentModePropertyField<SelectableKnot> m_Mode;
@@ -20,6 +23,7 @@ namespace UnityEditor.Splines
         {
             VisualElement row;
             Add(row = new VisualElement(){name = "Vector3WithIcon"});
+            row.tooltip = k_PositionTooltip;
             row.style.flexDirection = FlexDirection.Row;
             row.Add(new VisualElement(){name = "PositionIcon"});
             row.Add(m_Position = new Float3PropertyField<SelectableKnot>("",
@@ -30,6 +34,7 @@ namespace UnityEditor.Splines
             m_Position.style.flexGrow = 1;
 
             Add(row = new VisualElement(){name = "Vector3WithIcon"});
+            row.tooltip = k_RotationTooltip;
             row.style.flexDirection = FlexDirection.Row;
             row.Add(new VisualElement(){name = "RotationIcon"});
             row.Add(m_Rotation = new Float3PropertyField<SelectableKnot>("",

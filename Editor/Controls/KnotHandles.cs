@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
@@ -12,91 +11,49 @@ namespace UnityEditor.Splines
         const float k_KnotRotDiscWidthDefault = 1.5f;
         const float k_KnotRotDiscWidthHover = 3f;
         const float k_KnotHandleWidth = 2f;
-        
+
         static readonly List<SelectableKnot> k_KnotBuffer = new List<SelectableKnot>();
 
         static readonly Vector3[] k_HandlePoints = new Vector3[11];
-        
+
         static List<(SelectableKnot knot, bool selected, bool hovered, Color knotColor, Color discColor, bool linkedKnot)> s_Knots = new ();
-        
-        public static void Draw(int controlId, SelectableKnot knot, bool preview = false, bool activeSpline = true)
+
+        public static void Draw(int controlId, SelectableKnot knot)
         {
             if (Event.current.GetTypeForControl(controlId) != EventType.Repaint)
                 return;
 
-            var knotHovered = GUIUtility.hotControl == 0 && HandleUtility.nearestControl == controlId;
-            var hovered = knotHovered;
             var selected = SplineSelection.Contains(knot);
-
+            var knotHovered = SplineHandleUtility.IsElementHovered(controlId);
+ 
+            //Retrieving linked knots
             EditorSplineUtility.GetKnotLinks(knot, k_KnotBuffer);
             var drawLinkedKnotHandle = k_KnotBuffer.Count != 1;
             var mainKnot = knot;
+            
             SelectableKnot lastHovered = new SelectableKnot();
-            //Retrieving the last hovered element
+            // Retrieving the last hovered element 
+            // SplineHandleUtility.lastHoveredElement is pointing either to:
+            // - the hovered Knot and the ID is pointing to the controlID of that knot in that case
+            // - if a curve is hovered, the element is the knot closest to the hovered part of the curve (start or end knot depending)
+            //   and the controlID is the one of the curve 
             var lastHoveredElementIsKnot = SplineHandleUtility.lastHoveredElement is SelectableKnot;
             if (lastHoveredElementIsKnot)
                 lastHovered = (SelectableKnot)SplineHandleUtility.lastHoveredElement;
 
-            //The curve is hovered if the last hovered element is a linked knot and that the elementId is set to -1
+            var isCurveId = SplineHandles.IsCurveId(SplineHandleUtility.lastHoveredElementId);
+            
             var curveIsHovered = lastHoveredElementIsKnot &&
                 k_KnotBuffer.Contains(lastHovered) &&
-                SplineHandles.IsCurveId(SplineHandleUtility.lastHoveredElementId);
+                isCurveId;
 
-#if UNITY_2022_2_OR_NEWER
-            var knotColor = Handles.elementColor;
-            var highlightColor = Handles.elementPreselectionColor;
-#else
-            var knotColor = SplineHandleUtility.knotColor;
-            var highlightColor = SplineHandleUtility.knotColor;
-#endif
-            
-            if (preview)
-                knotColor = Color.Lerp(Color.gray, Color.white, 0.5f);
-#if UNITY_2022_2_OR_NEWER
-            else if (hovered)
-            {
-                knotColor = Handles.elementPreselectionColor;
-                highlightColor = Handles.elementPreselectionColor;
-            }
-            else if (selected)
-            {
-                knotColor = Handles.elementSelectionColor;
-                highlightColor = Handles.elementSelectionColor; 
-            }
-#else
-            else if (hovered)
-            {
-                knotColor = Handles.preselectionColor;
-                highlightColor = Handles.preselectionColor;
-            }
-            else if (selected)
-            {
-                knotColor = Handles.selectedColor;
-                highlightColor = Handles.selectedColor;
-            }
-#endif
+            var hovered = knotHovered || (curveIsHovered && knot.Equals(lastHovered));
 
-            if (!activeSpline)
-                knotColor = Handles.secondaryColor;
-
-            // Knot rotation indicators
-#if UNITY_2022_2_OR_NEWER
-            var rotationDiscColor = Handles.elementPreselectionColor;
-#else
-            var rotationDiscColor = Handles.preselectionColor;
-#endif
-            
-            hovered |= lastHoveredElementIsKnot && (knot.Equals(lastHovered) || k_KnotBuffer.Contains(lastHovered));
-            
-            if (!(controlId > 0 && GUIUtility.hotControl == 0 && hovered))
-                hovered = false;
-            
             if (drawLinkedKnotHandle)
             {
                 if (curveIsHovered)
-                {   
+                {
                     drawLinkedKnotHandle = false;
-                    
                     if (!knot.Equals(lastHovered))
                     {
                         if (!SplineSelection.Contains(knot))
@@ -106,13 +63,13 @@ namespace UnityEditor.Splines
                         mainKnot = lastHovered;
                     }
                 }
-                else 
+                else
                 {
-                    foreach (var k in k_KnotBuffer)
+                    foreach (var linkedKnot in k_KnotBuffer)
                     {
                         if (!hovered)
                         {
-                            var kSelected = SplineSelection.Contains(k);
+                            var kSelected = SplineSelection.Contains(linkedKnot);
 
                             // If the current knot in not selected but other linked knots are, skip rendering
                             if (!selected && kSelected)
@@ -127,34 +84,57 @@ namespace UnityEditor.Splines
                         }
 
                         //Main knot is the older one, the one on the spline of lowest range and the knot of lowest index
-                        if ((!SplineSelection.HasActiveSplineSelection() || SplineSelection.Contains(k.SplineInfo)) &&
-                            (k.SplineInfo.Index < mainKnot.SplineInfo.Index ||
-                                k.SplineInfo.Index == mainKnot.SplineInfo.Index && k.KnotIndex < mainKnot.KnotIndex))
-                            mainKnot = k;
+                        if ((!SplineSelection.HasActiveSplineSelection() || SplineSelection.Contains(linkedKnot.SplineInfo)) &&
+                            (linkedKnot.SplineInfo.Index < mainKnot.SplineInfo.Index ||
+                                linkedKnot.SplineInfo.Index == mainKnot.SplineInfo.Index && linkedKnot.KnotIndex < mainKnot.KnotIndex))
+                            mainKnot = linkedKnot;
                     }
                 }
             }
 
+            //Hovered might not be available if a TRS tool is in use
+            hovered &= SplineHandleUtility.IsHoverAvailableForSplineElement();
+            
+#if UNITY_2022_2_OR_NEWER
+            var knotColor = Handles.elementColor;
+            var highlightColor = Handles.elementPreselectionColor;
+            var rotationDiscColor = Handles.elementPreselectionColor;
             if (hovered)
             {
-#if UNITY_2022_2_OR_NEWER
                 knotColor = Handles.elementPreselectionColor;
                 highlightColor = Handles.elementPreselectionColor;
+            }
+            else if (selected)
+            {
+                knotColor = Handles.elementSelectionColor;
+                highlightColor = Handles.elementSelectionColor;
+            }
 #else
+            var knotColor = SplineHandleUtility.knotColor;
+            var highlightColor = SplineHandleUtility.knotColor;
+            var rotationDiscColor = Handles.preselectionColor;
+            if (hovered)
+            {
                 knotColor = Handles.preselectionColor;
                 highlightColor = Handles.preselectionColor;
-#endif
             }
+            else if (selected)
+            {
+                knotColor = Handles.selectedColor;
+                highlightColor = Handles.selectedColor;
+            }
+#endif
 
             if (hovered || selected)
             {
                 using (new Handles.DrawingScope(highlightColor))
                     CurveHandles.DoCurveHighlightCap(knot);
             }
-            
+
             if (knot.Equals(mainKnot))
             {
                 s_Knots.Add((knot, selected, hovered, knotColor, rotationDiscColor, drawLinkedKnotHandle));
+                DrawKnotIndices(knot);
             }
         }
 
@@ -174,33 +154,29 @@ namespace UnityEditor.Splines
             foreach (var knotInfo in s_Knots)
                 Draw(knotInfo.knot.Position, knotInfo.knot.Rotation, knotInfo.knotColor, knotInfo.selected, knotInfo.hovered, knotInfo.discColor, k_KnotRotDiscWidthHover, knotInfo.linkedKnot);
         }
-        
-        public static void DrawInformativeKnot(SelectableKnot knot)
+
+        static void DrawKnotIndices(SelectableKnot knot)
         {
-            if (Event.current.type != EventType.Repaint)
+            if (!SplineHandleSettings.ShowKnotIndices)
                 return;
 
-            var knotColor = Handles.secondaryColor;
-
-            EditorSplineUtility.GetKnotLinks(knot, k_KnotBuffer);
-            var drawLinkedKnotHandle = k_KnotBuffer.Count != 1;
-
-            if(drawLinkedKnotHandle)
+            var hasLinkedKnots = !(k_KnotBuffer.Count == 1 && k_KnotBuffer.Contains(knot));
+            if (k_KnotBuffer != null && k_KnotBuffer.Count > 0 && hasLinkedKnots)
             {
-                foreach(var k in k_KnotBuffer)
+                var stringBuilder = new System.Text.StringBuilder("[");
+                for (var i = 0; i < k_KnotBuffer.Count; i++)
                 {
-                    //If the current knot in not selected but other linked knots are, skip rendering
-                    if(SplineSelection.Contains(k))
-                        return;
+                    stringBuilder.Append($"({k_KnotBuffer[i].SplineInfo.Index},{k_KnotBuffer[i].KnotIndex})");
+                    if (i != k_KnotBuffer.Count - 1)
+                        stringBuilder.Append(", ");
                 }
-            }
 
-            var position = knot.Position;
-            var rotation = knot.Rotation;
-            var size = HandleUtility.GetHandleSize(position);
-            using(new Handles.DrawingScope(knotColor, Matrix4x4.TRS(position, rotation, Vector3.one)))
+                stringBuilder.Append("]");
+                Handles.Label(knot.Position, stringBuilder.ToString());
+            }
+            else
             {
-                Handles.DrawSolidDisc(Vector3.zero, Vector3.up, size * SplineHandleUtility.knotDiscRadiusFactorSelected /3f);
+                Handles.Label(knot.Position, $"[{knot.KnotIndex}]");
             }
         }
 
@@ -247,6 +223,38 @@ namespace UnityEditor.Splines
                     k_HandlePoints[0] = pos;
                 }
             }
+
+        }
+
+        public static void DrawInformativeKnot(SelectableKnot knot, float sizeFactor = 0.5f)
+        {
+            if (Event.current.type != EventType.Repaint)
+                return;
+
+            EditorSplineUtility.GetKnotLinks(knot, k_KnotBuffer);
+            var drawLinkedKnotHandle = k_KnotBuffer.Count != 1;
+
+            if(drawLinkedKnotHandle)
+            {
+                foreach(var k in k_KnotBuffer)
+                {
+                    //If the current knot in not selected but other linked knots are, skip rendering
+                    if(SplineSelection.Contains(k))
+                        return;
+                }
+            }
+
+            DrawInformativeKnotVisual(knot, SplineHandleUtility.lineColor, sizeFactor);
+        }
+
+        public static void DrawInformativeKnotVisual(SelectableKnot knot, Color knotColor, float sizeFactor = 0.5f)
+        {
+            var position = knot.Position;
+            var size = HandleUtility.GetHandleSize(position);
+            using(new Handles.DrawingScope(knotColor, Matrix4x4.TRS(position, knot.Rotation, Vector3.one)))
+            {
+                Handles.DrawSolidDisc(Vector3.zero, Vector3.up, size * SplineHandleUtility.knotDiscRadiusFactorSelected * sizeFactor);
+            }
         }
 
         internal static void Draw(Vector3 position, Quaternion rotation, Color knotColor, bool selected, bool hovered, Color discColor, float rotationDiscWidth, bool linkedKnots = false)
@@ -270,10 +278,11 @@ namespace UnityEditor.Splines
                 var newKnotColor = new Color(knotColor.r, knotColor.g, knotColor.b, knotColor.a * k_ColorAlphaFactor);
                 using (new Handles.DrawingScope(newKnotColor, Matrix4x4.TRS(position, rotation, Vector3.one)))
                     DrawKnotShape(size, selected, linkedKnots);
-                
+
                 if (hovered)
                 {
-                    var newDiscColor = new Color(discColor.r, discColor.g, discColor.b, discColor.a * k_ColorAlphaFactor);
+                    var newDiscColor = new Color(discColor.r, discColor.g,
+                        discColor.b, discColor.a * k_ColorAlphaFactor);
                     using (new Handles.DrawingScope(newDiscColor, Matrix4x4.TRS(position, rotation, Vector3.one)))
                         SplineHandleUtility.DrawAAWireDisc(Vector3.zero, Vector3.up, k_KnotRotDiscRadius * size, rotationDiscWidth);
                 }
@@ -300,7 +309,7 @@ namespace UnityEditor.Splines
                 else
                     Handles.DrawWireDisc(Vector3.zero, Vector3.up, SplineHandleUtility.knotDiscRadiusFactorDefault * size, SplineHandleUtility.handleWidth * SplineHandleUtility.aliasedLineSizeMultiplier);
             }
-            
+
             Handles.DrawAAPolyLine(Vector3.zero, Vector3.up * 2f * SplineHandleUtility.sizeFactor * size);
         }
     }

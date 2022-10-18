@@ -173,6 +173,7 @@ namespace UnityEngine.Splines
                 }
             }
         }
+
         /// <summary>
         /// Updates the KnotLinkCollection indices after a spline index changes.
         /// </summary>
@@ -223,7 +224,7 @@ namespace UnityEngine.Splines
             //Now that links has been updated, remove the previous knot
             KnotRemoved(previousIndex);
         }
-        
+
         /// <summary>
         /// Updates the KnotLinkCollection indices after a knot has been removed.
         /// </summary>

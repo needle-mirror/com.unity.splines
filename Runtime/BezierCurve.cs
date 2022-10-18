@@ -104,7 +104,7 @@ namespace UnityEngine.Splines
         /// <param name="b">The knot to use as the third and fourth control points. The third control point is equal
         /// to (<see cref="BezierKnot.Position"/> + <see cref="BezierKnot.TangentIn"/> that's rotated by <see cref="BezierKnot.Rotation"/>), and the fourth control point is
         /// equal to <see cref="BezierKnot.Position"/>.</param>
-        public BezierCurve(BezierKnot a, BezierKnot b) :
+        public  BezierCurve(BezierKnot a, BezierKnot b) :
             this(a.Position, a.Position + math.rotate(a.Rotation, a.TangentOut), b.Position +  math.rotate(b.Rotation, b.TangentIn), b.Position)
         {
         }
@@ -136,6 +136,15 @@ namespace UnityEngine.Splines
             return new BezierCurve(pointA, pointA + tangentOutA, pointB + tangentInB, pointB);
         }
         
+        /// <summary>
+        /// Gets the same BezierCurve but in the opposite direction.
+        /// </summary>
+        /// <returns>Returns the BezierCurve struct in the inverse direction.</returns>
+        public BezierCurve GetInvertedCurve()
+        {
+            return new BezierCurve(P3, P2, P1, P0);
+        }
+
         /// <summary>
         /// Compare two curves for equality.
         /// </summary>

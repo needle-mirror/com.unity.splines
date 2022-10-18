@@ -19,6 +19,7 @@ namespace UnityEngine.Splines
         public bool Equals(BezierCurve other);
         public static BezierCurve FromTangent(Unity.Mathematics.float3 pointA, Unity.Mathematics.float3 tangentOutA, Unity.Mathematics.float3 pointB, Unity.Mathematics.float3 tangentInB);
         public override int GetHashCode();
+        public BezierCurve GetInvertedCurve();
         public static bool operator ==(BezierCurve left, BezierCurve right);
         public static bool operator !=(BezierCurve left, BezierCurve right);
         public BezierCurve Transform(Unity.Mathematics.float4x4 matrix);
@@ -31,6 +32,7 @@ namespace UnityEngine.Splines
         public Unity.Mathematics.float3 TangentIn;
         public Unity.Mathematics.float3 TangentOut;
         public BezierKnot(Unity.Mathematics.float3 position) {}
+        public BezierKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 tangentIn, Unity.Mathematics.float3 tangentOut) {}
         public BezierKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 tangentIn, Unity.Mathematics.float3 tangentOut, Unity.Mathematics.quaternion rotation) {}
         public override bool Equals(object obj);
         public bool Equals(BezierKnot other);
@@ -60,6 +62,8 @@ namespace UnityEngine.Splines
         public static Unity.Mathematics.float3 EvaluateTangent(BezierCurve curve, float t);
         public static float GetDistanceToInterpolation<T>(T lut, float distance) where T : System.Collections.Generic.IReadOnlyList<DistanceToInterpolation>;
         public static float GetDistanceToInterpolation(BezierCurve curve, float distance);
+        public static Unity.Mathematics.float3 GetNearestPoint(BezierCurve curve, Ray ray, int resolution = 16);
+        public static float GetNearestPoint(BezierCurve curve, Ray ray, out Unity.Mathematics.float3 position, out float interpolation, int resolution = 16);
         public static void Split(BezierCurve curve, float t, out BezierCurve left, out BezierCurve right);
     }
 
@@ -98,6 +102,11 @@ namespace UnityEngine.Splines
     public interface IDataPoint
     {
         public float Index { get; set; }
+    }
+
+    public interface IHasEmptyCurves
+    {
+        public System.Collections.Generic.IReadOnlyList<int> EmptyCurves { get; }
     }
 
     public interface IInterpolator<T>
@@ -166,11 +175,13 @@ namespace UnityEngine.Splines
     {
         public bool Closed { get; }
         public int Count { get; }
+        public Unity.Collections.NativeArray<BezierCurve> Curves { get; }
         public BezierKnot this[int index] { get; }
         public Unity.Collections.NativeArray<BezierKnot> Knots { get; }
         public NativeSpline(ISpline spline, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {}
         public NativeSpline(ISpline spline, Unity.Mathematics.float4x4 transform, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {}
         public NativeSpline(System.Collections.Generic.IReadOnlyList<BezierKnot> knots, bool closed, Unity.Mathematics.float4x4 transform, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {}
+        public NativeSpline(System.Collections.Generic.IReadOnlyList<BezierKnot> knots, System.Collections.Generic.IReadOnlyList<int> splits, bool closed, Unity.Mathematics.float4x4 transform, Unity.Collections.Allocator allocator = Unity.Collections.Allocator.Temp) {}
         public void Dispose();
         public BezierCurve GetCurve(int index);
         public float GetCurveInterpolation(int curveIndex, float curveDistance);
@@ -186,6 +197,12 @@ namespace UnityEngine.Splines
         Normalized = 1,
     }
 
+    public enum SliceDirection
+    {
+        Backward = 1,
+        Forward = 0,
+    }
+
     public class Spline : ISpline, System.Collections.Generic.ICollection<BezierKnot>, System.Collections.Generic.IEnumerable<BezierKnot>, System.Collections.Generic.IList<BezierKnot>, System.Collections.Generic.IReadOnlyCollection<BezierKnot>, System.Collections.Generic.IReadOnlyList<BezierKnot>, System.Collections.IEnumerable
     {
         [System.Obsolete(@"Deprecated, use Changed instead.")] public event System.Action changed;
@@ -195,16 +212,18 @@ namespace UnityEngine.Splines
         [System.Obsolete(@"Use GetTangentMode and SetTangentMode.")] public SplineType EditType { get; set; }
         public bool IsReadOnly { get; }
         public BezierKnot this[int index] { get; set; }
-        public System.Collections.Generic.IEnumerable<BezierKnot> Knots { get; }
+        public System.Collections.Generic.IEnumerable<BezierKnot> Knots { get; set; }
         public Spline() {}
         public Spline(System.Collections.Generic.IEnumerable<BezierKnot> knots, bool closed = false) {}
         public Spline(int knotCapacity, bool closed = false) {}
         public void Add(BezierKnot item);
         public void Add(BezierKnot item, TangentMode mode);
+        public void Add(BezierKnot item, TangentMode mode, float tension);
         public void Clear();
         public bool Contains(BezierKnot item);
         public void Copy(Spline copyFrom);
         public void CopyTo(BezierKnot[] array, int arrayIndex);
+        public float GetAutoSmoothTension(int index);
         public BezierCurve GetCurve(int index);
         public float GetCurveInterpolation(int curveIndex, float curveDistance);
         public float GetCurveLength(int index);
@@ -214,14 +233,20 @@ namespace UnityEngine.Splines
         public int IndexOf(BezierKnot item);
         public void Insert(int index, BezierKnot knot);
         public void Insert(int index, BezierKnot knot, TangentMode mode);
+        public void Insert(int index, BezierKnot knot, TangentMode mode, float tension);
         protected virtual void OnSplineChanged();
         public bool Remove(BezierKnot item);
         public void RemoveAt(int index);
         public void Resize(int newSize);
+        public void SetAutoSmoothTension(int index, float tension);
+        public void SetAutoSmoothTension(SplineRange range, float tension);
+        public void SetAutoSmoothTensionNoNotify(int index, float tension);
+        public void SetAutoSmoothTensionNoNotify(SplineRange range, float tension);
         public void SetKnot(int index, BezierKnot value, BezierTangent main = BezierTangent.Out);
         public void SetKnotNoNotify(int index, BezierKnot value, BezierTangent main = BezierTangent.Out);
         public void SetTangentMode(TangentMode mode);
         public void SetTangentMode(int index, TangentMode mode, BezierTangent main = BezierTangent.Out);
+        public void SetTangentMode(SplineRange range, TangentMode mode, BezierTangent main = BezierTangent.Out);
         public void SetTangentModeNoNotify(int index, TangentMode mode, BezierTangent main = BezierTangent.Out);
         public BezierKnot[] ToArray();
         public void Warmup();
@@ -257,6 +282,7 @@ namespace UnityEngine.Splines
         [System.Obsolete(@"Use PlayOnAwake instead.", false)] public bool playOnAwake { get; }
         public bool PlayOnAwake { get; set; }
         [System.Obsolete(@"Use Container instead.", false)] public SplineContainer splineContainer { get; }
+        public float StartOffset { get; set; }
         public SplineAnimate() {}
         public void Pause();
         public void Play();
@@ -278,8 +304,8 @@ namespace UnityEngine.Splines
         }
         public enum LoopMode
         {
-            [InspectorName(@"Loop Continous")] Loop = 1,
-            [InspectorName(@"Ease In Then Continous")] LoopEaseInOnce = 2,
+            [InspectorName(@"Loop Continuous")] Loop = 1,
+            [InspectorName(@"Ease In Then Continuous")] LoopEaseInOnce = 2,
             [InspectorName(@"Once")] Once = 0,
             [InspectorName(@"Ping Pong")] PingPong = 3,
         }
@@ -318,6 +344,7 @@ namespace UnityEngine.Splines
 
     [AddComponentMenu(@"Splines/Spline")] [ExecuteInEditMode] [Icon(@"Packages/com.unity.splines/Editor/Resources/Icons/SplineComponent.png")] public sealed class SplineContainer : MonoBehaviour, ISerializationCallbackReceiver, ISplineContainer
     {
+        public Spline this[int index] { get; }
         public KnotLinkCollection KnotLinkCollection { get; }
         public Spline Spline { get; set; }
         public System.Collections.Generic.IReadOnlyList<Spline> Splines { get; set; }
@@ -405,10 +432,15 @@ namespace UnityEngine.Splines
     public static class SplineFactory
     {
         public static Spline CreateCatmullRom(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, bool closed = false);
+        public static Spline CreateCircle(float radius);
+        public static Spline CreateHelix(float radius, float height, int revolutions);
         public static Spline CreateLinear(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, bool closed = false);
         public static Spline CreateLinear(System.Collections.Generic.IList<Unity.Mathematics.float3> positions, System.Collections.Generic.IList<Unity.Mathematics.quaternion> rotations, bool closed = false);
+        public static Spline CreatePolygon(float edgeSize, int sides);
+        public static Spline CreateRoundedCornerSquare(float size, float cornerRadius);
         public static Spline CreateRoundedSquare(float radius, float rounding);
-        public static Spline CreateSquare(float radius);
+        public static Spline CreateSquare(float size);
+        public static Spline CreateStarPolygon(float edgeSize, int corners, float concavity);
     }
 
     [AddComponentMenu(@"Splines/Spline Instantiate")] [ExecuteInEditMode] public class SplineInstantiate : SplineComponent
@@ -419,12 +451,14 @@ namespace UnityEngine.Splines
         [System.Obsolete(@"Use ForwardAxis instead.", false)] public SplineComponent.AlignAxis forwardAxis { get; }
         public SplineComponent.AlignAxis ForwardAxis { get; set; }
         public SplineInstantiate.Method InstantiateMethod { get; set; }
+        public SplineInstantiate.InstantiableItem[] itemsToInstantiate { get; set; }
         [System.Obsolete(@"Use MaxPositionOffset instead.", false)] public Vector3 maxPositionOffset { get; }
         public Vector3 MaxPositionOffset { get; set; }
         [System.Obsolete(@"Use MaxRotationOffset instead.", false)] public Vector3 maxRotationOffset { get; }
         public Vector3 MaxRotationOffset { get; set; }
         [System.Obsolete(@"Use MaxScaleOffset instead.", false)] public Vector3 maxScaleOffset { get; }
         public Vector3 MaxScaleOffset { get; set; }
+        public float MaxSpacing { get; set; }
         [System.Obsolete(@"Use InstantiateMethod instead.", false)] public SplineInstantiate.Method method { get; }
         [System.Obsolete(@"Use MinPositionOffset instead.", false)] public Vector3 minPositionOffset { get; }
         public Vector3 MinPositionOffset { get; set; }
@@ -432,6 +466,7 @@ namespace UnityEngine.Splines
         public Vector3 MinRotationOffset { get; set; }
         [System.Obsolete(@"Use MinScaleOffset instead.", false)] public Vector3 minScaleOffset { get; }
         public Vector3 MinScaleOffset { get; set; }
+        public float MinSpacing { get; set; }
         [System.Obsolete(@"Use PositionSpace instead.", false)] public SplineInstantiate.OffsetSpace positionSpace { get; }
         public SplineInstantiate.OffsetSpace PositionSpace { get; set; }
         [System.Obsolete(@"Use RotationSpace instead.", false)] public SplineInstantiate.OffsetSpace rotationSpace { get; }
@@ -495,6 +530,16 @@ namespace UnityEngine.Splines
         public override string ToString();
     }
 
+    public static class SplineMath
+    {
+        public static float DistancePointLine(Unity.Mathematics.float3 p, Unity.Mathematics.float3 a, Unity.Mathematics.float3 b);
+        public static Unity.Mathematics.float3 PointLineNearestPoint(Unity.Mathematics.float3 p, Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, out float lineParam);
+        public static Unity.Mathematics.float3 RayLineDistance(Unity.Mathematics.float3 ro, Unity.Mathematics.float3 rd, Unity.Mathematics.float3 a, Unity.Mathematics.float3 b);
+        public static System.ValueTuple<Unity.Mathematics.float3, Unity.Mathematics.float3> RayLineNearestPoint(Unity.Mathematics.float3 ro, Unity.Mathematics.float3 rd, Unity.Mathematics.float3 a, Unity.Mathematics.float3 b);
+        public static System.ValueTuple<Unity.Mathematics.float3, Unity.Mathematics.float3> RayLineNearestPoint(Unity.Mathematics.float3 ro, Unity.Mathematics.float3 rd, Unity.Mathematics.float3 a, Unity.Mathematics.float3 b, out float rayParam, out float lineParam);
+        public static float RayLineParameter(Unity.Mathematics.float3 ro, Unity.Mathematics.float3 rd, Unity.Mathematics.float3 lineOrigin, Unity.Mathematics.float3 lineDir);
+    }
+
     public static class SplineMesh
     {
         public static void Extrude<T>(T spline, Mesh mesh, float radius, int sides, int segments, bool capped = true) where T : ISpline;
@@ -519,6 +564,64 @@ namespace UnityEngine.Splines
         KnotRemoved = 4,
     }
 
+    public class SplinePath : UnityEngine.Splines.SplinePath<UnityEngine.Splines.SplineSlice<Spline>>
+    {
+        public SplinePath(System.Collections.Generic.IEnumerable<UnityEngine.Splines.SplineSlice<Spline>> slices) {}
+    }
+
+    public class SplinePath<T> : IHasEmptyCurves, ISpline, System.Collections.Generic.IEnumerable<BezierKnot>, System.Collections.Generic.IReadOnlyCollection<BezierKnot>, System.Collections.Generic.IReadOnlyList<BezierKnot>, System.Collections.IEnumerable where T : ISpline
+    {
+        public bool Closed { get; }
+        public int Count { get; }
+        public System.Collections.Generic.IReadOnlyList<int> EmptyCurves { get; }
+        public BezierKnot this[int index] { get; }
+        public BezierKnot this[SplineKnotIndex index] { get; }
+        public System.Collections.Generic.IReadOnlyList<T> Slices { get; set; }
+        public SplinePath(System.Collections.Generic.IEnumerable<T> slices) {}
+        public BezierCurve GetCurve(int knot);
+        public float GetCurveInterpolation(int curveIndex, float curveDistance);
+        public float GetCurveLength(int index);
+        public System.Collections.Generic.IEnumerator<BezierKnot> GetEnumerator();
+        public float GetLength();
+    }
+
+    public struct SplineRange : System.Collections.Generic.IEnumerable<int>, System.Collections.IEnumerable
+    {
+        public int Count { get; set; }
+        public SliceDirection Direction { get; set; }
+        public int End { get; }
+        public int this[int index] { get; }
+        public int Start { get; set; }
+        public SplineRange(int start, int count) {}
+        public SplineRange(int start, int count, SliceDirection direction) {}
+        public System.Collections.Generic.IEnumerator<int> GetEnumerator();
+        public struct SplineRangeEnumerator : System.Collections.Generic.IEnumerator<int>, System.Collections.IEnumerator, System.IDisposable
+        {
+            public int Current { get; }
+            public SplineRangeEnumerator(SplineRange range) {}
+            public void Dispose();
+            public bool MoveNext();
+            public void Reset();
+        }
+    }
+
+    public struct SplineSlice<T> : ISpline, System.Collections.Generic.IEnumerable<BezierKnot>, System.Collections.Generic.IReadOnlyCollection<BezierKnot>, System.Collections.Generic.IReadOnlyList<BezierKnot>, System.Collections.IEnumerable where T : ISpline
+    {
+        public SplineRange Range;
+        public T Spline;
+        public Unity.Mathematics.float4x4 Transform;
+        public bool Closed { get; }
+        public int Count { get; }
+        public BezierKnot this[int index] { get; }
+        public SplineSlice(T spline, SplineRange range) {}
+        public SplineSlice(T spline, SplineRange range, Unity.Mathematics.float4x4 transform) {}
+        public BezierCurve GetCurve(int index);
+        public float GetCurveInterpolation(int curveIndex, float curveDistance);
+        public float GetCurveLength(int index);
+        public System.Collections.Generic.IEnumerator<BezierKnot> GetEnumerator();
+        public float GetLength();
+    }
+
     [System.Obsolete(@"Replaced by GetTangentMode and SetTangentMode.")] public enum SplineType
     {
         Bezier = 1,
@@ -528,6 +631,8 @@ namespace UnityEngine.Splines
 
     public static class SplineUtility
     {
+        public const float CatmullRomTension = 0.5f;
+        public const float DefaultTension = 0.3333333f;
         public const int DrawResolutionDefault = 10;
         public const int PickResolutionDefault = 4;
         public const int PickResolutionMax = 64;
@@ -541,11 +646,15 @@ namespace UnityEngine.Splines
         public static Unity.Mathematics.float3 EvaluateAcceleration<T>(this T spline, float t) where T : ISpline;
         public static float EvaluateCurvature<T>(this T spline, float t) where T : ISpline;
         public static Unity.Mathematics.float3 EvaluateCurvatureCenter<T>(this T spline, float t) where T : ISpline;
+        public static bool EvaluateNurbs(float t, System.Collections.Generic.List<Unity.Mathematics.float3> controlPoints, System.Collections.Generic.List<double> knotVector, int order, out Unity.Mathematics.float3 position);
         public static Unity.Mathematics.float3 EvaluatePosition<T>(this T spline, float t) where T : ISpline;
         public static Unity.Mathematics.float3 EvaluateTangent<T>(this T spline, float t) where T : ISpline;
         public static Unity.Mathematics.float3 EvaluateUpVector<T>(this T spline, float t) where T : ISpline;
+        public static bool FitSplineToPoints(System.Collections.Generic.List<Unity.Mathematics.float3> points, float errorThreshold, bool closed, out Spline spline);
         public static BezierKnot GetAutoSmoothKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next);
         public static BezierKnot GetAutoSmoothKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next, Unity.Mathematics.float3 normal);
+        public static BezierKnot GetAutoSmoothKnot(Unity.Mathematics.float3 position, Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next, Unity.Mathematics.float3 normal, float tension = 0.3333333f);
+        public static Unity.Mathematics.float3 GetAutoSmoothTangent(Unity.Mathematics.float3 previous, Unity.Mathematics.float3 next, float tension = 0.3333333f);
         public static Unity.Mathematics.float3 GetAutoSmoothTangent(Unity.Mathematics.float3 previous, Unity.Mathematics.float3 current, Unity.Mathematics.float3 next, float tension = 0.3333333f);
         public static Bounds GetBounds<T>(this T spline) where T : ISpline;
         public static Bounds GetBounds<T>(this T spline, Unity.Mathematics.float4x4 transform) where T : ISpline;
@@ -562,6 +671,8 @@ namespace UnityEngine.Splines
         public static int NextIndex<T>(this T spline, int index) where T : ISpline;
         public static BezierKnot Previous<T>(this T spline, int index) where T : ISpline;
         public static int PreviousIndex<T>(this T spline, int index) where T : ISpline;
+        public static System.Collections.Generic.List<Unity.Mathematics.float3> ReducePoints<T>(T line, float epsilon = 0.15f) where T : System.Collections.Generic.IList<Unity.Mathematics.float3>;
+        public static void ReducePoints<T>(T line, System.Collections.Generic.List<Unity.Mathematics.float3> results, float epsilon = 0.15f) where T : System.Collections.Generic.IList<Unity.Mathematics.float3>;
         public static bool RemoveSpline<T>(this T container, Spline spline) where T : ISplineContainer;
         public static bool RemoveSplineAt<T>(this T container, int splineIndex) where T : ISplineContainer;
         public static void SetLinkedKnotPosition<T>(this T container, SplineKnotIndex index) where T : ISplineContainer;

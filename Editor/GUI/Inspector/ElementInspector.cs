@@ -8,7 +8,7 @@ namespace UnityEditor.Splines
 {
     sealed class ElementInspector : VisualElement, IDisposable
     {
-        public static bool ignoreKnotCallbacks = true;
+        public static bool ignoreKnotCallbacks = false;
 
         static readonly string k_NoSelectionMessage = L10n.Tr("No element selected");
         

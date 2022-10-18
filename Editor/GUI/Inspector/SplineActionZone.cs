@@ -11,6 +11,12 @@ namespace UnityEditor.Splines
         static readonly string k_JoinButtonLabel = L10n.Tr("Join");
         static readonly string k_ReverseFlowButtonLabel = L10n.Tr("Reverse Spline Flow");
 
+        static readonly string k_LinkButtonTooltip = L10n.Tr("Set knots to the same position and link them.");
+        static readonly string k_UnlinkButtonTooltip = L10n.Tr("Unlink knots.");
+        static readonly string k_SplitButtonTooltip = L10n.Tr("Divide a knot with two segments into two knots.");
+        static readonly string k_JoinButtonTooltip = L10n.Tr("Connect the ends of two splines to each other.");
+        static readonly string k_ReverseFlowButtonTooltip = L10n.Tr("Reverse the direction of a spline.");
+
         static readonly List<SelectableKnot> m_KnotBuffer = new List<SelectableKnot>();
         static readonly List<ISplineElement> m_ElementBuffer = new List<ISplineElement>();
 
@@ -33,6 +39,7 @@ namespace UnityEditor.Splines
 
             m_LinkButton = new Button();
             m_LinkButton.text = k_LinkButtonLabel;
+            m_LinkButton.tooltip = k_LinkButtonTooltip;
             m_LinkButton.style.flexGrow = new StyleFloat(1);
             m_LinkButton.clicked += OnLinkClicked;
             m_LinkButton.AddToClassList("button-strip-button");
@@ -41,6 +48,7 @@ namespace UnityEditor.Splines
 
             m_UnlinkButton = new Button();
             m_UnlinkButton.text = k_UnlinkButtonLabel;
+            m_UnlinkButton.tooltip = k_UnlinkButtonTooltip;
             m_UnlinkButton.style.flexGrow = new StyleFloat(1);
             m_UnlinkButton.clicked += OnUnlinkClicked;
             m_UnlinkButton.AddToClassList("button-strip-button");
@@ -50,6 +58,7 @@ namespace UnityEditor.Splines
 
             m_SplitButton = new Button();
             m_SplitButton.text = k_SplitButtonLabel;
+            m_SplitButton.tooltip = k_SplitButtonTooltip;
             m_SplitButton.style.flexGrow = 1;
             m_SplitButton.clicked += OnSplitClicked;
             m_SplitButton.AddToClassList("button-strip-button");
@@ -59,6 +68,7 @@ namespace UnityEditor.Splines
 
             m_JoinButton = new Button();
             m_JoinButton.text = k_JoinButtonLabel;
+            m_JoinButton.tooltip = k_JoinButtonTooltip;
             m_JoinButton.style.flexGrow = 1;
             m_JoinButton.clicked += OnJoinClicked;
             m_JoinButton.AddToClassList("button-strip-button");
@@ -67,6 +77,7 @@ namespace UnityEditor.Splines
 
             m_ReverseFlowButton = new Button();
             m_ReverseFlowButton.text = k_ReverseFlowButtonLabel;
+            m_ReverseFlowButton.tooltip = k_ReverseFlowButtonTooltip;
             m_ReverseFlowButton.style.flexGrow = 1;
             m_ReverseFlowButton.clicked += OnReverseFlowClicked;
             Add(m_ReverseFlowButton);

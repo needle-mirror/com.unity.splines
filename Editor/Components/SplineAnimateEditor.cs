@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.Splines;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -23,6 +25,7 @@ namespace UnityEditor.Splines
         SerializedProperty m_SpeedProperty;
         SerializedProperty m_ObjectForwardProperty;
         SerializedProperty m_ObjectUpProperty;
+        SerializedProperty m_StartOffsetProperty;
         SerializedObject m_TransformSO;
 
         SplineAnimate m_SplineAnimate;
@@ -31,43 +34,101 @@ namespace UnityEditor.Splines
         static VisualTreeAsset s_TreeAsset;
         static StyleSheet s_ThemeStyleSheet;
 
+        SplineAnimate[] m_Components;
+
         void OnEnable()
         {
             m_SplineAnimate = target as SplineAnimate;
-            m_SplineAnimate.Updated += OnSplineAnimateUpdated;
-            m_TargetProperty = serializedObject.FindProperty("m_Target");
-            m_MethodProperty = serializedObject.FindProperty("m_Method");
-            m_DurationProperty = serializedObject.FindProperty("m_Duration");
-            m_SpeedProperty = serializedObject.FindProperty("m_MaxSpeed");
-            m_ObjectForwardProperty = serializedObject.FindProperty("m_ObjectForwardAxis");
-            m_ObjectUpProperty = serializedObject.FindProperty("m_ObjectUpAxis");
-            m_TransformSO = new SerializedObject(m_SplineAnimate.transform);
+            if (m_SplineAnimate == null)
+                return;
             
+            m_SplineAnimate.Updated += OnSplineAnimateUpdated;
+
+            try { 
+                m_TargetProperty = serializedObject.FindProperty("m_Target");
+                m_MethodProperty = serializedObject.FindProperty("m_Method");
+                m_DurationProperty = serializedObject.FindProperty("m_Duration");
+                m_SpeedProperty = serializedObject.FindProperty("m_MaxSpeed");
+                m_ObjectForwardProperty = serializedObject.FindProperty("m_ObjectForwardAxis");
+                m_ObjectUpProperty = serializedObject.FindProperty("m_ObjectUpAxis");
+                m_StartOffsetProperty = serializedObject.FindProperty("m_StartOffset");
+            }
+            catch (Exception)
+            {
+                return;
+            }
+
+            m_TransformSO = new SerializedObject(m_SplineAnimate.transform);
+            m_Components = targets.Select(x => x as SplineAnimate).Where(y => y != null).ToArray();
+
+            foreach (var animate in m_Components)
+            {
+                if (animate.Container != null)
+                    animate.RecalculateAnimationParameters();
+            }
+
             EditorApplication.update += OnEditorUpdate;
+            Spline.Changed += OnSplineChange;
+            ISplineContainer.SplineAdded += OnContainerSplineSetModified;
+            ISplineContainer.SplineRemoved += OnContainerSplineSetModified;
         }
 
         void OnDisable()
         {
-            if (m_SplineAnimate != null && m_SplineAnimate.Container != null)
-            {
-                if (!EditorApplication.isPlaying)
-                    m_SplineAnimate.Restart(false);
-
+            if(m_SplineAnimate != null)
                 m_SplineAnimate.Updated -= OnSplineAnimateUpdated;
+
+            if (!EditorApplication.isPlaying)
+            {
+                foreach (var animate in m_Components)
+                {
+                    if (animate.Container != null)
+                    {
+                        animate.RecalculateAnimationParameters();
+                        animate.Restart(false);
+                    }
+                }
             }
 
             EditorApplication.update -= OnEditorUpdate;
+            Spline.Changed -= OnSplineChange;
+            ISplineContainer.SplineAdded -= OnContainerSplineSetModified;
+            ISplineContainer.SplineRemoved -= OnContainerSplineSetModified;
         }
 
         void OnEditorUpdate()
         {
-            if (m_SplineAnimate == null || m_SplineAnimate.Container == null)
-                return;
-            
-            if (m_SplineAnimate.IsPlaying && !EditorApplication.isPlaying)
-                m_SplineAnimate.Update();
+            if (!EditorApplication.isPlaying)
+            {
+                if (m_SplineAnimate.Container != null && m_SplineAnimate.IsPlaying)
+                    m_SplineAnimate.Update();
+            }
 
             RefreshProgressFields();
+        }
+
+        void OnSplineChange(Spline spline, int knotIndex, SplineModification modificationType)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
+            foreach (var animate in m_Components)
+            {
+                if (animate.Container != null && animate.Container.Splines.Contains(spline))
+                    animate.RecalculateAnimationParameters();
+            }
+        }
+
+        void OnContainerSplineSetModified(ISplineContainer container, int spline)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
+            foreach (var animate in m_Components)
+            {
+                if (animate.Container == (System.Object)container)
+                    animate.RecalculateAnimationParameters();
+            }
         }
 
         public override VisualElement CreateInspectorGUI()
@@ -77,30 +138,24 @@ namespace UnityEditor.Splines
             if (s_TreeAsset == null)
                 s_TreeAsset = (VisualTreeAsset)AssetDatabase.LoadAssetAtPath(k_UxmlPath, typeof(VisualTreeAsset));
             s_TreeAsset.CloneTree(m_Root);
-            
+
             if (s_ThemeStyleSheet == null)
                 s_ThemeStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"Packages/com.unity.splines/Editor/Stylesheets/SplineAnimateInspector{(EditorGUIUtility.isProSkin ? "Dark" : "Light")}.uss");
 
             m_Root.styleSheets.Add(s_ThemeStyleSheet);
-            
-            var splineField = m_Root.Q<PropertyField>("spline-container");
-            splineField.RegisterValueChangeCallback((_) => { m_SplineAnimate.Container = m_TargetProperty.objectReferenceValue as SplineContainer; });
 
             var methodField = m_Root.Q<PropertyField>("method");
             methodField.RegisterValueChangeCallback((_) => { RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex); });
             RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex);
-            
-            var durationField = m_Root.Q<PropertyField>("duration");
-            durationField.RegisterValueChangeCallback((_) => { m_SplineAnimate.Duration = m_DurationProperty.floatValue; });
-            
-            var speedField = m_Root.Q<PropertyField>("max-speed");
-            speedField.RegisterValueChangeCallback((_) => { m_SplineAnimate.MaxSpeed = m_SpeedProperty.floatValue; });
-            
+
             m_ObjectForwardField = m_Root.Q<EnumField>("object-forward");
             m_ObjectForwardField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectForwardProperty, m_ObjectUpProperty));
-            
+
             m_ObjectUpField = m_Root.Q<EnumField>("object-up");
             m_ObjectUpField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectUpProperty, m_ObjectForwardProperty));
+
+            var startOffsetField = m_Root.Q<PropertyField>("start-offset");
+            startOffsetField.RegisterValueChangeCallback((_) => { m_SplineAnimate.StartOffset = m_StartOffsetProperty.floatValue; });
 
             var playButton = m_Root.Q<Button>("play");
             playButton.clicked += OnPlayClicked;
@@ -142,7 +197,7 @@ namespace UnityEditor.Splines
             if (m_ProgressSlider == null || m_ElapsedTimeField == null)
                 return;
 
-            m_ProgressSlider.SetValueWithoutNotify(m_SplineAnimate.GetLoopInterpolation());
+            m_ProgressSlider.SetValueWithoutNotify(m_SplineAnimate.GetLoopInterpolation(false));
             m_ElapsedTimeField.SetValueWithoutNotify(m_SplineAnimate.ElapsedTime);
         }
 
@@ -166,7 +221,7 @@ namespace UnityEditor.Splines
         {
             if (changeEvent.newValue == null)
                 return;
-            
+
             var newValue = (SplineAnimate.AlignAxis)changeEvent.newValue;
             var previousValue = (SplineAnimate.AlignAxis)changeEvent.previousValue;
 
@@ -188,6 +243,7 @@ namespace UnityEditor.Splines
         {
             if (!m_SplineAnimate.IsPlaying)
             {
+                m_SplineAnimate.RecalculateAnimationParameters();
                 if (m_SplineAnimate.NormalizedTime == 1f)
                     m_SplineAnimate.Restart(true);
                 else
@@ -202,6 +258,7 @@ namespace UnityEditor.Splines
 
         void OnResetClicked()
         {
+            m_SplineAnimate.RecalculateAnimationParameters();
             m_SplineAnimate.Restart(false);
             RefreshProgressFields();
         }
@@ -211,7 +268,7 @@ namespace UnityEditor.Splines
             if (!EditorApplication.isPlaying)
             {
                 m_TransformSO.Update();
-                
+
                 var localPosition = position;
                 var localRotation = rotation;
                 if (m_SplineAnimate.transform.parent != null)
@@ -225,6 +282,23 @@ namespace UnityEditor.Splines
 
                 m_TransformSO.ApplyModifiedProperties();
             }
+        }
+
+        [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
+        static void DrawSplineAnimateGizmos(SplineAnimate splineAnimate, GizmoType gizmoType)
+        {
+            if (splineAnimate.Container == null)
+                return;
+
+            const float k_OffsetGizmoSize = 0.15f;
+            splineAnimate.Container.Evaluate(splineAnimate.StartOffsetT, out var offsetPos, out var forward, out var up);
+
+#if UNITY_2022_2_OR_NEWER
+            using (new Handles.DrawingScope(Handles.elementColor))
+#else
+            using (new Handles.DrawingScope(SplineHandleUtility.knotColor))
+#endif
+                Handles.ConeHandleCap(-1, offsetPos, Quaternion.LookRotation(forward, up), k_OffsetGizmoSize * HandleUtility.GetHandleSize(offsetPos), EventType.Repaint);
         }
     }
 }

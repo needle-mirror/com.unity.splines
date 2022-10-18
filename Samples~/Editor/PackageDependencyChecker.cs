@@ -8,6 +8,7 @@ namespace Unity.Splines.Examples.Editor
 {
     static class PackageDependencyChecker
     {
+        const string k_SessionStateCheck = "SplinePackageExampleDependencyCheckPerformed";
         static ListRequest s_Request;
         static readonly List<string> s_PackageIDs = new()
         {
@@ -19,6 +20,9 @@ namespace Unity.Splines.Examples.Editor
         [InitializeOnLoadMethod]
         static void CheckDependencies()
         {
+            if (SessionState.GetBool(k_SessionStateCheck, false))
+                return;
+            SessionState.SetBool(k_SessionStateCheck, true);
             s_Request = Client.List();
             EditorApplication.update += PollRequest;
         }

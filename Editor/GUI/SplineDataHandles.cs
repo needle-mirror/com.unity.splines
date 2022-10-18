@@ -21,9 +21,9 @@ namespace UnityEditor.Splines
         static int s_NewDataPointIndex = -1;
         static bool s_AddingDataPoint = false;
 
-        static bool m_ShowAddHandle;
-        static float3 m_Position;
-        static float m_T;
+        static bool s_ShowAddHandle;
+        static float3 s_Position;
+        static float s_T;
 
         /// <summary>
         /// Creates manipulation handles in the SceneView to add, move, and remove SplineData's DataPoints along a spline.
@@ -51,16 +51,16 @@ namespace UnityEditor.Splines
             {
                 //Compute distance to spline and closest point
                 var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
-                var distance = SplineUtility.GetNearestPoint(spline, ray, out m_Position, out m_T);
-                m_ShowAddHandle = distance < HandleUtility.GetHandleSize(m_Position);
+                var distance = SplineUtility.GetNearestPoint(spline, ray, out s_Position, out s_T);
+                s_ShowAddHandle = distance < HandleUtility.GetHandleSize(s_Position);
             }
 
             //Id has to be consistent no matter the distance test
             var id = GUIUtility.GetControlID(FocusType.Passive);
 
             //Only activating the tooling when close enough from the spline
-            if(m_ShowAddHandle)
-                DataPointAddHandle(id, spline, splineData, m_Position, m_T, useDefaultValueOnAdd);
+            if(s_ShowAddHandle)
+                DataPointAddHandle(id, spline, splineData, s_Position, s_T, useDefaultValueOnAdd);
 
             //Remove DataPoint functionality
             TryRemoveDataPoint(splineData);

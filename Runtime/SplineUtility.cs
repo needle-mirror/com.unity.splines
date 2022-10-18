@@ -13,6 +13,22 @@ namespace UnityEngine.Splines
         const int k_SubdivisionCountMax = 1024;
 
         /// <summary>
+        /// The default tension value used for <see cref="TangentMode.AutoSmooth"/> knots.
+        /// Use with <see cref="Spline.SetTangentMode(UnityEngine.Splines.TangentMode)"/> and
+        /// <see cref="Spline.SetAutoSmoothTension(int,float)"/> to control the curvature of the spline at control
+        /// points.
+        /// </summary>
+        public const float DefaultTension = 1 / 3f;
+
+        /// <summary>
+        /// The tension value for a Catmull-Rom type spline.
+        /// Use with <see cref="Spline.SetTangentMode(UnityEngine.Splines.TangentMode)"/> and
+        /// <see cref="Spline.SetAutoSmoothTension(int,float)"/> to control the curvature of the spline at control
+        /// points.
+        /// </summary>
+        public const float CatmullRomTension = 1 / 2f;
+
+        /// <summary>
         /// The minimum resolution allowable when unrolling a curve to hit test while picking (selecting a spline with a cursor).
         ///
         /// Pick resolution is used when determining how many segments are required to unroll a curve. Unrolling is the
@@ -67,15 +83,15 @@ namespace UnityEngine.Splines
         /// <param name="tangent">Output variable for the float3 tangent at t.</param>
         /// <param name="upVector">Output variable for the float3 up direction at t.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        /// <returns>Boolean value, true if a valid set of output variables as been computed.</returns>
+        /// <returns>True if successful.</returns>
         public static bool Evaluate<T>(this T spline,
-                float t,
-                out float3 position,
-                out float3 tangent,
-                out float3 upVector
-            ) where T : ISpline
+            float t,
+            out float3 position,
+            out float3 tangent,
+            out float3 upVector
+        ) where T : ISpline
         {
-            if(spline.Count < 1)
+            if (spline.Count < 1)
             {
                 position = float3.zero;
                 tangent = new float3(0, 0, 1);
@@ -91,6 +107,97 @@ namespace UnityEngine.Splines
             upVector = spline.EvaluateUpVector(curveIndex, curveT);
 
             return true;
+        }
+
+        /// <summary>
+        /// Computes the interpolated position for NURBS defined by order, controlPoints, and knotVector at ratio t.
+        /// </summary>
+        /// <param name="t">The value between knotVector[0] and knotVector[-1] that represents the ratio along the curve.</param>
+        /// <param name="controlPoints">The control points for the NURBS.</param>
+        /// <param name="knotVector">The knot vector for the NURBS. There must be at least order + controlPoints.Length - 1 knots.</param>
+        /// <param name="order">The order of the curve. For example, 4 for a cubic curve or 3 for quadratic.</param>
+        /// <param name="position">The output variable for the float3 position at t.</param>
+        /// <returns>True if successful.</returns>
+        public static bool EvaluateNurbs(
+            float t,
+            List<float3> controlPoints,
+            List<double> knotVector,
+            int order,
+            out float3 position
+        )
+        {
+            position = float3.zero;
+            if (knotVector.Count < controlPoints.Count + order - 1 || controlPoints.Count < order || t < 0 || 1 < t)
+            {
+                return false;
+            }
+
+            knotVector = new List<double>(knotVector);
+
+            var originalFirstKnot = knotVector[0];
+            var fullKnotSpan = knotVector[knotVector.Count - 1] - knotVector[0];
+
+            //normalize knots
+            if (knotVector[0] != 0 || knotVector[knotVector.Count - 1] != 1)
+            {
+                for (int i = 0; i < knotVector.Count; ++i)
+                {
+                    knotVector[i] = (knotVector[i] - originalFirstKnot) / fullKnotSpan;
+                }
+            }
+
+            var span = order;
+            while (span < controlPoints.Count && knotVector[span] <= t)
+            {
+                span++;
+            }
+            span--;
+
+            var basis = SplineUtility.GetNurbsBasisFunctions(order, t, knotVector, span);
+
+            for (int i = 0; i < order; ++i)
+            {
+                position += basis[i] * controlPoints[span - order + 1 + i];
+            }
+
+            return true;
+        }
+
+        static float[] GetNurbsBasisFunctions(int degree, float t, List<double> knotVector, int span)
+        {
+            //Constructs the Basis functions at t for the nurbs curve.
+            //The nurbs basis function form can be found at this link under the section
+            //"Construction of the basis functions": https://en.wikipedia.org/wiki/Non-uniform_rational_B-spline
+            //This is an iterative way of computing the same thing.
+            var left = new float[degree];
+            var right = new float[degree];
+            var N = new float[degree];
+
+            for (int j = 0; j < degree; ++j)
+            {
+                left[j] = 0f;
+                right[j] = 0f;
+                N[j] = 1f;
+            }
+
+            for (int j = 1; j < degree; ++j)
+            {
+
+                left[j] = (float)(t - knotVector[span + 1 - j]);
+                right[j] = (float)(knotVector[span + j] - t);
+                var saved = 0f;
+                for (int k = 0; k < j; k++)
+                {
+                    float temp = N[k] / (right[k + 1] + left[j - k]);
+                    N[k] = saved + right[k + 1] * temp;
+                    saved = left[j - k] * temp;
+                }
+
+                N[j] = saved;
+
+            }
+
+            return N;
         }
 
         /// <summary>
@@ -212,7 +319,7 @@ namespace UnityEngine.Splines
 
             var curvature = CurveUtility.EvaluateCurvature(curve, curveT);
 
-            if(curvature != 0)
+            if (curvature != 0)
             {
                 var radius = 1f / curvature;
 
@@ -245,7 +352,7 @@ namespace UnityEngine.Splines
         static int SplineToCurveT<T>(this T spline, float splineT, out float curveT, bool useLUT) where T : ISpline
         {
             var knotCount = spline.Count;
-            if(knotCount <= 1)
+            if (knotCount <= 1)
             {
                 curveT = 0f;
                 return 0;
@@ -263,9 +370,9 @@ namespace UnityEngine.Splines
 
                 if (tLength <= (start + curveLength))
                 {
-                    curveT =  useLUT ?
+                    curveT = useLUT ?
                         spline.GetCurveInterpolation(index, tLength - start) :
-                        (tLength - start)/ curveLength;
+                        (tLength - start) / curveLength;
                     return index;
                 }
 
@@ -289,13 +396,13 @@ namespace UnityEngine.Splines
         /// <seealso cref="SplineToCurveT{T}"/>
         public static float CurveToSplineT<T>(this T spline, float curve) where T : ISpline
         {
-            if(spline.Count <= 1 || curve < 0f)
+            if (spline.Count <= 1 || curve < 0f)
                 return 0f;
 
-            if(curve >= ( spline.Closed ? spline.Count : spline.Count - 1 ))
+            if (curve >= (spline.Closed ? spline.Count : spline.Count - 1))
                 return 1f;
 
-            var curveIndex = (int) math.floor(curve);
+            var curveIndex = (int)math.floor(curve);
 
             float t = 0f;
 
@@ -376,63 +483,6 @@ namespace UnityEngine.Splines
             return bounds;
         }
 
-        // Get the point on a line segment at the smallest distance to intersection
-        static float3 RayLineSegmentNearestPoint(float3 rayOrigin, float3 rayDir, float3 s0, float3 s1, out float t)
-        {
-            float3 am = s1 - s0;
-            float al = math.length(am);
-            float3 ad = (1f / al) * am;
-            float dot = math.dot(ad, rayDir);
-
-            if (1f - math.abs(dot) < Mathf.Epsilon)
-            {
-                t = 0f;
-                return s0;
-            }
-
-            float3 c = rayOrigin - s0;
-            float rm = math.dot(rayDir, rayDir);
-            float n = -dot * math.dot(rayDir, c) + math.dot(ad, c) * rm;
-            float d = math.dot(ad, ad) * rm - dot * dot;
-            float mag = math.min(al, math.max(0f, n / d));
-            t = mag / al;
-            return s0 + ad * mag;
-        }
-
-        static float3 PointLineSegmentNearestPoint(float3 p, float3 a, float3 b, out float t)
-        {
-            float l2 = math.lengthsq(b - a);
-
-            if (l2 == 0.0)
-            {
-                t = 0f;
-                return a;
-            }
-
-            t = math.dot(p - a, b - a) / l2;
-
-            if (t < 0.0)
-            {
-                t = 0f;
-                return a;
-            }
-
-            if (t > 1.0)
-            {
-                t = 1f;
-                return b;
-            }
-
-            return a + t * (b - a);
-        }
-
-        // Same as ProjectPointLine but without clamping.
-        static float3 ProjectPointRay(float3 point, float3 ro, float3 rd)
-        {
-            float3 relativePoint = point - ro;
-            float dot = math.dot(rd, relativePoint);
-            return ro + rd * dot;
-        }
         /// <summary>
         /// Gets the number of segments for a specified spline length and resolution.
         /// </summary>
@@ -443,8 +493,8 @@ namespace UnityEngine.Splines
         /// <returns>
         /// The number of segments for a length and resolution.
         /// </returns>
-        [Obsolete("Use "+nameof(GetSubdivisionCount)+" instead.", false)]
-        public static int GetSegmentCount(float length, int resolution) => GetSubdivisionCount(length,resolution);
+        [Obsolete("Use " + nameof(GetSubdivisionCount) + " instead.", false)]
+        public static int GetSegmentCount(float length, int resolution) => GetSubdivisionCount(length, resolution);
 
         /// <summary>
         /// Gets the number of subdivisions for a spline length and resolution.
@@ -458,7 +508,7 @@ namespace UnityEngine.Splines
         /// </returns>
         public static int GetSubdivisionCount(float length, int resolution)
         {
-            return (int) math.max(k_SubdivisionCountMin, math.min(k_SubdivisionCountMax, math.sqrt(length) * resolution));
+            return (int)math.max(k_SubdivisionCountMin, math.min(k_SubdivisionCountMax, math.sqrt(length) * resolution));
         }
 
         struct Segment
@@ -490,22 +540,23 @@ namespace UnityEngine.Splines
             {
                 float t1 = range.start + (range.length * (i / (segments - 1f)));
                 float3 b = EvaluatePosition(spline, t1);
-                float3 p = RayLineSegmentNearestPoint(ro, rd, a, b, out float st);
-                float d = math.length(ProjectPointRay(p, ro, rd) - p);
+                var (rayPoint, linePoint) = SplineMath.RayLineNearestPoint(ro, rd, a, b, out _, out var lineParam);
+                float dsqr = math.lengthsq(linePoint - rayPoint);
 
-                if (d < distance)
+                if (dsqr < distance)
                 {
                     segment.start = t0;
                     segment.length = t1 - t0;
-                    time = segment.start + segment.length * st;
-                    distance = d;
-                    nearest = p;
+                    time = segment.start + segment.length * lineParam;
+                    distance = dsqr;
+                    nearest = linePoint;
                 }
 
                 t0 = t1;
                 a = b;
             }
 
+            distance = math.sqrt(distance);
             return segment;
         }
 
@@ -522,22 +573,22 @@ namespace UnityEngine.Splines
 
             float t0 = range.start;
             float3 a = EvaluatePosition(spline, t0);
-            float dsqr = distance;
+
 
             for (int i = 1; i < segments; i++)
             {
                 float t1 = range.start + (range.length * (i / (segments - 1f)));
                 float3 b = EvaluatePosition(spline, t1);
-                float3 p = PointLineSegmentNearestPoint(point, a, b, out float st);
-                float d = math.distancesq(p, point);
+                var p = SplineMath.PointLineNearestPoint(point, a, b, out var lineParam);
+                float dsqr = math.distancesq(p, point);
 
-                if (d < dsqr)
+                if (dsqr < distance)
                 {
                     segment.start = t0;
                     segment.length = t1 - t0;
-                    time = segment.start + segment.length * st;
-                    dsqr = d;
-                    distance = math.sqrt(d);
+                    time = segment.start + segment.length * lineParam;
+                    distance = dsqr;
+
                     nearest = p;
                 }
 
@@ -545,6 +596,7 @@ namespace UnityEngine.Splines
                 a = b;
             }
 
+            distance = math.sqrt(distance);
             return segment;
         }
 
@@ -561,12 +613,12 @@ namespace UnityEngine.Splines
         /// Higher values mean smaller and more segments, which increases accuracy at the cost of processing time.
         /// The minimum resolution is defined by <seealso cref="PickResolutionMin"/>, and the maximum is defined by
         /// <seealso cref="PickResolutionMax"/>.
-        /// In most cases, the default resolution is appropriate. Use with <seealso cref="iterations"/> to fine tune
+        /// In most cases, the default resolution is appropriate. Use with <paramref name="iterations"/> to fine tune
         /// point accuracy.
         /// </param>
         /// <param name="iterations">
         /// The nearest point is calculated by finding the nearest point on the entire length
-        /// of the spline using <seealso cref="resolution"/> to divide into equally spaced line segments. Successive
+        /// of the spline using <paramref name="resolution"/> to divide into equally spaced line segments. Successive
         /// iterations will then subdivide further the nearest segment, producing more accurate results. In most cases,
         /// the default value is sufficient, but if extreme accuracy is required this value can be increased to a
         /// maximum of <see cref="PickResolutionMax"/>.
@@ -607,12 +659,12 @@ namespace UnityEngine.Splines
         /// Higher values mean smaller and more segments, which increases accuracy at the cost of processing time.
         /// The minimum resolution is defined by <seealso cref="PickResolutionMin"/>, and the maximum is defined by
         /// <seealso cref="PickResolutionMax"/>.
-        /// In most cases, the default resolution is appropriate. Use with <seealso cref="iterations"/> to fine tune
+        /// In most cases, the default resolution is appropriate. Use with <paramref name="iterations"/> to fine tune
         /// point accuracy.
         /// </param>
         /// <param name="iterations">
         /// The nearest point is calculated by finding the nearest point on the entire length
-        /// of the spline using <seealso cref="resolution"/> to divide into equally spaced line segments. Successive
+        /// of the spline using <paramref name="resolution"/> to divide into equally spaced line segments. Successive
         /// iterations will then subdivide further the nearest segment, producing more accurate results. In most cases,
         /// the default value is sufficient, but if extreme accuracy is required this value can be increased to a
         /// maximum of <see cref="PickResolutionMax"/>.
@@ -660,7 +712,7 @@ namespace UnityEngine.Splines
             out float resultPointT) where T : ISpline
         {
             const float epsilon = 0.001f;
-            if(fromT <0)
+            if (fromT < 0)
             {
                 resultPointT = 0f;
                 return spline.EvaluatePosition(0f);
@@ -669,12 +721,12 @@ namespace UnityEngine.Splines
             var length = spline.GetLength();
             var lengthAtT = fromT * length;
             float currentLength = lengthAtT;
-            if(currentLength + relativeDistance >= length) //relativeDistance >= 0 -> Forward search
+            if (currentLength + relativeDistance >= length) //relativeDistance >= 0 -> Forward search
             {
                 resultPointT = 1f;
                 return spline.EvaluatePosition(1f);
             }
-            else if(currentLength + relativeDistance <= 0) //relativeDistance < 0 -> Forward search
+            else if (currentLength + relativeDistance <= 0) //relativeDistance < 0 -> Forward search
             {
                 resultPointT = 0f;
                 return spline.EvaluatePosition(0f);
@@ -687,16 +739,17 @@ namespace UnityEngine.Splines
             var residual = math.abs(relativeDistance);
             float linearDistance = 0;
             float3 point = spline.EvaluatePosition(fromT);
-            while(residual > epsilon && (forwardSearch ? resultPointT < 1f : resultPointT > 0))
+            while (residual > epsilon && (forwardSearch ? resultPointT < 1f : resultPointT > 0))
             {
                 currentLength += forwardSearch ? residual : -residual;
                 resultPointT = currentLength / length;
 
-                if(resultPointT > 1f) //forward search
+                if (resultPointT > 1f) //forward search
                 {
                     resultPointT = 1f;
                     point = spline.EvaluatePosition(1f);
-                }else if(resultPointT < 0f) //backward search
+                }
+                else if (resultPointT < 0f) //backward search
                 {
                     resultPointT = 0f;
                     point = spline.EvaluatePosition(0f);
@@ -752,7 +805,7 @@ namespace UnityEngine.Splines
 
         static float ConvertNormalizedIndexUnit<T>(T spline, float t, PathIndexUnit targetPathUnit) where T : ISpline
         {
-            switch(targetPathUnit)
+            switch (targetPathUnit)
             {
                 case PathIndexUnit.Knot:
                     //LUT SHOULD NOT be used here as PathIndexUnit.KnotIndex is linear regarding the distance
@@ -782,7 +835,7 @@ namespace UnityEngine.Splines
         /// <returns>The normalized interpolation ratio (0 to 1).</returns>
         public static float GetNormalizedInterpolation<T>(T spline, float t, PathIndexUnit originalPathUnit) where T : ISpline
         {
-            switch(originalPathUnit)
+            switch (originalPathUnit)
             {
                 case PathIndexUnit.Knot:
                     return WrapInterpolation(CurveToSplineT(spline, t));
@@ -795,13 +848,13 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Gets the index of a knot that precedes a spline index. This method uses the <see cref="Spline.Count"/> 
+        /// Gets the index of a knot that precedes a spline index. This method uses the <see cref="Spline.Count"/>
         /// and <see cref="Spline.Closed"/> properties to ensure that it returns the correct index of the knot.
         /// </summary>
         /// <param name="spline">The spline to consider.</param>
         /// <param name="index">The current index to consider.</param>
         /// <typeparam name="T">A type that implements ISpline.</typeparam>
-        /// <returns>Returns a knot index that precedes the `index` on the considered spline.</returns>    
+        /// <returns>Returns a knot index that precedes the `index` on the considered spline.</returns>
         public static int PreviousIndex<T>(this T spline, int index) where T : ISpline
             => PreviousIndex(index, spline.Count, spline.Closed);
 
@@ -840,7 +893,7 @@ namespace UnityEngine.Splines
 
         internal static int PreviousIndex(int index, int count, bool wrap)
         {
-            return wrap ? (index + (count-1)) % count : math.max(index - 1, 0);
+            return wrap ? (index + (count - 1)) % count : math.max(index - 1, 0);
         }
 
         internal static int NextIndex(int index, int count, bool wrap)
@@ -867,9 +920,46 @@ namespace UnityEngine.Splines
         /// <param name="previous">The position of the previous <see cref="BezierKnot"/>.</param>
         /// <param name="next">The position of the next <see cref="BezierKnot"/>.</param>
         /// <returns>Returns a tangent calculated from the previous and next knot positions.</returns>
-        public static float3 GetCatmullRomTangent(float3 previous, float3 next)
+        // todo Deprecate in 3.0 - this is not a correct uniform catmull rom parameterization.
+        public static float3 GetCatmullRomTangent(float3 previous, float3 next) =>
+            GetAutoSmoothTangent(previous, next, DefaultTension);
+
+        /// <summary>
+        /// Calculates a tangent from the previous and next knot positions.
+        /// </summary>
+        /// <param name="previous">The position of the previous <see cref="BezierKnot"/>.</param>
+        /// <param name="next">The position of the next <see cref="BezierKnot"/>.</param>
+        /// <param name="tension">Set the length of the tangent vectors.</param>
+        /// <returns>Returns a tangent calculated from the previous and next knot positions.</returns>
+        public static float3 GetAutoSmoothTangent(float3 previous, float3 next, float tension = DefaultTension)
         {
-            return 0.5f * (next - previous) / 3.0f;
+            if (next.Equals(previous))
+                return GetUniformAutoSmoothTangent(previous, next, tension);
+
+            return (next - previous) / math.sqrt(math.length(next - previous)) * tension * .5f;
+        }
+
+        /// <summary>
+        /// Gets a tangent from the previous, current, and next knot positions.
+        /// </summary>
+        /// <param name="previous">The position of the previous <see cref="BezierKnot"/>.</param>
+        /// <param name="current">The position of the current <see cref="BezierKnot"/>.</param>
+        /// <param name="next">The position of the next <see cref="BezierKnot"/>.</param>
+        /// <param name="tension">The length of the tangent vectors.</param>
+        /// <returns>Returns a tangent calculated from the previous, current, and next knot positions.</returns>
+        public static float3 GetAutoSmoothTangent(float3 previous, float3 current, float3 next, float tension = DefaultTension)
+        {
+            if (previous.Equals(current) || next.Equals(current))
+                return GetUniformAutoSmoothTangent(previous, next, tension);
+
+            var toNext = (next - current) / math.sqrt(math.length(next - current));
+            var toPrevious = (current - previous) / math.sqrt(math.length(previous - current));
+            return (toNext + toPrevious) * tension * .5f;
+        }
+
+        static float3 GetUniformAutoSmoothTangent(float3 previous, float3 next, float tension)
+        {
+            return (next - previous) * tension * .5f;
         }
 
         /// <summary>
@@ -879,10 +969,8 @@ namespace UnityEngine.Splines
         /// <param name="previous">The knot that immediately precedes the requested knot.</param>
         /// <param name="next">The knot that immediately follows the requested knot.</param>
         /// <returns>A <see cref="BezierKnot"/> with tangent and rotation values calculated from the previous and next knot positions.</returns>
-        public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next)
-        {
-            return GetAutoSmoothKnot(position, previous, next, math.up());
-        }
+        public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next) =>
+            GetAutoSmoothKnot(position, previous, next, math.up());
 
         /// <summary>
         /// Gets a <see cref="BezierKnot"/> with its tangents and rotation calculated using the previous and next knot positions.
@@ -892,9 +980,21 @@ namespace UnityEngine.Splines
         /// <param name="next">The knot that immediately follows the requested knot.</param>
         /// <param name="normal">The normal vector of the knot.</param>
         /// <returns>A <see cref="BezierKnot"/> with tangent and rotation values calculated from the previous and next knot positions.</returns>
-        public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next, float3 normal)
+        public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next, float3 normal) =>
+            GetAutoSmoothKnot(position, previous, next, normal, DefaultTension);
+        
+        /// <summary>
+        /// Gets a <see cref="BezierKnot"/> with its tangents and rotation calculated using the previous and next knot positions.
+        /// </summary>
+        /// <param name="position">The position of the knot.</param>
+        /// <param name="previous">The knot that immediately precedes the requested knot.</param>
+        /// <param name="next">The knot that immediately follows the requested knot.</param>
+        /// <param name="normal">The normal vector of the knot.</param>
+        /// <param name="tension">Set the length of the tangent vectors.</param>
+        /// <returns>A <see cref="BezierKnot"/> with tangent and rotation values calculated from the previous and next knot positions.</returns>
+        public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next, float3 normal, float tension = DefaultTension)
         {
-            var tan = GetCatmullRomTangent(previous, next);
+            var tan = GetAutoSmoothTangent(previous, position, next, tension);
             var dir = new float3(0, 0, math.length(tan));
             return new BezierKnot(position, -dir, dir, GetKnotRotation(tan, normal));
         }
@@ -925,6 +1025,327 @@ namespace UnityEngine.Splines
             var spline = container.Spline;
             for (int i = 0, c = spline.Count; i < c; i++)
                 spline[i] = spline[i] - delta;
+        }
+
+        /// <summary>
+        /// Computes a <see cref="Spline"/> to approximate the curve formed by the list of provided points
+        /// within the given error threshold.
+        /// </summary>
+        /// <param name="points">The list of <see cref="float3"/> points that define the curve to approximate.</param>
+        /// <param name="errorThreshold">The error threshold to use. Represents the largest distance between any of the
+        /// provided points and the curve.</param>
+        /// <param name="closed">Whether to close the <see cref="Spline"/>.</param>
+        /// <param name="spline">The output <see cref="Spline"/> fitted to the points, or an empty spline if could not be fitted.</param>
+        /// <returns>Whether a curve could be fitted according to the provided error threshold.</returns>
+        public static bool FitSplineToPoints(List<float3> points, float errorThreshold, bool closed,
+            out Spline spline)
+        {
+            /*
+                Implementation based on:
+                "Algorithm for Automatically Fitting Digitized Curves"
+                by Philip J. Schneider
+                "Graphics Gems", Academic Press, 1990
+            */
+
+            spline = new Spline();
+            var maxIterations = 4;
+
+            var leftTangent = math.normalize(points[1] - points[0]);
+            var rightTangent = math.normalize(points[points.Count - 1] - points[points.Count - 2]);
+
+            if (points.Count == 2)
+            {
+                var difference = points[0] - points[1];
+                var diffLength = math.sqrt(math.pow(difference.x, 2) + math.pow(difference.y, 2) +
+                                              math.pow(difference.z, 2));
+
+                var quat1 = GetKnotRotation(leftTangent, math.normalize(math.cross(leftTangent, math.right())));
+                //we use 1/3 of the distance between each of the points as described in the graphics gems paper.
+                var firstKnot = new BezierKnot(points[0], new float3(0, 0, -diffLength / 3f),
+                    new float3(0, 0, diffLength / 3f), quat1);
+
+                var quat2 = GetKnotRotation(rightTangent, math.normalize(math.cross(rightTangent, math.right())));
+                var secondKnot = new BezierKnot(points[1], new float3(0, 0, -diffLength / 3f),
+                    new float3(0, 0, diffLength / 3f), quat2);
+
+                spline = new Spline(new BezierKnot[2] { firstKnot, secondKnot }, closed);
+                return true;
+            }
+
+            //find corresponding t values for each point so we can compute errors (chord-length parameterization)
+            var correspondingTValues = new float[points.Count];
+
+            var firstPassTValues = new float[points.Count];
+
+            firstPassTValues[0] = 0f;
+
+            var cumulativeChordLengths = new float[points.Count - 1];
+
+            var chordLengthSum = 0f;
+            float3 chord;
+            for (int i = 1; i < points.Count; i++)
+            {
+                chord = points[i] - points[i - 1];
+                chordLengthSum += math.sqrt(
+                    chord.x * chord.x +
+                    chord.y * chord.y +
+                    chord.z * chord.z
+                );
+                cumulativeChordLengths[i - 1] = chordLengthSum;
+            }
+
+            for (int i = 0; i < cumulativeChordLengths.Length; i++)
+            {
+                firstPassTValues[i + 1] = cumulativeChordLengths[i] / chordLengthSum;
+            }
+
+            correspondingTValues = firstPassTValues;
+
+            spline = GenerateSplineFromTValues(points, closed, correspondingTValues);
+
+            var tPositions = new float3[points.Count];
+            for (int i = 0; i < correspondingTValues.Length; i++)
+            {
+                float t = correspondingTValues[i];
+                float3 position = spline.EvaluatePosition(t);
+                tPositions[i] = position;
+            }
+
+            (float, int) errorResult = ComputeMaxError(points, tPositions);
+
+            var errorBeforeReparameterization = errorResult.Item1;
+            var splitPoint = errorResult.Item2;
+
+            if (errorBeforeReparameterization < errorThreshold)
+            {
+                return true;
+            }
+            //if error is small enough, try reparameterizing and fitting again
+            else if (errorBeforeReparameterization < 4 * errorThreshold)
+            {
+                var numIterations = 0;
+                while (numIterations < maxIterations)
+                {
+                    var curveKnots = new BezierKnot[spline.Count];
+                    int i = 0;
+                    foreach (BezierKnot bezierKnot in spline.Knots)
+                    {
+                        curveKnots[i] = bezierKnot;
+                        ++i;
+                    }
+
+                    var P0 = curveKnots[0].Position;
+                    var P1 = curveKnots[0].Position + math.rotate(curveKnots[0].Rotation, curveKnots[0].TangentOut);
+                    var P2 = curveKnots[1].Position + math.rotate(curveKnots[1].Rotation, curveKnots[1].TangentIn);
+                    var P3 = curveKnots[1].Position;
+
+                    var P = new float3[] { P0, P1, P2, P3 };
+
+                    var q1 = new float3[3];
+                    for (int j = 0; j <= 2; ++j)
+                    {
+                        q1[j] = (P[j + 1] - P[j]) * 3f;
+                    }
+
+                    var q2 = new float3[2];
+                    for (int j = 0; j <= 1; ++j)
+                    {
+                        q2[j] = (q1[j + 1] - q1[j]) * 2f;
+                    }
+
+                    for (int k = 0; k < points.Count; k++)
+                    {
+                        var t = correspondingTValues[k];
+                        var q = Bernstein(t, P, 3);
+
+                        var q1_t = Bernstein(t, q1, 2);
+                        var q2_t = Bernstein(t, q2, 1);
+
+                        var numerator = math.dot(q - tPositions[k], q1_t);
+                        var denominator = math.dot(q1_t, q1_t) + math.dot(q - tPositions[k], q2_t);
+                        if (denominator != 0)
+                            correspondingTValues[k] -= (numerator / denominator);
+                    }
+
+                    spline = GenerateSplineFromTValues(points, closed, correspondingTValues);
+
+                    tPositions = new float3[points.Count];
+                    for (int k = 0; k < correspondingTValues.Length; k++)
+                    {
+                        var t = correspondingTValues[k];
+                        var position = spline.EvaluatePosition(t);
+                        tPositions[k] = position;
+                    }
+
+                    errorResult = ComputeMaxError(points, tPositions);
+                    var errorAfterReparameterization = errorResult.Item1;
+                    splitPoint = errorResult.Item2;
+                    if (errorAfterReparameterization < errorThreshold)
+                    {
+                        return true;
+                    }
+                    numIterations++;
+                }
+            }
+
+            //still not good enough. Try splitting at point of max error.
+            if (points.Count == 3) splitPoint = 1;
+            else
+            {
+                if (splitPoint == 0)
+                    splitPoint++;
+                else if (splitPoint == points.Count - 1)
+                    splitPoint--;
+            }
+            Spline firstSpline, secondSpline;
+            if (!FitSplineToPoints(points.GetRange(0, splitPoint + 1), errorThreshold, false, out firstSpline) ||
+                !FitSplineToPoints(points.GetRange(splitPoint, points.Count - splitPoint), errorThreshold, false,
+                    out secondSpline))
+            {
+                spline = new Spline();
+                return false;
+            }
+
+            var firstKnots = new BezierKnot[firstSpline.Count];
+            var secondKnots = new BezierKnot[secondSpline.Count];
+            firstSpline.CopyTo(firstKnots, 0);
+            secondSpline.CopyTo(secondKnots, 0);
+
+            var allKnots = new BezierKnot[firstKnots.Length + secondKnots.Length - 1];
+
+            var splitPointTangentIn = math.rotate(firstKnots[firstKnots.Length - 1].Rotation, firstKnots[firstKnots.Length - 1].TangentIn);
+            firstKnots.CopyTo(allKnots, 0);
+            secondKnots.CopyTo(allKnots, firstKnots.Length - 1);
+            allKnots[firstKnots.Length - 1].TangentIn = math.rotate(math.inverse(allKnots[firstKnots.Length - 1].Rotation), splitPointTangentIn);
+
+            float3 firstKnotPos = allKnots[0].Position, lastKnotPos = allKnots[allKnots.Length - 1].Position;
+            bool firstIsLast = (
+                new float3(
+                    (float)Math.Round(firstKnotPos.x, 2),
+                    (float)Math.Round(firstKnotPos.y, 2),
+                    (float)Math.Round(firstKnotPos.z, 2)
+                ).Equals(new float3(
+                    (float)Math.Round(lastKnotPos.x, 2),
+                    (float)Math.Round(lastKnotPos.y, 2),
+                    (float)Math.Round(lastKnotPos.z, 2))
+                )
+            );
+
+            if (closed && firstIsLast)
+            {
+                var firstPointTangentOut = math.rotate(allKnots[0].Rotation, allKnots[0].TangentOut);
+                var prevAllKnots = allKnots;
+                allKnots = new BezierKnot[allKnots.Length - 1];
+                for (int i = 0; i < allKnots.Length; ++i)
+                {
+                    allKnots[i] = prevAllKnots[i + 1];
+                }
+
+                allKnots[allKnots.Length - 1].TangentOut = math.rotate(math.inverse(allKnots[allKnots.Length - 1].Rotation), firstPointTangentOut);
+            }
+            spline = new Spline(allKnots, closed);
+            return true;
+        }
+
+        //A helper method for FitSplineToPoints that computes bernstein basis functions
+        static float3 Bernstein(float t, float3[] bezier, int degree)
+        {
+
+            var copy = new float3[bezier.Length];
+            bezier.CopyTo(copy, 0);
+
+            for (int i = 1; i <= degree; ++i)
+            {
+                for (int j = 0; j <= degree - i; ++j)
+                {
+                    copy[j] = (1 - t) * copy[j] + t * copy[j + 1];
+                }
+            }
+
+            return copy[0];
+        }
+
+        //A helper method for FitSplineToPoints that generates a spline from a provided array of
+        // interpolation values.
+        static Spline GenerateSplineFromTValues(List<float3> points, bool closed, float[] tValues)
+        {
+            var leftTangent = math.normalize(points[1] - points[0]);
+            var rightTangent = math.normalize(points[points.Count - 2] - points[points.Count - 1]);
+
+            var aLeft = new float3[points.Count];
+            var aRight = new float3[points.Count];
+            for (int i = 0; i < points.Count; ++i)
+            {
+                var t = tValues[i];
+                aLeft[i] = leftTangent * 3 * t * (1 - t) * (1 - t);
+                aRight[i] = rightTangent * 3 * t * t * (1 - t);
+            }
+
+            var c = new float[2, 2];
+
+            float x1 = 0f, x2 = 0f;
+
+            for (int i = 0; i < points.Count; ++i)
+            {
+                var t = tValues[i];
+                c[0, 0] += math.dot(aLeft[i], aLeft[i]);
+                c[0, 1] += math.dot(aLeft[i], aRight[i]);
+                c[1, 0] += math.dot(aLeft[i], aRight[i]);
+                c[1, 1] += math.dot(aRight[i], aRight[i]);
+
+                var tmp = points[i] - (
+                    points[0] * (1 - t) * (1 - t) * (1 - t)
+                    + points[0] * 3 * (1 - t) * (1 - t) * t
+                    + points[points.Count - 1] * 3 * (1 - t) * t * t
+                    + points[points.Count - 1] * t * t * t
+                );
+
+                x1 += math.dot(aLeft[i], tmp);
+                x2 += math.dot(aRight[i], tmp);
+            }
+
+            var c0_c1_determinant = c[0, 0] * c[1, 1] - c[1, 0] * c[0, 1];
+            var c0_x_determinant = c[0, 0] * x2 - c[1, 0] * x1;
+            var x_c1_determinant = x1 * c[1, 1] - x2 * c[0, 1];
+
+            //now we compute the coefficients for our tangents
+            var alpha1 = c0_c1_determinant == 0 ? 0 : x_c1_determinant / c0_c1_determinant;
+            var alpha2 = c0_c1_determinant == 0 ? 0 : c0_x_determinant / c0_c1_determinant;
+
+            quaternion quat1 = GetKnotRotation(leftTangent, math.normalize(math.cross(leftTangent, math.right())));
+            var first = new BezierKnot(points[0], new float3(0, 0, -alpha1), new float3(0, 0, alpha1), quat1);
+
+            quaternion quat2 = GetKnotRotation(-rightTangent, math.normalize(math.cross(-rightTangent, math.right())));
+            var second = new BezierKnot(points[points.Count - 1], new float3(0, 0, -alpha2),
+                new float3(0, 0, alpha2), quat2);
+
+            return new Spline(new BezierKnot[2] { first, second }, closed);
+        }
+
+        //Helper function for FitSplineToPoints that computes the maximum least squares distance error
+        // and the index of the point for which the error is maximum.
+        static (float maxError, int maxErrorIndex) ComputeMaxError(List<float3> points, float3[] positions)
+        {
+            //use least squares difference to evaluate error.
+            var maxError = 0f;
+            var splitPoint = 0;
+            for (int i = 0; i < points.Count; ++i)
+            {
+                var difference = points[i] - positions[i];
+                var error = math.sqrt(
+                    difference.x * difference.x +
+                    difference.y * difference.y +
+                    difference.z * difference.z
+                );
+
+                if (error > maxError)
+                {
+                    maxError = error;
+                    splitPoint = i;
+                }
+            }
+
+            return (maxError, splitPoint);
         }
 
         /// <summary>
@@ -1031,7 +1452,7 @@ namespace UnityEngine.Splines
         /// <param name="knotA">The first knot to link.</param>
         /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
         /// <param name="knotB">The second knot to link.</param>
-        public static void LinkKnots<T>(this T container, SplineKnotIndex knotA,  SplineKnotIndex knotB) where T : ISplineContainer
+        public static void LinkKnots<T>(this T container, SplineKnotIndex knotA, SplineKnotIndex knotB) where T : ISplineContainer
         {
             container.KnotLinkCollection.Link(knotA, knotB);
         }
@@ -1046,6 +1467,34 @@ namespace UnityEngine.Splines
         {
             foreach (var knot in knots)
                 container.KnotLinkCollection.Unlink(knot);
+        }
+
+        /// <summary>
+        /// Removes redundant points in a poly line to form a similar shape with fewer points.
+        /// </summary>
+        /// <param name="line">The poly line to act on.</param>
+        /// <param name="epsilon">The maximum distance from the reduced poly line shape for a point to be discarded.</param>
+        /// <typeparam name="T">The collection type. Usually this will be list or array of float3.</typeparam>
+        /// <returns>Returns a new list with a poly line matching the shape of the original line with fewer points.</returns>
+        public static List<float3> ReducePoints<T>(T line, float epsilon = .15f) where T : IList<float3>
+        {
+            var ret = new List<float3>();
+            var rdp = new RamerDouglasPeucker<T>(line);
+            rdp.Reduce(ret, epsilon);
+            return ret;
+        }
+
+        /// <summary>
+        /// Removes redundant points in a poly line to form a similar shape with fewer points.
+        /// </summary>
+        /// <param name="line">The poly line to act on.</param>
+        /// <param name="results">A pre-allocated list to be filled with the new reduced line points.</param>
+        /// <param name="epsilon">The maximum distance from the reduced poly line shape for a point to be discarded.</param>
+        /// <typeparam name="T">The collection type. Usually this will be list or array of float3.</typeparam>
+        public static void ReducePoints<T>(T line, List<float3> results, float epsilon = .15f) where T : IList<float3>
+        {
+            var rdp = new RamerDouglasPeucker<T>(line);
+            rdp.Reduce(results, epsilon);
         }
     }
 }

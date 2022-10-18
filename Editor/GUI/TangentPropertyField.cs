@@ -38,7 +38,7 @@ namespace UnityEditor.Splines
             var foldout = new Foldout() { value = false };
             var foldoutToggle = foldout.Q<Toggle>();
 
-            m_Magnitude = new FloatField(L10n.Tr(text),6);
+            m_Magnitude = new FloatField(L10n.Tr(text), 6);
             m_Magnitude.style.flexDirection = FlexDirection.Row;
             m_Magnitude.RemoveFromClassList("unity-base-field");
             vector3field = new Float3PropertyField<SelectableKnot>("", GetTangentPosition, ApplyPosition) { name = vect3name };

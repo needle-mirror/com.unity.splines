@@ -29,6 +29,7 @@ namespace UnityEditor.Splines
         readonly Button m_AutoSmoothButton;
         readonly Button m_BezierButton;
         IReadOnlyList<T> m_Elements = new List<T>(0);
+        TangentMode m_CurrentMode;
 
         internal TangentModePropertyField()
         {
@@ -84,20 +85,22 @@ namespace UnityEditor.Splines
 
         void SetValueWithoutNotify(TangentMode mode)
         {
-            mode = GetModeForProperty(mode);
+            m_CurrentMode = GetModeForProperty(mode);
 
-            SetButtonChecked(m_LinearButton, mode == TangentMode.Linear);
-            SetButtonChecked(m_AutoSmoothButton, mode == TangentMode.AutoSmooth);
-            SetButtonChecked(m_BezierButton, mode == k_BezierMode);
+            SetButtonChecked(m_LinearButton, m_CurrentMode == TangentMode.Linear);
+            SetButtonChecked(m_AutoSmoothButton, m_CurrentMode == TangentMode.AutoSmooth);
+            SetButtonChecked(m_BezierButton, m_CurrentMode == k_BezierMode);
         }
         void SetButtonChecked(Button button, bool isChecked)
         {
             button.EnableInClassList(k_ButtonStripButtonCheckedUssClass, isChecked);
-            button.pickingMode = isChecked ? PickingMode.Ignore : PickingMode.Position;
         }
 
         void OnValueChange(TangentMode mode)
         {
+            if (GetModeForProperty(mode) == m_CurrentMode)
+                return;
+
             SetValueWithoutNotify(mode);
 
             EditorSplineUtility.RecordSelection(SplineInspectorOverlay.SplineChangeUndoMessage);

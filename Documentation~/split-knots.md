@@ -9,7 +9,7 @@ You can only split a knot that has two segments. Split knots each have one segme
 
 
 To split a knot:
-1. In the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html) or [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html), select a spline.
-1. In the [Tools overlay](https://docs.unity3d.com/Manual/overlays.html), set the tool context to **Spline**.
+1. [!include[select-spline](.\snippets\select-spline.md)]
+1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
 1. Select a knot with two segments. 
 1. In the Element Inspector overlay, select **Split**.

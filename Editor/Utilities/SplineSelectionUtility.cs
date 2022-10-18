@@ -26,7 +26,6 @@ namespace UnityEditor.Splines
         }
 
         internal static void HandleSelection<T>(T element, bool appendElement, bool setActive, bool addLinkedKnots = true)
-
             where T : struct, ISplineElement
         {
             if (appendElement)
@@ -144,6 +143,7 @@ namespace UnityEditor.Splines
                 case (int)BezierTangent.Out:
                     return tangent.KnotIndex != tangent.SplineInfo.Spline.Count - 1 || tangent.SplineInfo.Spline.Closed;
             }
+
             return true;
         }
 

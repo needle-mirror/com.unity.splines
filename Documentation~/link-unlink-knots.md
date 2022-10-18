@@ -1,6 +1,6 @@
 # Link and unlink knots
 
-In a GameObject with a Spline Container, you can link knots from disconnected splines or on the same spline. Linked knots share a position, so when you move one linked knot, all the knots it links to also move. 
+You can link knots from splines attached to the same Spline component. Linked knots share a position. When you move a knot, its linked knots also move.
 
 Use linked knots to create a spline with branched paths. For example, you can create a spline that represents the following:
 - A road with merging lanes 
@@ -15,10 +15,11 @@ You can link knots in the Element Inspector overlay or with the **Draw Splines T
 ## Link knots with the Draw Splines Tool
 
 To create a linked knot with the **Draw Splines Tool**:
-1. In the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html) or [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html), select a spline.
-1. In the [Tools overlay](https://docs.unity3d.com/Manual/overlays.html), set the tool context to **Spline**.
+1. [!include[select-spline](.\snippets\select-spline.md)]
+1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
 1. In the Tools overlay, select the **Draw Splines Tool**.
-1. Select a knot that has two segments. 
+1. Select a knot that has two segments to create a knot that links to it. 
+    The new knot is the first knot of a new spline. 
 
 > [!NOTE]
 > If you use the **Draw Splines Tool** to create a knot on a linked knot, then that new knot is added to the existing link.
@@ -27,8 +28,8 @@ To create a linked knot with the **Draw Splines Tool**:
 
 To link knots in the Element Inspector: 
 
-1. In the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html) or [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html), select a spline.
-1. In the [Tools overlay](https://docs.unity3d.com/Manual/overlays.html), set the tool context to **Spline**.
+1. [!include[select-spline](.\snippets\select-spline.md)]
+1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
 1. Select at least two knots.
 1. In the Element Inspector overlay, select **Link**. 
 
@@ -36,8 +37,8 @@ To link knots in the Element Inspector:
 
 To unlink knots:
 
-1. In the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html) or [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html), select a spline.
-1. In the [Tools overlay](https://docs.unity3d.com/Manual/overlays.html), set the tool context to **Spline**.
+1. [!include[select-spline](.\snippets\select-spline.md)]
+1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
 1. Select a linked knot. 
 1. In the Element Inspect overlay, select **Unlink**. 
 

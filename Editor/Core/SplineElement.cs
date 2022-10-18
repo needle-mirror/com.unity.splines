@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 using Unity.Mathematics;
 using UnityEngine.Splines;
 
@@ -68,6 +67,12 @@ namespace UnityEditor.Splines
                 SplineInfo.Spline.SetTangentMode(KnotIndex, value);
                 SplineSelectionUtility.ValidateTangentSelection(this);
             }
+        }
+
+        public float Tension
+        {
+            get => SplineInfo.Spline.GetAutoSmoothTension(KnotIndex);
+            set => SplineInfo.Spline.SetAutoSmoothTension(KnotIndex, value);
         }
 
         public void SetTangentMode(TangentMode mode, BezierTangent main)

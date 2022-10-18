@@ -176,6 +176,19 @@ namespace UnityEngine.Splines
         [SerializeField]
         List<InstantiableItem> m_ItemsToInstantiate = new List<InstantiableItem>();
 
+        /// <summary>
+        /// The items to use in the instantiation.
+        /// </summary>
+        public InstantiableItem[] itemsToInstantiate
+        {
+            get => m_ItemsToInstantiate.ToArray();
+            set
+            {
+                m_ItemsToInstantiate.Clear();
+                m_ItemsToInstantiate.AddRange(value);
+            }
+        }
+
         [SerializeField]
         Method m_Method = Method.SpacingDistance;
 
@@ -217,7 +230,7 @@ namespace UnityEngine.Splines
         /// Minimum spacing between 2 generated instances,
         /// if equal to the maxSpacing, then all instances will have the exact same spacing.
         /// </summary>
-        float MinSpacing
+        public float MinSpacing
         {
             get => m_Spacing.x;
             set
@@ -231,7 +244,7 @@ namespace UnityEngine.Splines
         /// Maximum spacing between 2 generated instances,
         /// if equal to the minSpacing, then all instances will have the exact same spacing
         /// </summary>
-        float MaxSpacing
+        public float MaxSpacing
         {
             get => m_Spacing.y;
             set
@@ -386,7 +399,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Coordinate space to use to offset rotations of the instances.
         /// </summary>
-        [Obsolete("Use RotationSpace instead.", false)]
+        [Obsolete("Use RotationSpace instead.", false)] 
         public OffsetSpace rotationSpace => RotationSpace;
         /// <summary>
         /// Coordinate space to use to offset rotations of the instances.
@@ -462,8 +475,11 @@ namespace UnityEngine.Splines
             }
         }
 
-        [SerializeField]
-        List<GameObject> m_Instances = new List<GameObject>();
+        // Keep old serialization of instances to ensure that no zombie instances will remain serialized.
+        [SerializeField, HideInInspector, FormerlySerializedAs("m_Instances")]
+        List<GameObject> m_DeprecatedInstances = new List<GameObject>();
+
+        readonly List<GameObject> m_Instances = new List<GameObject>();
         internal List<GameObject> instances => m_Instances;
         bool m_InstancesCacheDirty = false;
 
@@ -515,20 +531,13 @@ namespace UnityEngine.Splines
 #endif
 
             Spline.Changed += OnSplineChanged;
+            UpdateInstances();
         }
 
         void OnDisable()
         {
             Spline.Changed -= OnSplineChanged;
-        }
-
-        void OnDestroy()
-        {
-            // When the component is destroyed, reveal the instances
-            foreach (var instance in m_Instances)
-            {
-                instance.hideFlags = HideFlags.None;
-            }
+            Clear();
         }
 
         void UndoRedoPerformed()
@@ -645,14 +654,25 @@ namespace UnityEngine.Splines
             }
         }
 
+        void ClearDeprecatedInstances()
+        {
+            foreach (var instance in m_DeprecatedInstances)
+            {
+#if UNITY_EDITOR
+                DestroyImmediate(instance);
+#else
+                Destroy(instance);
+#endif
+            }
+
+            m_DeprecatedInstances.Clear();
+        }
+
         /// <summary>
         /// Change the Random seed to obtain a new generation along the Spline
         /// </summary>
         public void Randomize()
         {
-#if UNITY_EDITOR
-            Undo.RecordObject(this, "Changing SplineInstantiate seed");
-#endif
             seed = Random.Range(int.MinValue, int.MaxValue);
             m_SplineDirty = true;
         }
@@ -668,6 +688,7 @@ namespace UnityEngine.Splines
         /// </summary>
         public void UpdateInstances()
         {
+            ClearDeprecatedInstances();
             TryClearCache();
 
             if (m_Container == null)
@@ -936,7 +957,7 @@ namespace UnityEngine.Splines
 #endif
                     m_Instances.Add(Instantiate(m_CurrentItem.Prefab, transform));
 
-                m_Instances[index].hideFlags |= HideFlags.HideInHierarchy;
+                m_Instances[index].hideFlags |= HideFlags.HideAndDontSave;
             }
 
             m_Instances[index].transform.localPosition = m_CurrentItem.Prefab.transform.localPosition;

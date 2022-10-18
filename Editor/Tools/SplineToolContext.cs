@@ -7,8 +7,26 @@ using UnityEngine;
 using UnityEngine.Splines;
 using UObject = UnityEngine.Object;
 
+#if UNITY_2022_1_OR_NEWER
+using UnityEditor.Overlays;
+#endif
+
 namespace UnityEditor.Splines
 {
+#if UNITY_2022_1_OR_NEWER
+    [CustomEditor(typeof(SplineToolContext))]
+    class SplineToolContextSettings : UnityEditor.Editor, ICreateToolbar
+    {
+        public IEnumerable<string> toolbarElements
+        {
+            get
+            {
+                yield return "Spline Tool Settings/Handle Visuals";
+            }
+        }
+    }
+#endif
+
     /// <summary>
     /// Defines a tool context for editing splines. When authoring tools for splines, pass the SplineToolContext type
     /// to the EditorToolAttribute.editorToolContext parameter to register as a spline tool.
@@ -26,7 +44,7 @@ namespace UnityEditor.Splines
 
         readonly SplineElementRectSelector m_RectSelector = new SplineElementRectSelector();
         readonly List<SplineInfo> m_Splines = new List<SplineInfo>();
-        readonly List<SelectableKnot> m_KnotBuffer = new List<SelectableKnot>();
+
         readonly List<SelectableTangent> m_TangentBuffer = new List<SelectableTangent>();
 
         bool m_WasActiveAfterDeserialize;
@@ -57,8 +75,10 @@ namespace UnityEditor.Splines
         /// common functionality for working with splines, ex gizmo drawing and selection.
         /// </summary>
         /// <param name="window"></param>
-        public override void OnToolGUI(EditorWindow window)
+        public override void OnToolGUI(EditorWindow window) 
         {
+            UpdateSelectionIfSplineRemoved(m_Splines);
+
             EditorSplineUtility.GetSplinesFromTargets(targets, m_Splines);
 
             //TODO set active spline
@@ -70,9 +90,7 @@ namespace UnityEditor.Splines
             if(!s_UseCustomSplineHandles)
                 SplineHandles.DrawSplineHandles(m_Splines);
 
-            HandleSelectionFraming();
-            HandleSelectAll();
-            HandleSelectedElementDelete();
+            HandleCommands();
         }
 
         void OnEnable()
@@ -107,6 +125,18 @@ namespace UnityEditor.Splines
             Undo.undoRedoPerformed -= UndoRedoPerformed;
         }
 
+        void UpdateSelectionIfSplineRemoved(List<SplineInfo> previousSelection)
+        {
+            foreach (var splineInfo in previousSelection)
+            {
+                if (!EditorSplineUtility.Exists(splineInfo))
+                {
+                    UpdateSelection();
+                    return;
+                }
+            }
+        }
+
         void ContextChanged()
         {
             if (!ToolManager.IsActiveContext(this))
@@ -128,111 +158,193 @@ namespace UnityEditor.Splines
             SceneView.RepaintAll();
         }
 
-        void HandleSelectedElementDelete()
+        void DeleteSelected()
         {
-            Event evt = Event.current;
-            if (evt.type == EventType.KeyDown && evt.keyCode == KeyCode.Delete)
+            var selectedElements = SplineSelection.Count;
+
+            if (selectedElements > 0)
             {
-                var selectedElements = SplineSelection.Count;
-                if (selectedElements > 0)
+                EditorSplineUtility.RecordSelection($"Delete selected elements ({selectedElements})");
+
+                List<SplineInfo> splinesToRemove = new List<SplineInfo>();
+                // First delete the knots in selection
+                var knotBuffer = new List<SelectableKnot>();
+                SplineSelection.GetElements(m_Splines, knotBuffer);
+
+                if (knotBuffer.Count > 0)
                 {
-                    EditorSplineUtility.RecordSelection($"Delete selected elements ({selectedElements})");
-
-                    // First delete the knots in selection
-                    SplineSelection.GetElements(m_Splines, m_KnotBuffer);
-                    if (m_KnotBuffer.Count > 0)
+                    //Sort knots index so removing them doesn't cause the rest of the indices to be invalid
+                    knotBuffer.Sort((a, b) => a.KnotIndex.CompareTo(b.KnotIndex));
+                    for (int i = knotBuffer.Count - 1; i >= 0; --i)
                     {
-                        //Sort knots index so removing them doesn't cause the rest of the indices to be invalid
-                        m_KnotBuffer.Sort((a, b) => a.KnotIndex.CompareTo(b.KnotIndex));
-                        for (int i = m_KnotBuffer.Count - 1; i >= 0; --i)
-                            EditorSplineUtility.RemoveKnot(m_KnotBuffer[i]);
-                    }
+                        EditorSplineUtility.RemoveKnot(knotBuffer[i]);
 
-                    // "Delete" remaining tangents by zeroing them out
-                    SplineSelection.GetElements(m_Splines, m_TangentBuffer);
-                    for (int i = m_TangentBuffer.Count - 1; i >= 0; --i)
-                        EditorSplineUtility.ClearTangent(m_TangentBuffer[i]);
+                        var spline = knotBuffer[i].SplineInfo;
+                        if (EditorSplineUtility.ShouldRemoveSpline(spline) && !splinesToRemove.Contains(spline))
+                            splinesToRemove.Add(spline);
+                    }
                 }
-                evt.Use();
+
+                // "Delete" remaining tangents by zeroing them out
+                SplineSelection.GetElements(m_Splines, m_TangentBuffer);
+                for (int i = m_TangentBuffer.Count - 1; i >= 0; --i)
+                    EditorSplineUtility.ClearTangent(m_TangentBuffer[i]);
+
+                // Sort spline index so removing them doesn't cause the rest of the indices to be invalid
+                splinesToRemove.Sort((a, b) => a.Index.CompareTo(b.Index));
+                for (int i = splinesToRemove.Count - 1; i >= 0; --i)
+                {
+                    var spline = splinesToRemove[i];
+                    spline.Container.RemoveSplineAt(spline.Index);
+                }
             }
         }
 
-        void HandleSelectionFraming()
+        void FrameSelected()
         {
+            Bounds selectionBounds;
             if (TransformOperation.canManipulate)
             {
-                Event evt = Event.current;
-                if (evt.commandName.Equals("FrameSelected"))
+                selectionBounds = TransformOperation.GetSelectionBounds(false);
+                selectionBounds.Encapsulate(TransformOperation.pivotPosition);
+            }
+            else
+                selectionBounds = EditorSplineUtility.GetBounds(m_Splines);
+
+            var size = selectionBounds.size;
+            if (selectionBounds.size.x < 1f)
+                size.x = 1f;
+            if (selectionBounds.size.y < 1f)
+                size.y = 1f;
+            if (selectionBounds.size.z < 1f)
+                size.z = 1f;
+            selectionBounds.size = size;
+
+            SceneView.lastActiveSceneView.Frame(selectionBounds, false);
+        }
+
+        void HandleCommands()
+        {
+            Event evt = Event.current;
+            var cmd = evt.commandName;
+
+            if (evt.type == EventType.ValidateCommand)
+            {
+                switch (cmd)
                 {
-                    var execute = evt.type == EventType.ExecuteCommand;
+                    case "SelectAll":
+                    case "Delete":
+                    case "SoftDelete":
+                    case "FrameSelected":
+                        evt.Use();
+                        break;
 
-                    if (evt.type == EventType.ValidateCommand || execute)
+                    case "Duplicate":
+                    case "Copy":
+                        if (SplineSelection.HasAny<SelectableKnot>(m_Splines))
+                            evt.Use();
+                        break;
+
+                    case "Paste":
+                        if (CopyPaste.IsSplineCopyBuffer(GUIUtility.systemCopyBuffer))
+                            evt.Use();
+                        break;
+                }
+            }
+
+            else if (evt.type == EventType.ExecuteCommand)
+            {
+                switch (cmd)
+                {
+                    case "SelectAll":
                     {
-                        if (execute)
+                        SelectAll();
+                        evt.Use();
+                        break;
+                    }
+
+                    case "Copy":
+                    {
+                        var knotBuffer = new List<SelectableKnot>();
+                        SplineSelection.GetElements(m_Splines, knotBuffer);
+                        GUIUtility.systemCopyBuffer = CopyPaste.Copy(knotBuffer);
+                        evt.Use();
+                        break;
+                    }
+
+                    case "Paste":
+                    {
+                        CopyPaste.Paste(GUIUtility.systemCopyBuffer);
+                        evt.Use();
+                        break;
+                    }
+
+                    case "Duplicate":
+                    {
+                        var knotBuffer = new List<SelectableKnot>();
+                        var splineBuffer = new List<SplineInfo>();
+                        foreach (var t in targets)
                         {
-                            Bounds selectionBounds;
-                            if (TransformOperation.canManipulate)
+                            if (t is ISplineContainer container)
                             {
-                                selectionBounds = TransformOperation.GetSelectionBounds(false);
-                                selectionBounds.Encapsulate(TransformOperation.pivotPosition);
+                                EditorSplineUtility.GetSplinesFromTarget(t, splineBuffer);
+                                SplineSelection.GetElements(m_Splines, knotBuffer);
+                                string copyPasteBuffer = CopyPaste.Copy(knotBuffer);
+                                CopyPaste.Paste(copyPasteBuffer, container);
                             }
-                            else
-                                selectionBounds = EditorSplineUtility.GetBounds(m_Splines);
-
-                            var size = selectionBounds.size;
-                            if (selectionBounds.size.x < 1f)
-                                size.x = 1f;
-                            if (selectionBounds.size.y < 1f)
-                                size.y = 1f;
-                            if (selectionBounds.size.z < 1f)
-                                size.z = 1f;
-                            selectionBounds.size = size;
-
-                            SceneView.lastActiveSceneView.Frame(selectionBounds, false);
                         }
 
                         evt.Use();
+                        break;
+                    }
+
+                    case "Delete":
+                    case "SoftDelete":
+                        {
+                        DeleteSelected();
+                        evt.Use();
+                        break;
+                    }
+
+                    case "FrameSelected":
+                    {
+                        FrameSelected();
+                        evt.Use();
+                        break;
                     }
                 }
             }
         }
 
-        void HandleSelectAll()
+        void SelectAll()
         {
-            Event evt = Event.current;
-            if (evt.commandName.Equals("SelectAll"))
+            var knots = new List<SelectableKnot>();
+            var tangents = new List<SelectableTangent>(knots.Count() * 2);
+
+            foreach (var info in m_Splines)
             {
-                var execute = evt.type == EventType.ExecuteCommand;
-
-                if (evt.type == EventType.ValidateCommand || execute)
+                if (!SplineSelection.HasActiveSplineSelection() || SplineSelection.Contains(info))
                 {
-                    var knots = new List<SelectableKnot>();
-                    var tangents = new List<SelectableTangent>(knots.Count() * 2);
-
-                    foreach (var info in m_Splines)
+                    for (int knotIdx = 0; knotIdx < info.Spline.Count; ++knotIdx)
                     {
-                        for (int knotIdx = 0; knotIdx < info.Spline.Count; ++knotIdx)
+                        knots.Add(new SelectableKnot(info, knotIdx));
+
+                        void TryAddSelectableTangent(BezierTangent tan)
                         {
-                            knots.Add(new SelectableKnot(info, knotIdx));
-
-                            void TryAddSelectableTangent(BezierTangent tan)
-                            {
-                                var t = new SelectableTangent(info, knotIdx, tan);
-                                if (SplineSelectionUtility.IsSelectable(t))
-                                    tangents.Add(t);
-                            }
-
-                            TryAddSelectableTangent(BezierTangent.In);
-                            TryAddSelectableTangent(BezierTangent.Out);
+                            var t = new SelectableTangent(info, knotIdx, tan);
+                            if (SplineSelectionUtility.IsSelectable(t))
+                                tangents.Add(t);
                         }
+
+                        TryAddSelectableTangent(BezierTangent.In);
+                        TryAddSelectableTangent(BezierTangent.Out);
                     }
-
-                    SplineSelection.AddRange(knots);
-                    SplineSelection.AddRange(tangents);
-
-                    evt.Use();
                 }
             }
+
+            SplineSelection.AddRange(knots);
+            SplineSelection.AddRange(tangents);
+
         }
 
         void OnAfterDomainReload()

@@ -1,8 +1,8 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.0.0",
-  "unity": "2022.1",
+  "version": "2.1.0",
+  "unity": "2021.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
     "com.unity.settings-manager": "1.0.3",
@@ -27,14 +27,14 @@
     "com.unity.test-framework.performance"
   ],
   "relatedPackages": {
-    "com.unity.splines.tests": "2.0.0"
+    "com.unity.splines.tests": "2.1.0"
   },
   "upmCi": {
-    "footprint": "a4977fccc8f5d2212555ed31e77e9e6c7876026c"
+    "footprint": "c8222560641fdf757ff24ef57a8d024a5937534a"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "3d1fb0ab442e2537dc536dd7cab58e4303804b6d"
+    "revision": "ee14b014a23ca712ba3ea0841c9da16ceed7b1f7"
   }
 }

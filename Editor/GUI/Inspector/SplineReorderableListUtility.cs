@@ -36,7 +36,6 @@ namespace UnityEditor.Splines
         static void OnSplineSelectionChanged()
         {
             EditorSplineUtility.GetSplinesFromTargets(SplineSelection.GetAllSelectedTargets(), s_SplineInfos);
-
             if (s_SplineInfos.Count == 0)
             {
                 foreach (var kvp in s_KnotsReorderableLists)
@@ -46,7 +45,6 @@ namespace UnityEditor.Splines
 
                     if (s_SelectedKnotsIndexes.TryGetValue(kvp.Key, out var indexesList))
                         indexesList?.Clear();
-
                     try
                     {
                         var target = list.serializedProperty.serializedObject.targetObject;
@@ -64,7 +62,7 @@ namespace UnityEditor.Splines
                 var key = splineInfo.GetHashCode();
                 if(s_KnotsReorderableLists.TryGetValue(key, out var list))
                 {
-                    s_SelectedKnotsIndexes.TryGetValue(key, out List<int> indexesList);
+                    s_SelectedKnotsIndexes.TryGetValue(key, out var indexesList);
                     list.ClearSelection();
                     indexesList?.Clear();
 
@@ -96,6 +94,7 @@ namespace UnityEditor.Splines
                     }
                 }
             }
+
             s_SplineSelectionDirty = true;
         }
 
@@ -128,7 +127,7 @@ namespace UnityEditor.Splines
                 return EditorGUI.GetPropertyHeight(property.GetArrayElementAtIndex(index), new GUIContent(index.ToString()));
             };
 
-            list.drawElementCallback = (position, listIndex, _, _) =>
+            list.drawElementCallback = (position, listIndex, isActive, isFocused) =>
             {
                 var ppte = property.GetArrayElementAtIndex(listIndex);
 
@@ -142,7 +141,7 @@ namespace UnityEditor.Splines
 
             list.onReorderCallbackWithDetails = (_, index, newIndex) =>
             {
-                if(property.serializedObject.targetObject is ISplineContainer container)
+                if (property.serializedObject.targetObject is ISplineContainer container)
                 {
                     property.serializedObject.ApplyModifiedProperties();
                     container.KnotLinkCollection.SplineIndexChanged(index, newIndex);
@@ -150,14 +149,14 @@ namespace UnityEditor.Splines
                 }
             };
 
-            list.onMouseDragCallback = reorderableList =>
+            list.onMouseDragCallback = reList =>
             {
-                bool noElementSelectedForDrag = reorderableList.selectedIndices.Count == 0;
+                bool noElementSelectedForDrag = reList.selectedIndices.Count == 0;
                 if (s_LastSelectedIndex >= 0 && noElementSelectedForDrag)
-                    list.Select(s_LastSelectedIndex);
+                    reList.Select(s_LastSelectedIndex);
             };
 
-            list.onMouseUpCallback = reorderableList =>
+            list.onMouseUpCallback = reList =>
             {
                 s_LastSelectedIndex = -1;
             };
@@ -167,36 +166,38 @@ namespace UnityEditor.Splines
                 if(!EditorGUI.actionKey)
                 {
                     SplineSelection.ClearSplineSelection();
-                    foreach(var kvp in s_SplinesReorderableLists)
+                    foreach (var kvp in s_SplinesReorderableLists)
                     {
-                        if(kvp.Value != reorderableList)
+                        if (kvp.Value != reorderableList)
                             kvp.Value.ClearSelection();
                     }
                 }
 
-                if(property.serializedObject.targetObject is ISplineContainer container)
+                if (property.serializedObject.targetObject is ISplineContainer container)
                 {
                     var previousSelection = SplineSelection.SelectedSplines.GetRange(0, SplineSelection.SelectedSplines.Count);
                     var selectedIndices = reorderableList.selectedIndices;
                     //Remove elements that are not present anymore
-                    for(int i = 0; i < previousSelection.Count;  i++)
+                    for (int i = 0; i < previousSelection.Count; i++)
                     {
                         var selected = previousSelection[i];
-                        if(selected.Container != container || !selectedIndices.Contains(selected.Index))
+                        if (selected.Container != container || !selectedIndices.Contains(selected.Index))
                             SplineSelection.Remove(selected);
                     }
 
                     //Update selection: Add or Remove element depending if
-                    foreach(var selectedSplineIndex in selectedIndices)
+                    foreach (var selectedSplineIndex in selectedIndices)
                     {
                         var splineInfo = new SplineInfo(container, selectedSplineIndex);
                         var contained = previousSelection.Contains(splineInfo);
 
                         var addToSelection = !contained || Event.current.shift;
+
                         if(addToSelection)
                             SplineSelection.Add(splineInfo);
                     }
                 }
+
                 SceneView.RepaintAll();
             };
 
@@ -205,6 +206,7 @@ namespace UnityEditor.Splines
                 if(property.serializedObject.targetObject is ISplineContainer container)
                 {
                     Undo.RecordObject(property.serializedObject.targetObject, "Adding Spline to SplineContainer");
+
                     var selectedIndices = reorderableList.selectedIndices;
                     var count = 0;
                     if(selectedIndices.Count > 0)
@@ -234,6 +236,7 @@ namespace UnityEditor.Splines
                 if(property.serializedObject.targetObject is ISplineContainer container)
                 {
                     Undo.RecordObject(property.serializedObject.targetObject, "Removing Spline from SplineContainer");
+
                     var selectedIndices = reorderableList.selectedIndices;
                     for(int i = selectedIndices.Count - 1; i >= 0; i--)
                         container.RemoveSplineAt(selectedIndices[i]);
@@ -369,7 +372,6 @@ namespace UnityEditor.Splines
                     for(int i = 0; i < reorderableList.count; ++i)
                     {
                         var knot = new SelectableKnot(new SplineInfo(container, splineIndex), i);
-
                         var isInListSelection = selectedIndices.Contains(i);
                         var isInSplineSelection = SplineSelection.Contains(knot);
 
@@ -386,9 +388,10 @@ namespace UnityEditor.Splines
                             }
                         }
 
-                        if(!isInListSelection && isInSplineSelection)
+                        if (!isInListSelection && isInSplineSelection)
                             SplineSelection.Remove(knot);
                     }
+
                     //Has to be handled separately to correctly work with SHIFT select
                     OnSplineSelectionChanged();
                     SplineSelection.changed += OnSplineSelectionChanged;
@@ -397,9 +400,9 @@ namespace UnityEditor.Splines
 
             list.onAddCallback = reorderableList =>
             {
+                property.serializedObject.ApplyModifiedProperties();
                 if(property.serializedObject.targetObject is ISplineContainer container)
                 {
-                    property.serializedObject.ApplyModifiedProperties();
                     var selectedIndex = reorderableList.index;
                     if(selectedIndex < reorderableList.count - 1)
                     {
@@ -443,21 +446,21 @@ namespace UnityEditor.Splines
 
                     //Force inspector to repaint
                     EditorUtility.SetDirty(list.serializedProperty.serializedObject.targetObject);
-                    property.serializedObject.Update();
                 }
                 else // if the Spline is not in a ISplineContainer, make default reorderable list
                     ReorderableList.defaultBehaviours.DoAddButton(reorderableList);
+                property.serializedObject.Update();
             };
 
             list.onRemoveCallback = reorderableList =>
             {
+                property.serializedObject.ApplyModifiedProperties();
                 if(property.serializedObject.targetObject is ISplineContainer container)
                 {
-                    property.serializedObject.ApplyModifiedProperties();
                     SplineSelection.changed -= OnSplineSelectionChanged;
                     var toRemove = new List<BezierKnot>();
                     var selectedIndices = reorderableList.selectedIndices;
-                    foreach(int index in selectedIndices.ToList())
+                    foreach (int index in selectedIndices.ToList())
                     {
                         var knot = new SelectableKnot(new SplineInfo(container, splineIndex), index);
                         EditorSplineUtility.RecordObject(knot.SplineInfo, "Removing Knot");
@@ -471,7 +474,6 @@ namespace UnityEditor.Splines
 
                     toRemove.Clear();
                     SplineSelection.changed += OnSplineSelectionChanged;
-                    property.serializedObject.Update();
                 }
 
                 ReorderableList.defaultBehaviours.DoRemoveButton(reorderableList);
@@ -479,6 +481,7 @@ namespace UnityEditor.Splines
 
                 if(s_SelectedKnotsIndexes.TryGetValue(key, out List<int> indexesList))
                     indexesList.Clear();
+                property.serializedObject.Update();
             };
 
             return list;

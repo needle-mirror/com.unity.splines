@@ -1,11 +1,7 @@
 using Unity.Mathematics;
 using UnityEngine.Splines;
 using UnityEngine;
-#if UNITY_2020_2_OR_NEWER
 using UnityEditor.EditorTools;
-#else
-using ToolManager = UnityEditor.EditorTools.EditorTools;
-#endif
 
 namespace UnityEditor.Splines
 {
@@ -40,7 +36,7 @@ namespace UnityEditor.Splines
 
         const int k_MenuPriority = 10;
 
-        [MenuItem(k_MenuPath + "/Draw Spline Tool...", false, k_MenuPriority + 0)]
+        [MenuItem(k_MenuPath + "/Draw Splines Tool...", false, k_MenuPriority + 0)]
         static void CreateNewSpline(MenuCommand menuCommand)
         {
             var gameObject = CreateSplineGameObject(menuCommand);
@@ -66,11 +62,36 @@ namespace UnityEditor.Splines
             CreateSplineGameObject(command, SplineFactory.CreateSquare(1f));
         }
 
-        [MenuItem(k_MenuPath + "/Circle", false, k_MenuPriority + 12)]
+        [MenuItem(k_MenuPath + "/Rounded Square", false, k_MenuPriority + 12)]
+        static void CreateRoundedSquare(MenuCommand command)
+        {
+            CreateSplineGameObject(command, SplineFactory.CreateRoundedCornerSquare(1f, 0.25f));
+        }
+
+        [MenuItem(k_MenuPath + "/Circle", false, k_MenuPriority + 13)]
         static void CreateCircle(MenuCommand command)
         {
-            // .36 is just an eye-balled approximation
-            CreateSplineGameObject(command, SplineFactory.CreateRoundedSquare(1f, .36f));
+            CreateSplineGameObject(command, SplineFactory.CreateCircle(0.5f));
+        }
+
+        [MenuItem(k_MenuPath + "/Polygon", false, k_MenuPriority + 14)]
+        static void CreatePolygon(MenuCommand command)
+        {
+            var edgeSize = math.sin(math.PI / 6f);
+            CreateSplineGameObject(command, SplineFactory.CreatePolygon(edgeSize, 6));
+        }
+
+        [MenuItem(k_MenuPath + "/Helix", false, k_MenuPriority + 15)]
+        static void CreateHelix(MenuCommand command)
+        {
+            CreateSplineGameObject(command, SplineFactory.CreateHelix(0.5f, 1f, 1));
+        }
+
+        [MenuItem(k_MenuPath + "/Star", false, k_MenuPriority + 16)]
+        static void CreateStar(MenuCommand command)
+        {
+            var edgeSize = math.sin(math.PI / 5f);
+            CreateSplineGameObject(command, SplineFactory.CreateStarPolygon(edgeSize, 5, 0.5f));
         }
     }
 }

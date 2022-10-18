@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.Splines;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -7,13 +9,13 @@ using UnityEditor;
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// A component for animating an object along a Spline.
+    /// A component to animate an object along a spline.
     /// </summary>
     [AddComponentMenu("Splines/Spline Animate")]
     public class SplineAnimate : SplineComponent
     {
         /// <summary>
-        /// Describes the different methods that may be used to animated the object along the Spline.
+        /// Describes the different methods that can be used to animated an object along a spline.
         /// </summary>
         public enum Method
         {
@@ -28,28 +30,28 @@ namespace UnityEngine.Splines
         /// </summary>
         public enum LoopMode
         {
-            /// <summary> Traverse the Spline once and stop at the end. </summary>
+            /// <summary> Traverse the spline once and stop at the end. </summary>
             [InspectorName("Once")]
             Once,
-            /// <summary> Traverse the Spline continuously without stopping. </summary>
+            /// <summary> Traverse the spline continuously without stopping. </summary>
             [InspectorName("Loop Continuous")]
             Loop,
-            /// <summary> Traverse the Spline continuously without stopping. If <see cref="SplineAnimate.Easing"/> is set to <see cref="SplineAnimate.EasingMode.EaseIn"/> or
-            /// <see cref="SplineAnimate.EasingMode.EaseInOut"/> then only ease in is applied and only during the first loop. Otherwise, no easing is applied when using this loop mode.
+            /// <summary> Traverse the spline continuously without stopping. If <see cref="SplineAnimate.Easing"/> is set to <see cref="SplineAnimate.EasingMode.EaseIn"/> or
+            /// <see cref="SplineAnimate.EasingMode.EaseInOut"/> then easing is only applied to the first loop of the animation. Otherwise, no easing is applied with this loop mode.
             /// </summary>
             [InspectorName("Ease In Then Continuous")]
             LoopEaseInOnce,
-            /// <summary> Traverse the Spline continuously without stopping and reverse movement direction uppon reaching end or beginning of the Spline. </summary>
+            /// <summary> Traverse the spline and then reverse direction at the end of the spline. The animation plays repeatedly. </summary>
             [InspectorName("Ping Pong")]
             PingPong
         }
 
         /// <summary>
-        /// Describes the different ways the object's animation along the Spline can be eased.
+        /// Describes the different ways the object's animation along the spline can be eased.
         /// </summary>
         public enum EasingMode
         {
-            /// <summary> Apply no easing - animation will be linear. </summary>
+            /// <summary> Apply no easing. The animation speed is linear.</summary>
             [InspectorName("None")]
             None,
             /// <summary> Apply easing to the beginning of animation. </summary>
@@ -64,63 +66,68 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Describes the ways the object can be aligned when animating along the Spline.
+        /// Describes the ways the object can be aligned when animating along the spline.
         /// </summary>
         public enum AlignmentMode
         {
             /// <summary> No aligment is done and object's rotation is unaffected. </summary>
             [InspectorName("None")]
             None,
-            /// <summary> Object's forward and up axes align to the Spline's tangent and up vectors. </summary>
+            /// <summary> The object's forward and up axes align to the spline's tangent and up vectors. </summary>
             [InspectorName("Spline Element")]
             SplineElement,
-            /// <summary> Object's forward and up axes align to the Spline tranform's Z and Y axes. </summary>
+            /// <summary> The object's forward and up axes align to the spline tranform's z-axis and y-axis. </summary>
             [InspectorName("Spline Object")]
             SplineObject,
-            /// <summary> Object's forward and up axes align to to the World's Z and Y axes. </summary>
+            /// <summary> The object's forward and up axes align to to the world's z-axis and y-axis. </summary>
             [InspectorName("World Space")]
             World
         }
 
-        [SerializeField, Tooltip("The target Spline to follow.")]
+        [SerializeField, Tooltip("The target spline to follow.")]
         SplineContainer m_Target;
 
-        [SerializeField, Tooltip("If true, transform will automatically start following the target Spline on awake.")]
+        [SerializeField, Tooltip("Enable to have the animation start when the GameObject first loads.")]
         bool m_PlayOnAwake = true;
 
-        [SerializeField, Tooltip("The loop mode used when animating object along the Spline.\n" +
-                                 "Once - Traverse the Spline once and stop at the end.\n" +
-                                 "Loop Continuous - Traverse the Spline continuously without stopping.\n" +
-                                 "Ease In Then Continuous - Traverse the Spline repeatedly without stopping. If ease in easing is enabled, apply it only for the first loop.\n" +
-                                 "Ping Pong - Traverse the Spline continuously without stopping and reverse movement direction upon reaching end or beginning of the Spline.\n")]
+        [SerializeField, Tooltip("The loop mode that the animation uses. Loop modes cause the animation to repeat after it finishes. The following loop modes are available:.\n" +
+                                 "Once - Traverse the spline once and stop at the end.\n" +
+                                 "Loop Continuous - Traverse the spline continuously without stopping.\n" +
+                                 "Ease In Then Continuous - Traverse the spline repeatedly without stopping. If Ease In easing is enabled, apply easing to the first loop only.\n" +
+                                 "Ping Pong - Traverse the spline continuously without stopping and reverse direction after an end of the spline is reached.\n")]
         LoopMode m_LoopMode = LoopMode.Loop;
 
-        [SerializeField, Tooltip("The method used to animate object along the Spline.\n" +
-                                 "Time - spline will be traversed in given amount of seconds.\n" +
-                                 "Speed - spline will be traversed at a given maximum speed.")]
+        [SerializeField, Tooltip("The method used to animate the GameObject along the spline.\n" +
+                                 "Time - The spline is traversed in a given amount of seconds.\n" +
+                                 "Speed - The spline is traversed at a given maximum speed.")]
         Method m_Method = Method.Time;
 
-        [SerializeField, Tooltip("Amount of time (in seconds) that the spline will be traversed in.")]
+        [SerializeField, Tooltip("The period of time that it takes for the GameObject to complete its animation along the spline.")]
         float m_Duration = 1f;
 
-        [SerializeField, Tooltip("Speed (in meters/second) at which the spline will be traversed.")]
+        [SerializeField, Tooltip("The speed in meters/second that the GameObject animates along the spline at.")]
         float m_MaxSpeed = 10f;
 
-        [SerializeField, Tooltip("Easing mode used when the object along the Spline.\n" +
-                                 "None - Apply no easing. Animation will be linear.\n" +
+        [SerializeField, Tooltip("The easing mode used when the GameObject animates along the spline.\n" +
+                                 "None - Apply no easing to the animation. The animation speed is linear.\n" +
                                  "Ease In Only - Apply easing to the beginning of animation.\n" +
                                  "Ease Out Only - Apply easing to the end of animation.\n" +
                                  "Ease In-Out - Apply easing to the beginning and end of animation.\n")]
         EasingMode m_EasingMode = EasingMode.None;
 
-        [SerializeField, Tooltip("The coordinate space to which the object's up and forward axes should align to.")]
+        [SerializeField, Tooltip("The coordinate space that the GameObject's up and forward axes align to.")]
         AlignmentMode m_AlignmentMode = AlignmentMode.SplineElement;
 
-        [SerializeField, Tooltip("Which axis of the object should be treated as the forward axis.")]
+        [SerializeField, Tooltip("Which axis of the GameObject is treated as the forward axis.")]
         AlignAxis m_ObjectForwardAxis = AlignAxis.ZAxis;
 
-        [SerializeField, Tooltip("Which axis of the object should be treated as the up axis.")]
+        [SerializeField, Tooltip("Which axis of the GameObject is treated as the up axis.")]
         AlignAxis m_ObjectUpAxis = AlignAxis.YAxis;
+
+        [SerializeField, Tooltip("Normalized distance [0;1] offset along the spline at which the GameObject should be placed when the animation begins.")]
+        float m_StartOffset;
+        [NonSerialized]
+        float m_StartOffsetT;
 
         float m_SplineLength = -1;
         bool m_Playing;
@@ -129,11 +136,12 @@ namespace UnityEngine.Splines
 #if UNITY_EDITOR
         double m_LastEditorUpdateTime;
 #endif
+        SplinePath<Spline> m_SplinePath;
 
-        /// <summary>The target Spline to follow.</summary>
+        /// <summary>The target container of the splines to follow.</summary>
         [Obsolete("Use Container instead.", false)]
         public SplineContainer splineContainer => Container;
-        /// <summary>The target Spline to follow.</summary>
+        /// <summary>The target container of the splines to follow.</summary>
         public SplineContainer Container
         {
             get => m_Target;
@@ -141,8 +149,11 @@ namespace UnityEngine.Splines
             {
                 m_Target = value;
 
-                if (enabled && m_Target != null && m_Target.Spline != null)
-                    OnSplineChange(m_Target.Spline, -1, SplineModification.Default);
+                if (enabled && m_Target != null && m_Target.Splines != null)
+                {
+                    for (int i = 0; i < m_Target.Splines.Count; i++)
+                        OnSplineChange(m_Target.Splines[i], -1, SplineModification.Default);
+                }
             }
         }
 
@@ -306,6 +317,22 @@ namespace UnityEngine.Splines
             }
         }
 
+        /// <summary> Normalized distance [0;1] offset along the spline at which the object should be placed when the animation begins. </summary>
+        public float StartOffset
+        {
+            get => m_StartOffset;
+            set
+            {
+                if (m_SplineLength < 0f)
+                    RebuildSplinePath();
+
+                m_StartOffset = Mathf.Clamp01(value);
+                m_StartOffsetT = m_SplinePath.ConvertIndexUnit(m_StartOffset * m_SplineLength, PathIndexUnit.Distance, PathIndexUnit.Normalized);
+            }
+        }
+
+        internal float StartOffsetT => m_StartOffsetT;
+
         /// <summary> Returns true if object is currently animating along the Spline. </summary>
         [Obsolete("Use IsPlaying instead.", false)]
         public bool isPlaying => IsPlaying;
@@ -318,14 +345,14 @@ namespace UnityEngine.Splines
         /// <summary> Invoked each time object's animation along the Spline is updated.</summary>
         public event Action<Vector3, Quaternion> Updated;
 
-        void Awake()
+        void Start()
         {
-            CalculateSplineLength();
             Restart(m_PlayOnAwake);
         }
 
         void OnEnable()
         {
+            RecalculateAnimationParameters();
             Spline.Changed += OnSplineChange;
         }
 
@@ -336,15 +363,22 @@ namespace UnityEngine.Splines
 
         void OnValidate()
         {
+            m_Duration = Mathf.Max(0f, m_Duration);
+            m_MaxSpeed = Mathf.Max(0f, m_MaxSpeed);
+            RecalculateAnimationParameters();
+        }
+
+        internal void RecalculateAnimationParameters()
+        {
+            RebuildSplinePath();
+
             switch (m_Method)
             {
                 case Method.Time:
-                    m_Duration = Mathf.Max(0f, m_Duration);
                     CalculateMaxSpeed();
                     break;
 
                 case Method.Speed:
-                    m_MaxSpeed = Mathf.Max(0f, m_MaxSpeed);
                     CalculateDuration();
                     break;
 
@@ -354,22 +388,21 @@ namespace UnityEngine.Splines
             }
         }
 
-        bool CheckForNullContainerOrSpline()
+        bool IsNullOrEmptyContainer()
         {
-            if (m_Target == null || m_Target.Spline == null)
+            if (m_Target == null || m_Target.Splines.Count == 0)
             {
-                Debug.LogError("Spline Follow does not have a valid SplineContainer set.");
+                Debug.LogError("SplineAnimate does not have a valid SplineContainer set.");
                 return true;
             }
 
             return false;
         }
 
-
         /// <summary> Begin animating object along the Spline. </summary>
         public void Play()
         {
-            if (CheckForNullContainerOrSpline())
+            if (IsNullOrEmptyContainer())
                 return;
 
             m_Playing = true;
@@ -388,7 +421,7 @@ namespace UnityEngine.Splines
         /// <param name="autoplay"> If true, the animation along the Spline will start over again. </param>
         public void Restart(bool autoplay)
         {
-            if (CheckForNullContainerOrSpline())
+            if (IsNullOrEmptyContainer())
                 return;
 
             m_Playing = false;
@@ -524,9 +557,8 @@ namespace UnityEngine.Splines
 
         void EvaluatePositionAndRotation(out Vector3 position, out Quaternion rotation)
         {
-            var t = GetLoopInterpolation();
-
-            position = m_Target.EvaluatePosition(t);
+            var t = GetLoopInterpolation(true);
+            position = m_Target.EvaluatePosition(m_SplinePath, t);
             rotation = Quaternion.identity;
 
             // Correct forward and up vectors based on axis remapping parameters
@@ -542,8 +574,8 @@ namespace UnityEngine.Splines
                 switch (m_AlignmentMode)
                 {
                     case AlignmentMode.SplineElement:
-                        forward = Vector3.Normalize(m_Target.EvaluateTangent(t));
-                        up = m_Target.EvaluateUpVector(t);
+                        forward = Vector3.Normalize(m_Target.EvaluateTangent(m_SplinePath, t));
+                        up = m_Target.EvaluateUpVector(m_SplinePath, t);
                         break;
 
                     case AlignmentMode.SplineObject:
@@ -566,7 +598,7 @@ namespace UnityEngine.Splines
         void CalculateDuration()
         {
             if (m_SplineLength < 0f)
-                CalculateSplineLength();
+                RebuildSplinePath();
 
             if (m_SplineLength >= 0f)
             {
@@ -591,8 +623,8 @@ namespace UnityEngine.Splines
 
         void CalculateMaxSpeed()
         {
-            if (m_SplineLength <= 0f)
-                CalculateSplineLength();
+            if (m_SplineLength < 0f)
+                RebuildSplinePath();
 
             if (m_SplineLength >= 0f)
             {
@@ -615,10 +647,13 @@ namespace UnityEngine.Splines
             }
         }
 
-        void CalculateSplineLength()
+        void RebuildSplinePath()
         {
             if (m_Target != null)
-                m_SplineLength = m_Target.CalculateLength();
+            {
+                m_SplinePath = new SplinePath<Spline>(m_Target.Splines);
+                m_SplineLength = m_SplinePath != null ? m_SplinePath.GetLength() : 0f;
+            }
         }
 
         AlignAxis SetObjectAlignAxis(AlignAxis newValue, ref AlignAxis targetAxis, AlignAxis otherAxis)
@@ -638,33 +673,17 @@ namespace UnityEngine.Splines
 
         void OnSplineChange(Spline spline, int knotIndex, SplineModification modificationType)
         {
-            if (m_Target == null || m_Target.Spline != spline)
-                return;
-
-            CalculateSplineLength();
-            switch (m_Method)
-            {
-                case Method.Time:
-                    CalculateMaxSpeed();
-                    break;
-
-                case Method.Speed:
-                    CalculateDuration();
-                    break;
-
-                default:
-                    Debug.Log($"{m_Method} animation method is not supported!");
-                    break;
-            }
+            RecalculateAnimationParameters();
         }
 
-        internal float GetLoopInterpolation()
+        internal float GetLoopInterpolation(bool offset)
         {
             var t = 0f;
-            if (Mathf.Floor(NormalizedTime) == NormalizedTime)
-                t = Mathf.Clamp01(NormalizedTime);
+            var normalizedTimeWithOffset = NormalizedTime + (offset ? m_StartOffsetT : 0f);
+            if (Mathf.Floor(normalizedTimeWithOffset) == normalizedTimeWithOffset)
+                t = Mathf.Clamp01(normalizedTimeWithOffset);
             else
-                t = NormalizedTime % 1f;
+                t = normalizedTimeWithOffset % 1f;
 
             return t;
         }

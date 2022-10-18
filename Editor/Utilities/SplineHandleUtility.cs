@@ -47,12 +47,12 @@ namespace UnityEditor.Splines
 
         [UserSetting]
         internal static UserSetting<Color> s_LineNormalBehindColor = new UserSetting<Color>(PathSettings.instance, "Handles.CurveNormalBehindColor", new Color(0f, 0f, 0f, 0.4f), SettingsScope.User);
-        
+
 #if !UNITY_2022_2_OR_NEWER
         [UserSetting]
         internal static UserSetting<Color> s_KnotColor = new UserSetting<Color>(PathSettings.instance, "Handles.KnotDefaultColor", new Color(0f, 224f / 255f, 1f, 1f), SettingsScope.User);
 #endif
-        
+
         [UserSetting]
         internal static UserSetting<Color> s_TangentColor = new UserSetting<Color>(PathSettings.instance, "Handles.TangentDefaultColor", Color.black, SettingsScope.User);
 
@@ -96,6 +96,20 @@ namespace UnityEditor.Splines
         public static ISplineElement lastHoveredElement { get; private set; }
         public static int lastHoveredElementId { get; private set; }
 
+        //Settings min and max ids used by handles when drawing curves/knots/tangents 
+        //This helps to determine if nearest control is a spline element or a built-in tool
+        static Vector2Int s_ElementIdRange = Vector2Int.zero;
+        internal static int minElementId
+        {
+            get => s_ElementIdRange.x;
+            set => s_ElementIdRange.x = value;
+        }
+        internal static int maxElementId
+        {
+            get => s_ElementIdRange.y;
+            set => s_ElementIdRange.y = value;
+        }
+        
         internal static bool ShouldShowTangent(SelectableTangent tangent)
         {
             if (!SplineSelectionUtility.IsSelectable(tangent) || Mathf.Approximately(math.length(tangent.LocalDirection), 0f))
@@ -106,7 +120,7 @@ namespace UnityEditor.Splines
 
             return SplineSelection.IsSelectedOrAdjacentToSelected(tangent);
         }
-        
+
         internal static void ResetLastHoveredElement()
         {
             lastHoveredElementId = -1;
@@ -122,6 +136,27 @@ namespace UnityEditor.Splines
         {
             lastHoveredElementId = controlId;
             lastHoveredElement = element;
+        }
+
+        internal static bool IsElementHovered(int controlId)
+        {
+            //Hovering the element itself
+            var isElementHovered = (GUIUtility.hotControl == 0 && HandleUtility.nearestControl == controlId);
+            // starting (Mouse down) or performing direct manip on that element
+            var isDirectManipElement = GUIUtility.hotControl == controlId;
+            return isElementHovered || isDirectManipElement;
+        }
+        
+        internal static void ResetElementIdRange()
+        {
+            s_ElementIdRange = new Vector2Int(-1, -1);
+        }
+        
+        //Check if the nearest control is one belonging to the spline elements
+        internal static bool IsHoverAvailableForSplineElement()
+        {
+            return GUIUtility.hotControl == 0 && (HandleUtility.nearestControl > minElementId && HandleUtility.nearestControl < maxElementId) 
+                || GUIUtility.hotControl > minElementId && GUIUtility.hotControl < maxElementId;
         }
 
         internal static Ray TransformRay(Ray ray, Matrix4x4 matrix)

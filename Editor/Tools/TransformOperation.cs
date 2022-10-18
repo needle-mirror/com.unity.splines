@@ -155,9 +155,9 @@ namespace UnityEditor.Splines
                 var curElement = TransformOperation.currentElementSelected;
 
                 if (SplineTool.handleOrientation == HandleOrientation.Element)
-                    handleRotation = CalculateElementSpaceHandleRotation(curElement);
+                    handleRotation = EditorSplineUtility.GetElementRotation(curElement);
                 else if (curElement is SelectableTangent editableTangent)
-                    handleRotation = CalculateElementSpaceHandleRotation(editableTangent.Owner);
+                    handleRotation = EditorSplineUtility.GetElementRotation(editableTangent.Owner);
             }
 
             s_HandleRotation = handleRotation;
@@ -210,7 +210,6 @@ namespace UnityEditor.Splines
                             
                             s_RotationSyncData.Initialize(deltas.knotRotationDelta, deltas.tangentLocalMagnitudeDelta, 1f);
                         }
-                        
                         ApplyTangentRotationSyncTransform(tangent);
                     }
                 }
@@ -459,9 +458,15 @@ namespace UnityEditor.Splines
                 (!absoluteScale && tangent.Owner.Mode == TangentMode.Continuous))
             {
                 if (absoluteScale)
-                    tangent.LocalDirection += math.normalize(tangent.LocalDirection) * s_RotationSyncData.magnitudeDelta;
+                {
+                    var localDirection = tangent.LocalDirection;
+                    if (Mathf.Approximately(math.length(localDirection), 0f))
+                        localDirection = new float3(0, 0, 1f);
+                    
+                    tangent.LocalDirection += math.normalizesafe(localDirection) * s_RotationSyncData.magnitudeDelta;
+                }
                 else
-                    tangent.LocalDirection *= s_RotationSyncData.scaleMultiplier;
+                    tangent.LocalDirection *=  s_RotationSyncData.scaleMultiplier;
             }
 
             RotateKnot(tangent.Owner, s_RotationSyncData.rotationDelta, tangent.Owner.Position, false);
@@ -493,35 +498,6 @@ namespace UnityEditor.Splines
             var tangentLocalMagnitudeDelta = math.length(targetLocalDirection) - math.length(tangent.LocalDirection);
 
             return (knotRotationDelta, tangentLocalMagnitudeDelta);
-        }
-
-        internal static quaternion CalculateElementSpaceHandleRotation<T>(T element)
-            where T : ISplineElement
-        {
-            quaternion handleRotation = quaternion.identity;
-            if (element is SelectableTangent editableTangent)
-            {
-                float3 forward;
-                var knotUp = math.rotate(editableTangent.Owner.Rotation, math.up());
-
-                if (math.length(editableTangent.Direction) > 0)
-                    forward = math.normalize(editableTangent.Direction);
-                else // Treat zero length tangent same way as when it's parallel to knot's up vector
-                    forward = knotUp;
-
-                float3 right;
-                var dotForwardKnotUp = math.dot(forward, knotUp);
-                if (Mathf.Approximately(math.abs(dotForwardKnotUp), 1f))
-                    right = math.rotate(editableTangent.Owner.Rotation, math.right()) * math.sign(dotForwardKnotUp);
-                else
-                    right = math.cross(forward, knotUp);
-
-                handleRotation = quaternion.LookRotationSafe(forward, math.cross(right, forward));
-            }
-            else if (element is SelectableKnot editableKnot)
-                handleRotation = editableKnot.Rotation;
-
-            return handleRotation;
         }
 
         static SelectableKnot GetCurrentSelectionKnot()
@@ -557,7 +533,7 @@ namespace UnityEditor.Splines
             return EditorSplineUtility.GetElementBounds(s_ElementSelection, useKnotPositionForTangents);
         }
 
-        static float3 ApplySmartRounding(float3 position)
+        public static float3 ApplySmartRounding(float3 position)
         {
             //If we are snapping, disable the smart rounding. If not the case, the transform will have the wrong snap value based on distance to screen.
 #if UNITY_2022_2_OR_NEWER

@@ -1,3 +1,3 @@
-# Splines Samples
+# Splines samples
 
-For samples documentation please see the Scenes folder and the accompanying README files for each scene.
+For sample scene documentation, refer to the README file in each of the sample's Scenes folder.

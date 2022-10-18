@@ -17,11 +17,12 @@ namespace UnityEditor.Splines
         /// <summary>
         /// Creates handles for a BezierCurve.
         /// </summary>
+        /// <param name="controlID">The controlID of the curve to create highlights for.</param>
         /// <param name="curve">The <see cref="BezierCurve"/> to create handles for.</param>
-        public static void DrawPreview(BezierCurve curve)
+        public static void Draw(int controlID, BezierCurve curve)
         {
             if(Event.current.type == EventType.Repaint)
-                Draw(-1, curve, true, true);
+                Draw(controlID, curve, false, true);
         }
 
         /// <summary>
@@ -29,7 +30,7 @@ namespace UnityEditor.Splines
         /// </summary>
         /// <param name="curve">The <see cref="BezierCurve"/> to create handles for.</param>
         /// <param name="activeSpline">Whether the curve is part of the active spline.</param>
-        public static void Draw(BezierCurve curve, bool activeSpline)
+        internal static void Draw(BezierCurve curve, bool activeSpline)
         {
             if(Event.current.type == EventType.Repaint)
                 Draw(0, curve, false, activeSpline);
@@ -45,7 +46,14 @@ namespace UnityEditor.Splines
         /// <param name="knotA">The knot at the start of the curve.</param>
         /// <param name="knotB">The knot at the end of the curve.</param>
         /// <param name="activeSpline">Whether the curve is part of the active spline.</param>
-        public static void DrawWithHighlight(int controlID, BezierCurve curve, ISpline spline, int curveIndex, SelectableKnot knotA, SelectableKnot knotB, bool activeSpline)
+        internal static void DrawWithHighlight(
+            int controlID,
+            BezierCurve curve,
+            ISpline spline,
+            int curveIndex,
+            SelectableKnot knotA,
+            SelectableKnot knotB,
+            bool activeSpline)
         {
             var evt = Event.current;
             switch(evt.GetTypeForControl(controlID))
@@ -56,9 +64,8 @@ namespace UnityEditor.Splines
                     {
                         var dist = DistanceToCurve(curve);
                         HandleUtility.AddControl(controlID, Mathf.Max(0, dist - SplineHandleUtility.pickingDistance));
-                        
                         //Trigger repaint on MouseMove to update highlight visuals from SplineHandles
-                        if (evt.type == EventType.MouseMove && controlID == HandleUtility.nearestControl)
+                        if (evt.type == EventType.MouseMove || controlID == HandleUtility.nearestControl)
                         {
                             SplineHandleUtility.GetNearestPointOnCurve(curve, out _, out var t);
                             var curveMidT = GetCurveMiddleInterpolation(curve, spline, curveIndex);
@@ -86,7 +93,6 @@ namespace UnityEditor.Splines
                         SplineHandleUtility.GetNearestPointOnCurve(curve, out _, out var t);
                         SplineSelectionUtility.HandleSelection(t <= .5f ? knotA : knotB, false);
                     }
-
                     break;
 
                 case EventType.MouseUp:
@@ -95,11 +101,10 @@ namespace UnityEditor.Splines
                         GUIUtility.hotControl = 0;
                         evt.Use();
                     }
-
                     break;
             }
         }
-        
+
         /// <summary>
         /// Draws curve and flow for a BezierCurve without the highlight.
         /// </summary>
@@ -125,28 +130,52 @@ namespace UnityEditor.Splines
                 case EventType.Repaint:
                     Draw(controlID, curve, false, activeSpline);
                     if (SplineHandleSettings.FlowDirectionEnabled && activeSpline)
-                        DrawFlow(controlID, curve, spline, curveIndex, math.rotate(knotA.Rotation, math.up()), math.rotate(knotB.Rotation, math.up()), activeSpline);
+                        DrawFlow(curve, spline, curveIndex, math.rotate(knotA.Rotation, math.up()), math.rotate(knotB.Rotation, math.up()));
                     break;
             }
         }
 
-        public static void DrawFlow(int controlID, BezierCurve curve, ISpline spline, int curveIndex, Vector3 upAtStart, Vector3 upAtEnd, bool activeSpline)
+        /// <summary>
+        /// Draws flow on a BezierCurve to indicate the direction.
+        /// </summary>
+        /// <param name="curve">The <see cref="BezierCurve"/> to create highlights for.</param>
+        /// <param name="spline">The <see cref="ISpline"/> (if any) that the curve belongs to.</param>
+        /// <param name="curveIndex">The curve's index if it belongs to a spline - otherwise -1.</param>
+        /// <param name="upAtStart">The up vector at the start of the curve.</param>
+        /// <param name="upAtEnd">The up vector at the end of the curve.</param>
+        internal static void DrawFlow(BezierCurve curve, ISpline spline, int curveIndex, Vector3 upAtStart, Vector3 upAtEnd)
         {
             if(Event.current.type != EventType.Repaint)
                 return;
 
-            //We attenuate the spline display if a spline can be controlled (id != -1) and
-            //if it's not the current active spline
-            var attenuate = controlID != -1 && !activeSpline;
-
             var curveMidT = GetCurveMiddleInterpolation(curve, spline, curveIndex);
-            var position = (Vector3)CurveUtility.EvaluatePosition(curve, curveMidT);
-            var tangent = ((Vector3)CurveUtility.EvaluateTangent(curve, curveMidT)).normalized;
-            var up = CurveUtility.EvaluateUpVector(curve, curveMidT, upAtStart, upAtEnd);
+            var arrow = GetFlowArrowData(curve, curveMidT, upAtStart, upAtEnd);
+            s_FlowTriangleVertices[0] = arrow.pointA;
+            s_FlowTriangleVertices[1] = arrow.pointB;
+            s_FlowTriangleVertices[2] = arrow.pointC;
+
+            using (new Handles.DrawingScope(SplineHandleUtility.lineColor, arrow.transform))
+            {
+                using (new ZTestScope(CompareFunction.Less))
+                    Handles.DrawAAConvexPolygon(s_FlowTriangleVertices);
+            }
+
+            using (new Handles.DrawingScope(SplineHandleUtility.lineBehindColor, arrow.transform))
+            {
+                using (new ZTestScope(CompareFunction.Greater))
+                    Handles.DrawAAConvexPolygon(s_FlowTriangleVertices);
+            }
+        }
+
+        public static (Vector3 pointA, Vector3 pointB, Vector3 pointC, Matrix4x4 transform) GetFlowArrowData(BezierCurve curve, float t, Vector3 upAtStart, Vector3 upAtEnd, float sizeMultiplier = 1f)
+        {
+            var position = (Vector3)CurveUtility.EvaluatePosition(curve, t);
+            var tangent = ((Vector3)CurveUtility.EvaluateTangent(curve, t)).normalized;
+            var up = CurveUtility.EvaluateUpVector(curve, t, upAtStart, upAtEnd);
             var rotation = Quaternion.LookRotation(tangent, up);
 
             var arrowMaxSpline = .05f * CurveUtility.ApproximateLength(curve);
-            var size = HandleUtility.GetHandleSize(position) * .5f;
+            var size = HandleUtility.GetHandleSize(position) * .5f * sizeMultiplier;
 
             tangent = new Vector3(0, 0, .1f) * size;
             var right = new Vector3(0.075f, 0, 0) * size;
@@ -159,25 +188,11 @@ namespace UnityEditor.Splines
                 right *= ratio;
             }
 
-            s_FlowTriangleVertices[0] = tangent;
-            s_FlowTriangleVertices[1] = - tangent + right;
-            s_FlowTriangleVertices[2] = - tangent - right;
+            var a = tangent;
+            var b = -tangent + right;
+            var c = -tangent - right;
 
-            var color = attenuate ? Handles.secondaryColor : SplineHandleUtility.lineColor;
-
-            using (new Handles.DrawingScope(color, Matrix4x4.TRS(position, rotation, Vector3.one)))
-            {
-                using (new ZTestScope(CompareFunction.Less))
-                    Handles.DrawAAConvexPolygon(s_FlowTriangleVertices);
-            }
-
-            color = attenuate ? Handles.secondaryColor : SplineHandleUtility.lineBehindColor;
-
-            using (new Handles.DrawingScope(color, Matrix4x4.TRS(position, rotation, Vector3.one)))
-            {
-                using (new ZTestScope(CompareFunction.Greater))
-                    Handles.DrawAAConvexPolygon(s_FlowTriangleVertices);
-            }
+            return (pointA: a, pointB: b, pointC: c, transform: Matrix4x4.TRS(position, rotation, Vector3.one));
         }
 
         static void Draw(int controlID, BezierCurve curve, bool preview, bool activeSpline)
@@ -314,8 +329,8 @@ namespace UnityEditor.Splines
         {
             for (int i = 1; i <= k_CurveDrawResolution; ++i)
             {
-                    Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, k_CurveLineWidth, new []{s_CurveDrawingBuffer[i-1], s_CurveDrawingBuffer[i]});
-                    
+                Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, k_CurveLineWidth, new[] { s_CurveDrawingBuffer[i - 1], s_CurveDrawingBuffer[i] });
+
                 var current = ((float)i / (float)k_CurveDrawResolution);
                 if (growing)
                 {
@@ -340,6 +355,7 @@ namespace UnityEditor.Splines
         /// Creates the set of control points that make up a curve.
         /// </summary>
         /// <param name="curve">The <see cref="BezierCurve"/> to create control points for.</param>
+
         public static void DrawControlNet(BezierCurve curve)
         {
             Handles.color = Color.green;

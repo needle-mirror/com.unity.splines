@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.Splines
@@ -9,12 +9,14 @@ namespace UnityEditor.Splines
 
         Toggle m_FlowDirection;
         Toggle m_AllTangents;
+        Toggle m_KnotIndices;
+        Toggle m_SplineMesh;
 
         public static void Show(Rect buttonRect)
         {
             var window = CreateInstance<SplineHandleSettingsWindow>();
             window.hideFlags = HideFlags.DontSave;
-            window.ShowAsDropDown(GUIUtility.GUIToScreenRect(buttonRect), new Vector2(160, 40));
+            window.ShowAsDropDown(GUIUtility.GUIToScreenRect(buttonRect), new Vector2(160, 80));
         }
 
         void OnEnable()
@@ -32,23 +34,40 @@ namespace UnityEditor.Splines
 
             rootVisualElement.Add(m_FlowDirection = new Toggle(L10n.Tr("Flow Direction")));
             rootVisualElement.Add(m_AllTangents = new Toggle(L10n.Tr("All Tangents")));
+            rootVisualElement.Add(m_KnotIndices = new Toggle(L10n.Tr("Knot Indices")));
+            rootVisualElement.Add(m_SplineMesh = new Toggle(L10n.Tr("Show Mesh")));
 
-            m_FlowDirection.RegisterValueChangedCallback((evt) => SplineHandleSettings.FlowDirectionEnabled = evt.newValue);
-            m_AllTangents.RegisterValueChangedCallback((evt) => SplineHandleSettings.ShowAllTangents = evt.newValue);
+            m_FlowDirection.RegisterValueChangedCallback((evt) =>
+            {
+                SplineHandleSettings.FlowDirectionEnabled = evt.newValue;
+                SceneView.RepaintAll();
+            });
+            m_AllTangents.RegisterValueChangedCallback((evt) =>
+            {
+                SplineHandleSettings.ShowAllTangents = evt.newValue;
+                SceneView.RepaintAll();
+            });
+            m_KnotIndices.RegisterValueChangedCallback((evt) =>
+            {
+                SplineHandleSettings.ShowKnotIndices = evt.newValue;
+                SceneView.RepaintAll();
+            });
+            m_SplineMesh.RegisterValueChangedCallback((evt) =>
+            {
+                SplineHandleSettings.ShowMesh = evt.newValue;
+                SceneView.RepaintAll();
+            });
 
             UpdateValues();
-            SplineHandleSettings.Changed += UpdateValues;
         }
 
-        void OnDisable()
-        {
-            SplineHandleSettings.Changed -= UpdateValues;
-        }
 
         void UpdateValues()
         {
             m_FlowDirection.SetValueWithoutNotify(SplineHandleSettings.FlowDirectionEnabled);
             m_AllTangents.SetValueWithoutNotify(SplineHandleSettings.ShowAllTangents);
+            m_KnotIndices.SetValueWithoutNotify(SplineHandleSettings.ShowKnotIndices);
+            m_SplineMesh.SetValueWithoutNotify(SplineHandleSettings.ShowMesh);
             SceneView.RepaintAll();
         }
     }

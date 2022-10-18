@@ -186,6 +186,7 @@ namespace Unity.Splines.Examples
                         dir = new float3(0, 0, 1);
                 }
 
+
                 var tangent = math.normalizesafe(math.cross(up, dir)) * new float3(1f / scale.x, 1f / scale.y, 1f / scale.z);
 
                 var w = widthData.Width.DefaultValue;

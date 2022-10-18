@@ -4,7 +4,7 @@ namespace UnityEngine.Splines
 {
     /// <summary>
     /// A key-value pair associating a distance to interpolation ratio ('t') value. This is used when evaluating Spline
-    /// attributes to ensure uniform ditribution of sampling points.
+    /// attributes to ensure uniform distribution of sampling points.
     /// </summary>
     /// <seealso cref="CurveUtility.CalculateCurveLengths"/>
     public struct DistanceToInterpolation
@@ -13,11 +13,24 @@ namespace UnityEngine.Splines
         /// Distance in Unity units.
         /// </summary>
         public float Distance;
-        
+
         /// <summary>
         /// A normalized interpolation ratio ('t').
         /// </summary>
         public float T;
+    }
+
+    /// <summary>
+    /// This interface defines a collection of knot indices that should be considered disconnected from the following
+    /// knot indices when creating a <see cref="BezierCurve"/>.
+    /// </summary>
+    public interface IHasEmptyCurves
+    {
+        /// <summary>
+        /// A collection of knot indices that should be considered degenerate curves for the purpose of creating a
+        /// non-interpolated gap between curves.
+        /// </summary>
+        public IReadOnlyList<int> EmptyCurves { get; }
     }
 
     /// <summary>
@@ -50,7 +63,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Return the length of a curve.
         /// </summary>
-        /// <param name="index">The index of the curve for which the length needs to be retrieved</param>
+        /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>
         /// <seealso cref="GetLength"/>
         /// <returns>
         /// Returns the length of the curve of index 'index' in the spline.
