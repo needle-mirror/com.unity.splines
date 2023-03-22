@@ -1,11 +1,10 @@
-using System;
 using UnityEditor;
-using UnityEngine;
 
 namespace Unity.Splines.Examples.Editor
 {
     [CustomEditor(typeof(LoftRoadBehaviour))]
-    class RoadTool : UnityEditor.Editor
+    [CanEditMultipleObjects]
+    class SplineWidthEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
@@ -14,7 +13,13 @@ namespace Unity.Splines.Examples.Editor
             base.OnInspectorGUI();
 
             if (EditorGUI.EndChangeCheck())
-                ((LoftRoadBehaviour)target).Loft();
+            {
+                EditorApplication.delayCall += () =>
+                {
+                    foreach (var target in targets)
+                        ((LoftRoadBehaviour)target).LoftAllRoads();
+                };
+            }
         }
     }
 }

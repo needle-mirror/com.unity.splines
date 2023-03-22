@@ -47,6 +47,15 @@ namespace UnityEngine.Splines
         Knot
     }
 
+    // Used internally to try preserving index positioning for SplineData embedded in Spline class. It is not very
+    // useful outside of this specific context, which is why it is not public. Additionally, in the future I'd like to
+    // explore passing the previous and new spline length to enable better preservation of distance and normalized
+    // indices.
+    interface ISplineModificationHandler
+    {
+        void OnSplineModified(SplineModificationData info);
+    }
+
     /// <summary>
     /// The SplineData{T} class is used to store information relative to a <see cref="Spline"/> without coupling data
     /// directly to the Spline class. SplineData can store any type of data, and provides options for how to index
@@ -54,7 +63,7 @@ namespace UnityEngine.Splines
     /// </summary>
     /// <typeparam name="T"> The type of data to store. </typeparam>
     [Serializable]
-    public class SplineData<T> : IEnumerable<DataPoint<T>>
+    public class SplineData<T> : IEnumerable<DataPoint<T>>, ISplineModificationHandler
     {
         static readonly DataPointComparer<DataPoint<T>> k_DataPointComparer = new DataPointComparer<DataPoint<T>>();
 
@@ -140,7 +149,6 @@ namespace UnityEngine.Splines
         internal static Action<SplineData<T>> afterSplineDataWasModified;
 #endif
 
-
         /// <summary>
         /// Create a new SplineData instance.
         /// </summary>
@@ -169,7 +177,6 @@ namespace UnityEngine.Splines
         {
             foreach(var dataPoint in dataPoints)
                 Add(dataPoint);
-
             SetDirty();
         }
 
@@ -290,8 +297,8 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Move a <see cref="DataPoint{T}"/> (if it exists) from this collection, from one index to the another.
         /// </summary>
-        /// <param name="index">The index of the  <see cref="DataPoint{T}"/> to move.</param>
-        /// <param name="newIndex">The new index for this  <see cref="DataPoint{T}"/>.</param>
+        /// <param name="index">The index of the  <see cref="DataPoint{T}"/> to move. This is the index into the collection, not the PathIndexUnit.Knot.</param>
+        /// <param name="newIndex">The new index (<see cref="UnityEngine.Splines.PathIndexUnit.Knot"/>) for this <see cref="DataPoint{T}"/>.</param>
         /// <returns>The index of the modified <see cref="DataPoint{T}"/>.</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public int MoveDataPoint(int index, float newIndex)
@@ -493,7 +500,6 @@ namespace UnityEngine.Splines
             SortIfNecessary();
         }
 
-
         /// <summary>
         /// Given a spline and a target PathIndex Unit, convert the SplineData to a new PathIndexUnit without changing the final positions on the Spline.
         /// </summary>
@@ -506,7 +512,7 @@ namespace UnityEngine.Splines
             if(toUnit == m_IndexUnit)
                 return;
 
-            for(int i = 0; i<m_DataPoints.Count; i++)
+            for(int i = 0; i < m_DataPoints.Count; i++)
             {
                 var dataPoint = m_DataPoints[i];
                 var newTime = spline.ConvertIndexUnit(dataPoint.Index, m_IndexUnit, toUnit);
@@ -545,5 +551,109 @@ namespace UnityEngine.Splines
         /// <returns>
         /// An IEnumerator{DataPoint{T}} for this collection.</returns>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        static float WrapInt(float index, int lowerBound, int upperBound)
+        {
+            return Wrap((int)math.floor(index), lowerBound, upperBound) + math.frac(index);
+        }
+
+        static float ClampInt(float index, int lowerBound, int upperBound)
+        {
+            return math.clamp((int)math.floor(index), lowerBound, upperBound) + math.frac(index);
+        }
+
+        // IMPORTANT - NOT PUBLIC API. See ISplineModificationHandler for more information.
+        /// <summary>
+        /// Attempts to preserve knot indices relative to their current position after a Spline has been modified. This
+        /// is only valid for SplineData that is indexed using <see cref="UnityEngine.Splines.PathIndexUnit.Knot"/>.
+        /// </summary>
+        /// <remarks>
+        /// This function is only valid for PathIndexUnit.Knot because other representations are (1) implicitly better
+        /// suited to handle knot insertion/deletion while preserving locality, and (2) converting to the Knot index
+        /// format for the purposes of order preservation would need to be done _before_ knot insertion/deletion in
+        /// order to be correct.
+        /// </remarks>
+        void ISplineModificationHandler.OnSplineModified(SplineModificationData data)
+        {
+            if (m_IndexUnit != PathIndexUnit.Knot)
+                return;
+
+            if (data.Modification == SplineModification.KnotModified || data.Modification == SplineModification.KnotReordered || data.Modification == SplineModification.Default)
+                return;
+
+            var editedKnotOldIdx = data.KnotIndex;
+            var prevLength = data.PrevCurveLength;
+            var nextLength = data.NextCurveLength;
+
+            var dataPointsToRemove = new List<int>();
+            for (int dataIdx = 0, c = Count; dataIdx < c; ++dataIdx)
+            {
+                var point = m_DataPoints[dataIdx];
+                var dataKnotOldIdx = (int)math.floor(point.Index);
+                var fracIdx = point.Index - dataKnotOldIdx;
+                
+                if (data.Modification == SplineModification.KnotInserted)
+                {
+                    var currentLength = data.Spline.GetCurveLength(data.Spline.PreviousIndex(editedKnotOldIdx));
+                    if (dataKnotOldIdx == editedKnotOldIdx - 1)
+                    {
+                        if (fracIdx < currentLength / prevLength)
+                            point.Index = dataKnotOldIdx + fracIdx * (prevLength / currentLength);
+                        else
+                            point.Index = (dataKnotOldIdx + 1) + (fracIdx * prevLength - currentLength) / (prevLength - currentLength);
+                    }
+                    else if (data.Spline.Closed && dataKnotOldIdx == data.Spline.Count - 2 && editedKnotOldIdx == 0)
+                    {
+                        if (fracIdx < currentLength / prevLength)
+                            point.Index = (dataKnotOldIdx + 1) + fracIdx * (prevLength / currentLength);
+                        else
+                            point.Index = (fracIdx * prevLength - currentLength) / (prevLength - currentLength);
+                    }
+                    else
+                        point.Index += 1;
+                }
+                else if (data.Modification == SplineModification.KnotRemoved)
+                {
+                    // The spline is cleared.
+                    if (editedKnotOldIdx == -1)
+                    {
+                        dataPointsToRemove.Add(dataIdx);
+                        continue;
+                    }
+
+                    var removingHardLink = (fracIdx == 0f && dataKnotOldIdx == editedKnotOldIdx);
+                    
+                    var removingEndKnots = !data.Spline.Closed &&
+                        ((dataKnotOldIdx <= 0 && editedKnotOldIdx == 0) || // Removed first curve with data points on it.
+                        (editedKnotOldIdx == data.Spline.Count &&          // Removed last curve
+                        math.ceil(point.Index) >= editedKnotOldIdx));      //  and data point is either on last curve or beyond it/clamped.
+
+                    if (removingHardLink || removingEndKnots || data.Spline.Count == 1)
+                        dataPointsToRemove.Add(dataIdx);
+                    else if (dataKnotOldIdx == editedKnotOldIdx - 1)
+                        point.Index = dataKnotOldIdx + fracIdx * prevLength / (prevLength + nextLength);
+                    else if (dataKnotOldIdx == editedKnotOldIdx)
+                        point.Index = (dataKnotOldIdx - 1) + (prevLength + fracIdx * nextLength) / (prevLength + nextLength);
+                    else if ((data.Spline.Closed && editedKnotOldIdx == 0) /*acting on the previous first knot of a closed spline*/
+                        && dataKnotOldIdx == data.Spline.Count /*and considering data that is on the last curve closing the spline*/)
+                        point.Index = (dataKnotOldIdx - 1) + (fracIdx * prevLength) / (prevLength + nextLength);
+                    else if (dataKnotOldIdx >= editedKnotOldIdx)
+                        point.Index -= 1;
+                }
+                else // Closed Modified
+                {
+                    if (!data.Spline.Closed &&                          // Spline has been opened and
+                        (math.ceil(point.Index) >= data.Spline.Count))  // data point is on connecting curve or the very end of it (treat same as open spline last curve deletion).
+                        dataPointsToRemove.Add(dataIdx);
+                }
+
+                m_DataPoints[dataIdx] = point;
+            }
+
+            for (int i = dataPointsToRemove.Count - 1; i > -1; --i)
+            {
+                m_DataPoints.RemoveAt(dataPointsToRemove[i]);
+            }
+        }
     }
 }

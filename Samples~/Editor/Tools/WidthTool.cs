@@ -7,7 +7,7 @@ using UnityEngine.Splines;
 
 namespace Unity.Splines.Examples
 {
-    [EditorTool("Width Tool", typeof(WidthSplineData))]
+    [EditorTool("Width Tool", typeof(LoftRoadBehaviour))]
     public class WidthTool : SplineDataToolBase<float>, IDrawSelectedHandles
     {
         GUIContent m_IconContent;
@@ -27,37 +27,51 @@ namespace Unity.Splines.Examples
 
         public override void OnToolGUI(EditorWindow window)
         {
-            var splineDataTarget = target as WidthSplineData;
+            var splineDataTarget = target as LoftRoadBehaviour;
             if (splineDataTarget == null || splineDataTarget.Container == null)
                 return;
-
-            var nativeSpline = new NativeSpline(splineDataTarget.Container.Spline, splineDataTarget.Container.transform.localToWorldMatrix);
-
-            Undo.RecordObject(splineDataTarget, "Modifying Width SplineData");
 
             Handles.color = Color.blue;
             m_DisableHandles = false;
 
-            //User defined handles to manipulate width
-            DrawDataPoints(nativeSpline, splineDataTarget.Width);
+            var splines = splineDataTarget.Container.Splines;
+            for (var i = 0; i < splines.Count; i++)
+            {
+                if (i < splineDataTarget.Widths.Count)
+                {
+                    var nativeSpline = new NativeSpline(splines[i], splineDataTarget.Container.transform.localToWorldMatrix);
 
-            //Using the out-of the box behaviour to manipulate indexes
-            nativeSpline.DataPointHandles(splineDataTarget.Width);
+                    Undo.RecordObject(splineDataTarget, "Modifying Widths SplineData");
+
+                    // User defined handles to manipulate width
+                    DrawDataPoints(nativeSpline, splineDataTarget.Widths[i]);
+
+                    // Using the out-of the box behaviour to manipulate indexes
+                    nativeSpline.DataPointHandles(splineDataTarget.Widths[i], false, i);
+                }
+            }
         }
 
         public void OnDrawHandles()
         {
-            var splineDataTarget = target as WidthSplineData;
+            var splineDataTarget = target as LoftRoadBehaviour;
             if (ToolManager.IsActiveTool(this) || splineDataTarget.Container == null)
                 return;
-
-            var nativeSpline = new NativeSpline(splineDataTarget.Container.Spline, splineDataTarget.Container.transform.localToWorldMatrix);
 
             Color color = Color.blue;
             color.a = 0.5f;
             Handles.color = color;
             m_DisableHandles = true;
-            DrawDataPoints(nativeSpline, splineDataTarget.Width);
+
+            var splines = splineDataTarget.Container.Splines;
+            for (var i = 0; i < splines.Count; i++)
+            {
+                if (i < splineDataTarget.Widths.Count)
+                {
+                    var nativeSpline = new NativeSpline(splines[i], splineDataTarget.Container.transform.localToWorldMatrix);
+                    DrawDataPoints(nativeSpline, splineDataTarget.Widths[i]);
+                }
+            }
         }
 
         protected override bool DrawDataPoint(
@@ -95,7 +109,9 @@ namespace Unity.Splines.Examples
             Vector3 val1, val2;
             using (new Handles.DrawingScope(handleColor))
             {
-                Handles.DrawLine(extremity1, extremity2);
+                if (Event.current.type == EventType.Repaint)
+                    Handles.DrawLine(extremity1, extremity2);
+
                 val1 = Handles.Slider(id1, extremity1, normalDirection,
                     k_HandleSize * .5f * HandleUtility.GetHandleSize(position), CustomHandleCap, 0);
                 val2 = Handles.Slider(id2, extremity2, normalDirection,
@@ -119,7 +135,13 @@ namespace Unity.Splines.Examples
 
         public void CustomHandleCap(int controlID, Vector3 position, Quaternion rotation, float size, EventType eventType)
         {
-            Handles.CubeHandleCap(controlID, position, rotation, size, m_DisableHandles ? EventType.Repaint : eventType);
+            if (m_DisableHandles) // If disabled, do nothing unless it's a repaint event
+            {
+                if (Event.current.type == EventType.Repaint)
+                    Handles.CubeHandleCap(controlID, position, rotation, size, eventType);
+            }
+            else
+                Handles.CubeHandleCap(controlID, position, rotation, size, eventType);
         }
     }
 }

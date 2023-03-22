@@ -74,7 +74,9 @@ namespace UnityEngine.Splines
                 var n = SplineUtility.NextIndex(i, knotCount, closed);
                 var p = SplineUtility.PreviousIndex(i, knotCount, closed);
 
-                var tangentOut = math.rotate(math.inverse(rotation), SplineUtility.GetAutoSmoothTangent(positions[p], positions[i], positions[n]));
+                var tangentOut = math.rotate(
+                    math.inverse(rotation), 
+                    SplineUtility.GetAutoSmoothTangent(positions[p], positions[i], positions[n], SplineUtility.CatmullRomTension));
                 var tangentIn = -tangentOut;
                 spline.Add(new BezierKnot(position, tangentIn, tangentOut, rotation), TangentMode.AutoSmooth);
             }

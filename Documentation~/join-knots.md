@@ -4,7 +4,7 @@ Join knots to connect the ends of two splines to each other.
 
 When you join two knots, the new, joined knot takes the position of the active knot. The active knot is the last knot you selected. To join knots, both knots must each have only one segment and be part of different splines attached to the same Spline component. 
 
-If you join the knots of two splines that flow<!--add link to flow documentation--> in different directions, the new spline takes the direction of the active knot. 
+If you join the knots of two splines that flow in different directions, the new spline takes the direction of the active knot. 
 
 To join two splines:
 1. [!include[select-spline](.\snippets\select-spline.md)]

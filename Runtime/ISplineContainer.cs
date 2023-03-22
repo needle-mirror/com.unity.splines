@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace UnityEngine.Splines
@@ -17,10 +16,5 @@ namespace UnityEngine.Splines
         /// A collection of KnotLinks to maintain valid links between knots.
         /// </summary>
         KnotLinkCollection KnotLinkCollection { get; }
-        
-#if UNITY_EDITOR
-        internal static Action<ISplineContainer, int> SplineAdded;
-        internal static Action<ISplineContainer, int> SplineRemoved;
-#endif
     }
 }

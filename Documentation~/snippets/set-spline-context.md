@@ -2,4 +2,4 @@
 title: set-spline-context
 ---
 
-In the [Tools overlay](https://docs.unity3d.com/Manual/overlays.html), set the tool context to **Spline**.
+In the [Tools overlay](xref:overlays), set the tool context to **Spline**.

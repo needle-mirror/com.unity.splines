@@ -64,12 +64,8 @@ namespace UnityEngine.Splines
         /// <param name="rd">The ray direction (normalized vector).</param>
         /// <param name="a">The line start point.</param>
         /// <param name="b">The line end point.</param>
-        /// <param name="rayParam">The parameter of the projection of the nearest point on the line segment to the ray.
-        /// This is a value between 0 and 1 that represents the ratio along the ray starting from origin at which the
-        /// nearest point is found.</param>
-        /// <param name="lineParam">The parameter for the projection of the nearest point on a ray onto the line
-        /// segment. This is a value between 0 and 1 that represents the ratio along the line segment at which the
-        /// nearest point is found.</param>
+        /// <param name="rayParam">The signed distance between point 'ro' and the projection of the line segment along the ray.</param>
+        /// <param name="lineParam">The signed distance between point 'a' and the projection of point 'p' on the line segment.</param>
         /// <returns>Returns the nearest points on a ray and a line segment to one another.</returns>
         public static (float3 rayPoint, float3 linePoint) RayLineNearestPoint(
             float3 ro,
@@ -93,8 +89,7 @@ namespace UnityEngine.Splines
         /// <param name="p">The point to compare to.</param>
         /// <param name="a">The line start point.</param>
         /// <param name="b">The line end point.</param>
-        /// <param name="lineParam">The parameter for the projection of a point onto the line segment. This is a value
-        /// between 0 and 1 that represents the ratio along the line segment at which the nearest point is found.</param>
+        /// <param name="lineParam">The signed distance between point 'a' and the projection of point 'p' on the line segment.</param>
         /// <returns>The nearest point on a line segment to another point.</returns>
         public static float3 PointLineNearestPoint(float3 p, float3 a, float3 b, out float lineParam)
         {

@@ -4,6 +4,9 @@ using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    /// <summary>
+    /// This class provides the ability to draw a handle for a spline.
+    /// </summary>
     public static class SplineHandles
     {
         static List<int> s_ControlIDs = new();
@@ -26,14 +29,14 @@ namespace UnityEditor.Splines
             s_CurveIDs.Clear();
             s_KnotsIDs.Clear();
         }
-        
+
         internal static void DrawSplineHandles(IReadOnlyList<SplineInfo> splines)
         {
             var id = HandleUtility.nearestControl;
-            
+
             Clear();
             SplineHandleUtility.minElementId = GUIUtility.GetControlID(FocusType.Passive);
-            
+
             // Drawing done in two separate passes to make sure the curves are drawn behind the spline elements.
             // Draw the curves.
             for (int i = 0; i < splines.Count; ++i)
@@ -45,7 +48,7 @@ namespace UnityEditor.Splines
                 DrawSplineElements(splines[i]);
             //Drawing knots on top of all other elements and above other splines
             KnotHandles.DrawVisibleKnots();
-            
+
             SplineHandleUtility.maxElementId = GUIUtility.GetControlID(FocusType.Passive);
 
             var evtType = Event.current.type;
@@ -57,7 +60,7 @@ namespace UnityEditor.Splines
         {
             return s_CurveIDs.Contains(id);
         }
-        
+
         internal static void DrawSplineCurves(SplineInfo splineInfo)
         {
             var spline = splineInfo.Spline;
@@ -124,7 +127,7 @@ namespace UnityEditor.Splines
                     k_TangentChildIDs.Clear();
                     var knot = new SelectableKnot(splineInfo, knotIndex);
 
-                    if (EditorSplineUtility.AreTangentsModifiable(splineInfo.Spline.GetTangentMode(knotIndex)))
+                    if (SplineUtility.AreTangentsModifiable(splineInfo.Spline.GetTangentMode(knotIndex)))
                     {
                         var tangentIn = new SelectableTangent(splineInfo, knotIndex, BezierTangent.In);
                         var tangentOut = new SelectableTangent(splineInfo, knotIndex, BezierTangent.Out);
@@ -169,7 +172,7 @@ namespace UnityEditor.Splines
             //If a linked knot as already been assigned, return the same id
             if (s_KnotsIDs.ContainsKey(k_KnotBuffer[0]))
                 return s_KnotsIDs[k_KnotBuffer[0]];
-            
+
             //else compute a new id and record it
             var id = GUIUtility.GetControlID(FocusType.Passive);
             s_KnotsIDs.Add(k_KnotBuffer[0], id);

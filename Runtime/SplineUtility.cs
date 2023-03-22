@@ -7,6 +7,9 @@ namespace UnityEngine.Splines
     /// <summary>
     /// A collection of methods for extracting information about <see cref="Spline"/> types.
     /// </summary>
+    /// <remarks>
+    /// `SplineUtility` methods do not consider Transform values except where explicitly requested. To perform operations in world space, you can use the <see cref="SplineContainer"/> evaluate methods or build a <see cref="NativeSpline"/> with a constructor that accepts a matrix and evaluate that spline.
+    /// </remarks>
     public static class SplineUtility
     {
         const int k_SubdivisionCountMin = 6;
@@ -26,6 +29,7 @@ namespace UnityEngine.Splines
         /// <see cref="Spline.SetAutoSmoothTension(int,float)"/> to control the curvature of the spline at control
         /// points.
         /// </summary>
+        //todo Deprecate in 3.0.
         public const float CatmullRomTension = 1 / 2f;
 
         /// <summary>
@@ -396,9 +400,11 @@ namespace UnityEngine.Splines
         /// <seealso cref="SplineToCurveT{T}"/>
         public static float CurveToSplineT<T>(this T spline, float curve) where T : ISpline
         {
+            // Clamp negative curve index to 0
             if (spline.Count <= 1 || curve < 0f)
                 return 0f;
 
+            // Clamp postive curve index beyond last knot to 1
             if (curve >= (spline.Closed ? spline.Count : spline.Count - 1))
                 return 1f;
 
@@ -448,7 +454,7 @@ namespace UnityEngine.Splines
         {
             return GetBounds(spline, float4x4.identity);
         }
-        
+
         /// <summary>
         /// Creates a bounding box for a spline.
         /// </summary>
@@ -463,7 +469,7 @@ namespace UnityEngine.Splines
 
             var knot = spline[0];
             Bounds bounds = new Bounds(math.transform(transform, knot.Position), Vector3.zero);
-            
+
             // Only encapsulate first tangentIn if the spline is closed - otherwise it's not contributing to the spline's shape.
             if (spline.Closed)
                 bounds.Encapsulate(math.transform(transform, knot.Position + math.rotate(knot.Rotation, knot.TangentIn)));
@@ -474,7 +480,7 @@ namespace UnityEngine.Splines
                 knot = spline[i];
                 bounds.Encapsulate(math.transform(transform, knot.Position));
                 bounds.Encapsulate(math.transform(transform, knot.Position + math.rotate(knot.Rotation, knot.TangentIn)));
-                
+
                 // Encapsulate last tangentOut if the spline is closed - otherwise it's not contributing to the spline's shape.
                 if (spline.Closed || (!spline.Closed && i < c - 1))
                     bounds.Encapsulate(math.transform(transform, knot.Position + math.rotate(knot.Rotation, knot.TangentOut)));
@@ -775,7 +781,7 @@ namespace UnityEngine.Splines
             where T : ISpline
         {
             if (targetPathUnit == PathIndexUnit.Normalized)
-                return WrapInterpolation(t);
+                return WrapInterpolation(t, spline.Closed);
 
             return ConvertNormalizedIndexUnit(spline, t, targetPathUnit);
         }
@@ -795,7 +801,7 @@ namespace UnityEngine.Splines
             if (fromPathUnit == targetPathUnit)
             {
                 if (targetPathUnit == PathIndexUnit.Normalized)
-                    t = WrapInterpolation(t);
+                    t = WrapInterpolation(t, spline.Closed);
 
                 return t;
             }
@@ -819,8 +825,11 @@ namespace UnityEngine.Splines
             }
         }
 
-        static float WrapInterpolation(float t)
+        static float WrapInterpolation(float t, bool closed)
         {
+            if (!closed)
+                return math.clamp(t, 0f, 1f);
+
             return t % 1f == 0f ? math.clamp(t, 0f, 1f) : t - math.floor(t);
         }
 
@@ -838,12 +847,12 @@ namespace UnityEngine.Splines
             switch (originalPathUnit)
             {
                 case PathIndexUnit.Knot:
-                    return WrapInterpolation(CurveToSplineT(spline, t));
+                    return WrapInterpolation(CurveToSplineT(spline, t), spline.Closed);
                 case PathIndexUnit.Distance:
                     var length = spline.GetLength();
-                    return WrapInterpolation(length > 0 ? t / length : 0f);
+                    return WrapInterpolation(length > 0 ? t / length : 0f, spline.Closed);
                 default:
-                    return WrapInterpolation(t);
+                    return WrapInterpolation(t, spline.Closed);
             }
         }
 
@@ -922,7 +931,7 @@ namespace UnityEngine.Splines
         /// <returns>Returns a tangent calculated from the previous and next knot positions.</returns>
         // todo Deprecate in 3.0 - this is not a correct uniform catmull rom parameterization.
         public static float3 GetCatmullRomTangent(float3 previous, float3 next) =>
-            GetAutoSmoothTangent(previous, next, DefaultTension);
+            GetAutoSmoothTangent(previous, next, CatmullRomTension);
 
         /// <summary>
         /// Calculates a tangent from the previous and next knot positions.
@@ -934,9 +943,9 @@ namespace UnityEngine.Splines
         public static float3 GetAutoSmoothTangent(float3 previous, float3 next, float tension = DefaultTension)
         {
             if (next.Equals(previous))
-                return GetUniformAutoSmoothTangent(previous, next, tension);
+                return 0f;
 
-            return (next - previous) / math.sqrt(math.length(next - previous)) * tension * .5f;
+            return (next - previous) / math.sqrt(math.length(next - previous)) * tension;
         }
 
         /// <summary>
@@ -949,17 +958,30 @@ namespace UnityEngine.Splines
         /// <returns>Returns a tangent calculated from the previous, current, and next knot positions.</returns>
         public static float3 GetAutoSmoothTangent(float3 previous, float3 current, float3 next, float tension = DefaultTension)
         {
-            if (previous.Equals(current) || next.Equals(current))
-                return GetUniformAutoSmoothTangent(previous, next, tension);
+            var d1 = math.length(current - previous);
+            var d2 = math.length(next - current);
+            
+            if (d1 == 0f) // If we're only working with 2 valid points, then calculate roughly Uniform parametrization tangent and scale it down so we can atleast build rotation.
+                return (next - current) * 0.1f; 
+            else if (d2 == 0f)
+                return (current - previous) * 0.1f;
 
-            var toNext = (next - current) / math.sqrt(math.length(next - current));
-            var toPrevious = (current - previous) / math.sqrt(math.length(previous - current));
-            return (toNext + toPrevious) * tension * .5f;
+            // Calculations below are based on (pp. 5-6): http://www.cemyuksel.com/research/catmullrom_param/catmullrom_cad.pdf
+            // Catmull-Rom parameterization: a = 0 - Uniform, a = 0.5 - Centripetal, a = 1.0 - Chordal.
+            var a = tension;
+            var twoA = 2f * tension;
+            
+            var d1PowA = math.pow(d1, a);
+            var d1Pow2A = math.pow(d1, twoA); 
+            var d2PowA = math.pow(d2, a);
+            var d2Pow2A = math.pow(d2, twoA);
+            
+            return (d1Pow2A * next - d2Pow2A * previous + (d2Pow2A - d1Pow2A) * current) / (3f * d1PowA * (d1PowA +  d2PowA));
         }
 
         static float3 GetUniformAutoSmoothTangent(float3 previous, float3 next, float tension)
         {
-            return (next - previous) * tension * .5f;
+            return (next - previous) * tension;
         }
 
         /// <summary>
@@ -981,8 +1003,8 @@ namespace UnityEngine.Splines
         /// <param name="normal">The normal vector of the knot.</param>
         /// <returns>A <see cref="BezierKnot"/> with tangent and rotation values calculated from the previous and next knot positions.</returns>
         public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next, float3 normal) =>
-            GetAutoSmoothKnot(position, previous, next, normal, DefaultTension);
-        
+            GetAutoSmoothKnot(position, previous, next, normal, CatmullRomTension);
+
         /// <summary>
         /// Gets a <see cref="BezierKnot"/> with its tangents and rotation calculated using the previous and next knot positions.
         /// </summary>
@@ -994,9 +1016,21 @@ namespace UnityEngine.Splines
         /// <returns>A <see cref="BezierKnot"/> with tangent and rotation values calculated from the previous and next knot positions.</returns>
         public static BezierKnot GetAutoSmoothKnot(float3 position, float3 previous, float3 next, float3 normal, float tension = DefaultTension)
         {
-            var tan = GetAutoSmoothTangent(previous, position, next, tension);
-            var dir = new float3(0, 0, math.length(tan));
-            return new BezierKnot(position, -dir, dir, GetKnotRotation(tan, normal));
+            var tanIn = GetAutoSmoothTangent(next, position, previous, tension);
+            var tanOut = GetAutoSmoothTangent(previous, position, next, tension);
+            var dirIn = new float3(0, 0, math.length(tanIn));
+            var dirOut = new float3(0, 0, math.length(tanOut));
+            var dirRot = tanOut;
+
+            if (dirIn.z == 0f)
+                dirIn.z = dirOut.z;
+            if (dirOut.z == 0f)
+            {
+                dirOut.z = dirIn.z;
+                dirRot = -tanIn;
+            }
+
+            return new BezierKnot(position, -dirIn, dirOut, GetKnotRotation(dirRot, normal));
         }
 
         internal static quaternion GetKnotRotation(float3 tangent, float3 normal)
@@ -1349,21 +1383,29 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Creates a new spline and adds it to the  <see cref="ISplineContainer"/>.
+        /// Creates a new spline and adds it to the <see cref="ISplineContainer"/>.
         /// </summary>
         /// <param name="container">The target container.</param>
         /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
         /// <returns>Returns the spline that was created and added to the container.</returns>
         public static Spline AddSpline<T>(this T container) where T : ISplineContainer
         {
-            var splines = new List<Spline>(container.Splines);
             var spline = new Spline();
+            AddSpline(container, spline);
+            return spline;
+        }
+
+        /// <summary>
+        /// Add a new <see cref="Spline"/> to the <see cref="ISplineContainer"/>.
+        /// </summary>
+        /// <param name="container">The target container.</param>
+        /// <param name="spline">The spline to append to this container.</param>
+        /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
+        public static void AddSpline<T>(this T container, Spline spline) where T : ISplineContainer
+        {
+            var splines = new List<Spline>(container.Splines);
             splines.Add(spline);
             container.Splines = splines;
-#if UNITY_EDITOR
-            ISplineContainer.SplineAdded?.Invoke(container, splines.Count - 1);
-#endif
-            return spline;
         }
 
         /// <summary>
@@ -1381,11 +1423,8 @@ namespace UnityEngine.Splines
             var splines = new List<Spline>(container.Splines);
             splines.RemoveAt(splineIndex);
             container.KnotLinkCollection.SplineRemoved(splineIndex);
-
             container.Splines = splines;
-#if UNITY_EDITOR
-            ISplineContainer.SplineRemoved?.Invoke(container, splineIndex);
-#endif
+
             return true;
         }
 
@@ -1405,11 +1444,33 @@ namespace UnityEngine.Splines
 
             splines.RemoveAt(index);
             container.KnotLinkCollection.SplineRemoved(index);
-
             container.Splines = splines;
-#if UNITY_EDITOR
-            ISplineContainer.SplineRemoved?.Invoke(container, index);
-#endif
+
+            return true;
+        }
+
+        /// <summary>
+        /// Reorders a spline in a <see cref="ISplineContainer"/>.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="previousSplineIndex">The previous index of the spline to reorder in the SplineContainer.</param>
+        /// <param name="newSplineIndex">The new index of the spline to reorder in the SplineContainer.</param>
+        /// <typeparam name="T">A type that implements <see cref="ISplineContainer"/>.</typeparam>
+        /// <returns>Returns true if the spline was reordered in the container.</returns>
+        public static bool ReorderSpline<T>(this T container, int previousSplineIndex, int newSplineIndex) where T : ISplineContainer
+        {
+            if (previousSplineIndex < 0 || previousSplineIndex >= container.Splines.Count ||
+                newSplineIndex < 0 || newSplineIndex >= container.Splines.Count)
+                return false;
+
+            var splines = new List<Spline>(container.Splines);
+            var spline = splines[previousSplineIndex];
+            splines.RemoveAt(previousSplineIndex);
+            splines.Insert(newSplineIndex, spline);
+
+            container.KnotLinkCollection.SplineIndexChanged(previousSplineIndex, newSplineIndex);
+            container.Splines = splines;
+
             return true;
         }
 
@@ -1470,6 +1531,35 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
+        /// Copies knot links between two splines of the same <see cref="ISplineContainer"/>.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="srcSplineIndex">The index of the source spline to copy from.</param>
+        /// <param name="destSplineIndex">The index of the destination spline to copy to.</param>
+        /// <typeparam name="T">A type implementing <see cref="ISplineContainer"/>.</typeparam>
+        /// <remarks>
+        /// The knot links will only be copied if both of the spline indices are valid and both splines have the same amount of knots.
+        /// </remarks>
+        public static void CopyKnotLinks<T>(this T container, int srcSplineIndex, int destSplineIndex) where T : ISplineContainer
+        {
+            if ((srcSplineIndex < 0 || srcSplineIndex >= container.Splines.Count) ||
+                (destSplineIndex < 0 || destSplineIndex >= container.Splines.Count))
+                return;
+
+            var srcSpline = container.Splines[srcSplineIndex];
+            var dstSpline = container.Splines[destSplineIndex];
+
+            if (srcSpline.Count == 0 || srcSpline.Count != dstSpline.Count)
+                return;
+
+            for (int i = 0, c = srcSpline.Count; i < c; ++i)
+            {
+                if (container.KnotLinkCollection.TryGetKnotLinks(new SplineKnotIndex(srcSplineIndex, i), out _))
+                    container.KnotLinkCollection.Link(new SplineKnotIndex(srcSplineIndex, i), new SplineKnotIndex(destSplineIndex, i));
+            }
+        }
+
+        /// <summary>
         /// Removes redundant points in a poly line to form a similar shape with fewer points.
         /// </summary>
         /// <param name="line">The poly line to act on.</param>
@@ -1495,6 +1585,11 @@ namespace UnityEngine.Splines
         {
             var rdp = new RamerDouglasPeucker<T>(line);
             rdp.Reduce(results, epsilon);
+        }
+        
+        internal static bool AreTangentsModifiable(TangentMode mode)
+        {
+            return mode == TangentMode.Broken || mode == TangentMode.Continuous || mode == TangentMode.Mirrored;
         }
     }
 }

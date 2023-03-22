@@ -217,7 +217,7 @@ namespace UnityEngine.Splines
             else
                 newIndex.Knot += 1;
 
-            //Insert the knot to shift indexes
+            //Insert the knot to shift indices
             KnotInserted(newIndex);
             //Link the 2 knots together temporary to link the new knot to the same knots as previous knot
             Link(previousIndex, newIndex);

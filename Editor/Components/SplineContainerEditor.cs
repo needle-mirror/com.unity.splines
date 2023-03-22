@@ -4,6 +4,7 @@ using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    // Multi-object selection is not supported
     [CustomEditor(typeof(SplineContainer))]
     class SplineContainerEditor : UnityEditor.Editor
     {
@@ -11,41 +12,71 @@ namespace UnityEditor.Splines
         SerializedProperty splinesProperty => m_SplineProperty ??= serializedObject.FindProperty("m_Splines");
 
         static GUIStyle s_HelpLabelStyle;
-        static GUIContent s_HelpLabelContent;
-        static GUIContent s_HelpLabelContentIcon;
+        static GUIStyle HelpLabelStyle
+        {
+            get
+            {            
+                if (s_HelpLabelStyle == null)
+                {
+                    s_HelpLabelStyle = new GUIStyle(EditorStyles.helpBox);
+                    s_HelpLabelStyle.padding = new RectOffset(2, 2, 2, 2);
+                }
 
-        const string k_ComponentMessage = "Use the <b>Spline Edit Mode</b> in the <b>Scene Tools Overlay</b> to edit this Spline.";
-        const string k_HelpBoxIconPath = "Packages/com.unity.splines/Editor/Resources/Icons/SplineContext.png";
+                return s_HelpLabelStyle;
+            }
+        }
         
+        static GUIContent m_HelpLabelContent;
+        
+        const string k_HelpBoxIconPath = "SplineEditMode-Info";
+        static GUIContent m_HelpLabelContentIcon;
+
+        const string k_ComponentMessage = "Use the Spline Edit Mode in the Scene Tools Overlay to edit this Spline.";
+
+
         public void OnEnable()
         {
-            if(s_HelpLabelContent == null)
-                s_HelpLabelContent = EditorGUIUtility.TrTextContent(k_ComponentMessage);
+            m_HelpLabelContent = EditorGUIUtility.TrTextContent(k_ComponentMessage);
+            m_HelpLabelContentIcon = new GUIContent(PathIcons.GetIcon(k_HelpBoxIconPath));
+            Undo.undoRedoPerformed += UndoRedoPerformed;
+        }
 
-            if(s_HelpLabelContentIcon == null)
-                s_HelpLabelContentIcon = EditorGUIUtility.TrIconContent(k_HelpBoxIconPath);
+        public void OnDisable()
+        {
+            Undo.undoRedoPerformed -= UndoRedoPerformed;
+        }
+        
+        void UndoRedoPerformed()
+        {
+            foreach (var t in targets)
+            {
+                var container = t as SplineContainer;
+                if (container != null)
+                {
+                    foreach (var spline in container.Splines)
+                        spline.SetDirty(SplineModification.Default);
+                }
+            }
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-
-            if (s_HelpLabelStyle == null)
-            {
-                s_HelpLabelStyle = new GUIStyle(EditorStyles.helpBox);
-                s_HelpLabelStyle.padding = new RectOffset(10, 10, 10, 10);
-            }
-
-            EditorGUILayout.BeginHorizontal(s_HelpLabelStyle);
-            EditorGUILayout.LabelField(s_HelpLabelContentIcon, GUILayout.Width(20), GUILayout.ExpandHeight(true));
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.LabelField(s_HelpLabelContent, new GUIStyle(EditorStyles.label){richText = true, wordWrap = true});
-            EditorGUILayout.EndVertical();
+            
+            // [SPLB-132] Reverting to custom helpbox as the default helpbox style as a trouble to handle custom icons
+            // when using a screen with PixelPerPoints different than 1. This is done in trunk by setting the
+            // Texture2d.pixelsPerPoints which is an internal property than cannot be access from here.
+            EditorGUILayout.BeginHorizontal(HelpLabelStyle);
+            EditorGUIUtility.SetIconSize(new Vector2(32f, 32f));
+            EditorGUILayout.LabelField(m_HelpLabelContentIcon, 
+                GUILayout.Width(34), GUILayout.MinHeight(34), GUILayout.ExpandHeight(true));
+            EditorGUIUtility.SetIconSize(Vector2.zero);
+            EditorGUILayout.LabelField(m_HelpLabelContent, 
+                new GUIStyle(EditorStyles.label){wordWrap = HelpLabelStyle.wordWrap, fontSize = HelpLabelStyle.fontSize, padding = new RectOffset(-2, 0, 0, 0)}, 
+                GUILayout.ExpandHeight(true));
             EditorGUILayout.EndHorizontal();
-
-            var reorderableList = SplineReorderableListUtility.GetSplinesReorderableList(splinesProperty);
-            reorderableList.DoList(EditorGUILayout.GetControlRect(true, reorderableList.GetHeight()));
-
+            
+            SplineReorderableList.Get(splinesProperty).DoLayoutList();
             serializedObject.ApplyModifiedProperties();
         }
 

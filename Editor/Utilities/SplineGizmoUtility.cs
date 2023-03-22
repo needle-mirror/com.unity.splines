@@ -30,13 +30,11 @@ namespace UnityEditor.Splines
         public static void DrawGizmos(ISplineContainer container)
         {
             var splines = container.Splines;
-
             if (splines == null)
                 return;
 
-            s_CameraUp = SceneView.lastActiveSceneView.camera.transform.up;
-            var localToWorld = ((MonoBehaviour)container).transform.localToWorldMatrix;
-            foreach(var spline in splines)
+            Gizmos.matrix = ((MonoBehaviour)container).transform.localToWorldMatrix;
+            foreach (var spline in splines)
             {
                 if(spline == null || spline.Count < 2)
                     continue;
@@ -44,49 +42,14 @@ namespace UnityEditor.Splines
                 Vector3[] positions;
                 SplineCacheUtility.GetCachedPositions(spline, out positions);
 
-                var color = Gizmos.color;
-                var from = localToWorld.MultiplyPoint(positions[0]);
-                var previousDir = Vector3.zero;
-                for(int i = 1; i < positions.Length; ++i)
-                {
-                    var to = localToWorld.MultiplyPoint(positions[i]);
-
-                    var center = ( from + to ) / 2f;
-                    var size = .1f * HandleUtility.GetHandleSize(center);
-
-                    var dir = to - from;
-                    var delta = previousDir.magnitude == 0 ? 1f :Vector3.Dot(previousDir, dir.normalized);
-                    //If the angle is too wide between 2 positions, take the previous position to draw the line
-                    if(delta < 0.9f)
-                    {
-                        Gizmos.color = color;
-                        DrawLineSegment(from, from + previousDir, size);
-                        from = from + previousDir;
-                        dir = to - from;
-                    }
-                    //Is the second position far enough to draw the segment
-                    if(i == positions.Length-1 || dir.magnitude > size)
-                    {
-                        Gizmos.color = color;
-                        DrawLineSegment(from, to, size);
-                        from = to;
-                        previousDir = Vector3.zero;
-                    }
-                    else
-                        previousDir = dir;
-                }
-                Gizmos.matrix = Matrix4x4.identity;
-                Gizmos.color = color;
+#if UNITY_2023_1_OR_NEWER
+                Gizmos.DrawLineStrip(positions, false);
+#else
+                for (int i = 1; i < positions.Length; ++i)
+                    Gizmos.DrawLine(positions[i-1], positions[i]);
+#endif
             }
-        }
-
-        static void DrawLineSegment(Vector3 from, Vector3 to, float size)
-        {
-            Gizmos.DrawLine(from, to);
-            Gizmos.color = s_OutlineColor;
-            //make the gizmo a little thicker
-            var offset = size * s_CameraUp / 7.5f;
-            Gizmos.DrawLine(from - offset, to - offset);
+            Gizmos.matrix = Matrix4x4.identity;
         }
 
         /// <summary>
@@ -97,12 +60,10 @@ namespace UnityEditor.Splines
         public static void DrawGizmos(ISplineProvider provider)
         {
             var splines = provider.Splines;
-
             if (splines == null)
                 return;
 
-            s_CameraUp = SceneView.lastActiveSceneView.camera.transform.up;
-            var localToWorld = ((MonoBehaviour)provider).transform.localToWorldMatrix;
+            Gizmos.matrix = ((MonoBehaviour)provider).transform.localToWorldMatrix;
             foreach (var spline in splines)
             {
                 if (spline == null || spline.Count < 2)
@@ -111,40 +72,14 @@ namespace UnityEditor.Splines
                 Vector3[] positions;
                 SplineCacheUtility.GetCachedPositions(spline, out positions);
 
-                var color = Gizmos.color;
-                var from = localToWorld.MultiplyPoint(positions[0]);
-                var previousDir = Vector3.zero;
+#if UNITY_2023_1_OR_NEWER
+                Gizmos.DrawLineStrip(positions, false);
+#else
                 for (int i = 1; i < positions.Length; ++i)
-                {
-                    var to = localToWorld.MultiplyPoint(positions[i]);
-
-                    var center = (from + to) / 2f;
-                    var size = .1f * HandleUtility.GetHandleSize(center);
-
-                    var dir = to - from;
-                    var delta = previousDir.magnitude == 0 ? 1f : Vector3.Dot(previousDir, dir.normalized);
-                    //If the angle is too wide between 2 positions, take the previous position to draw the line
-                    if (delta < 0.9f)
-                    {
-                        Gizmos.color = color;
-                        DrawLineSegment(from, from + previousDir, size);
-                        from = from + previousDir;
-                        dir = to - from;
-                    }
-                    //Is the second position far enough to draw the segment
-                    if (i == positions.Length - 1 || dir.magnitude > size)
-                    {
-                        Gizmos.color = color;
-                        DrawLineSegment(from, to, size);
-                        from = to;
-                        previousDir = Vector3.zero;
-                    }
-                    else
-                        previousDir = dir;
-                }
-                Gizmos.matrix = Matrix4x4.identity;
-                Gizmos.color = color;
+                    Gizmos.DrawLine(positions[i-1], positions[i]);
+#endif
             }
+            Gizmos.matrix = Matrix4x4.identity;
         }
     }
 }

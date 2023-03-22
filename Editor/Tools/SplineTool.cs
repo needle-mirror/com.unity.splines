@@ -69,7 +69,6 @@ namespace UnityEditor.Splines
     abstract class SplineTool : EditorTool
     {
         static UserSetting<HandleOrientation> m_HandleOrientation = new UserSetting<HandleOrientation>(PathSettings.instance, "SplineTool.HandleOrientation", HandleOrientation.Global, SettingsScope.User);
-
         public static HandleOrientation handleOrientation
         {
             get => m_HandleOrientation;
@@ -143,6 +142,7 @@ namespace UnityEditor.Splines
         }
 
         void AfterSplineWasModified(Spline spline) => UpdateSelection();
+
         void UndoRedoPerformed() => UpdateSelection();
 
         void OnSplineSelectionChanged()
@@ -178,7 +178,7 @@ namespace UnityEditor.Splines
                         var newMode = default(TangentMode);
                         var previousMode = knot.Mode;
 
-                        if(!EditorSplineUtility.AreTangentsModifiable(previousMode))
+                        if(!SplineUtility.AreTangentsModifiable(previousMode))
                             continue;
 
                         if(previousMode == TangentMode.Mirrored)

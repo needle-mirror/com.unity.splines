@@ -1,6 +1,6 @@
 # Manipulate splines
 
-You can move, rotate, and scale splines like other GameObjects. See [Positioning GameObjects](https://docs.unity3d.com/Manual/PositioningGameObjects.html) in the Unity User Manual to learn more.  
+You can move, rotate, and scale splines like other GameObjects. Refer to [Positioning GameObjects](xref:PositioningGameObjects) in the Unity User Manual to learn more.  
 
 Knots and tangents determine a spline's path and shape. To change a spline's path or shape, manipulate a spline's knots and tangents. 
 
@@ -36,7 +36,7 @@ Use the tool handle position toggles in the [Tool Settings Overlay](https://docs
 
 You can toggle tool handle rotations for knots and tangents like you would with other GameObjects. Besides the default tool handle rotation settings, **Global** and **Local**, knots and tangents have the **Parent** and **Element** handle rotations. When you have multiple knots and tangents selected, a tool's handle rotation setting affects the behavior of some transform tools, such as the **Rotate** and **Scale** tools. 
 
-Use the tool handle rotation position toggles in the [Tool Settings Overlay](https://docs.unity3d.com/2021.2/Documentation/Manual/overlays.html) to select the following tool handle rotation positions for knots and tangents:
+Use the tool handle rotation position toggles in the [Tool Settings Overlay](xref:overlays) to select the following tool handle rotation positions for knots and tangents:
 
 * **Global**: Clamp a spline element to world space orientation. 
 * **Local**: Keep a spline element's rotation relative to its parent spline.

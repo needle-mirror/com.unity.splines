@@ -6,14 +6,14 @@ namespace UnityEngine.Splines
     /// <summary>
     /// This struct contains position and tangent data for a knot. The position is a scalar point and the tangents are vectors.
     /// The <see cref="Spline"/> class stores a collection of BezierKnot that form a series of connected
-    /// <see cref="BezierCurve"/>. Each knot contains a Position, Tangent In, and Tangent Out. When a Spline is not
+    /// <see cref="BezierCurve"/>. Each knot contains a Position, Tangent In, and Tangent Out. When a spline is not
     /// closed, the first and last knots will contain an extraneous tangent (in and out, respectively).
     /// </summary>
     [Serializable]
     public struct BezierKnot : ISerializationCallbackReceiver, IEquatable<BezierKnot>
     {
         /// <summary>
-        /// The position of the knot. On a cubic bezier curve, this is equivalent to <see cref="BezierCurve.P0"/> or
+        /// The position of the knot. On a cubic Bezier curve, this is equivalent to <see cref="BezierCurve.P0"/> or
         /// <see cref="BezierCurve.P3"/>, depending on whether this knot is forming the first or second control point
         /// of the curve.
         /// </summary>
@@ -108,6 +108,27 @@ namespace UnityEngine.Splines
         public static BezierKnot operator -(BezierKnot knot, float3 rhs)
         {
             return new BezierKnot(knot.Position - rhs, knot.TangentIn, knot.TangentOut, knot.Rotation);
+        }
+
+        internal BezierKnot BakeTangentDirectionToRotation(bool mirrored, BezierTangent main = BezierTangent.Out)
+        {
+            if (mirrored)
+            {
+                float lead = math.length(main == BezierTangent.In ? TangentIn : TangentOut);
+                return new BezierKnot(Position,
+                    new float3(0f, 0f, -lead),
+                    new float3(0f, 0f,  lead),    
+                    SplineUtility.GetKnotRotation(
+                        math.mul(Rotation, main == BezierTangent.In ? -TangentIn : TangentOut),
+                        math.mul(Rotation, math.up())));
+            }
+
+            return new BezierKnot(Position,
+                new float3(0, 0, -math.length(TangentIn)),
+                new float3(0, 0, math.length(TangentOut)),
+                Rotation = SplineUtility.GetKnotRotation(
+                    math.mul(Rotation, main == BezierTangent.In ? -TangentIn : TangentOut),
+                    math.mul(Rotation, math.up())));
         }
 
         /// <summary>

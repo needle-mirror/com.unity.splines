@@ -9,6 +9,3 @@ Use knots to change the shape of a spline. For more information, refer to [Manip
 | [**Link and unlink knots**](link-unlink-knots.md) | Set knots to the same position and link them. When a linked knot moves, all the knots it links to also move.|
 | [**Split knots**](split-knots.md)| Divide a knot with two segments into two knots.|
  
-<!-- ## Additional resources
-- Links to related content
-- Can be doc links or other Unity-owned resources -->

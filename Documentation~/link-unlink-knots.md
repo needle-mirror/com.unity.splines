@@ -7,7 +7,7 @@ Use linked knots to create a spline with branched paths. For example, you can cr
 - A river with tributaries
 - A diverging sets of mountain paths.
 
-You can link knots in the Element Inspector overlay or with the **Draw Splines Tool** in the [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html). Use the Element Inspector overlay to unlink knots. 
+You can link knots in the Element Inspector overlay or with the **Draw Splines Tool** in the [Scene view](xref:UsingTheSceneView). Use the Element Inspector overlay to unlink knots. 
 
 > [!NOTE]
 > You can link more than two knots to each other. If you link knots that are already linked to other knots, all the knots link to each other.  

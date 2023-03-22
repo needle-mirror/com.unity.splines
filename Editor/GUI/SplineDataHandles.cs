@@ -19,11 +19,7 @@ namespace UnityEditor.Splines
         static int[] s_DataPointsIDs;
 
         static int s_NewDataPointIndex = -1;
-        static bool s_AddingDataPoint = false;
-
-        static bool s_ShowAddHandle;
-        static float3 s_Position;
-        static float s_T;
+        static float s_AddingDataPoint = float.NaN;
 
         /// <summary>
         /// Creates manipulation handles in the SceneView to add, move, and remove SplineData's DataPoints along a spline.
@@ -46,50 +42,67 @@ namespace UnityEditor.Splines
             bool useDefaultValueOnAdd = false)
                 where TSpline : ISpline
         {
-            var evt = Event.current;
-            if(evt.type == EventType.MouseMove)
-            {
-                //Compute distance to spline and closest point
-                var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
-                var distance = SplineUtility.GetNearestPoint(spline, ray, out s_Position, out s_T);
-                s_ShowAddHandle = distance < HandleUtility.GetHandleSize(s_Position);
-            }
+            spline.DataPointHandles(splineData, useDefaultValueOnAdd, 0);
+        }
 
-            //Id has to be consistent no matter the distance test
+        /// <summary>
+        /// Creates manipulation handles in the Scene view that can be used to add, move, and remove SplineData's DataPoints along a spline.
+        /// </summary>
+        /// <description>
+        /// Left-click an empty location on the spline to add a new DataPoint to the SplineData.
+        /// Left-click and drag a DataPoint to move the point along the spline. Right-click a DataPoint to delete it.
+        /// </description>
+        /// <param name="spline">The spline to use to interprete the SplineData.</param>
+        /// <param name="splineData">The SplineData for which the handles are drawn.</param>
+        /// <param name="splineID">The ID for the spline.</param>
+        /// <param name="useDefaultValueOnAdd">Whether to use the default value or a closer DataPoint value when adding new DataPoint.</param>
+        /// <typeparam name="TSpline">The spline type.</typeparam>
+        /// <typeparam name="TData">The type of data this data point stores.</typeparam>
+        public static void DataPointHandles<TSpline, TData>(
+            this TSpline spline,
+            SplineData<TData> splineData,
+            bool useDefaultValueOnAdd,
+            int splineID = 0)
+                where TSpline : ISpline
+        {
             var id = GUIUtility.GetControlID(FocusType.Passive);
 
-            //Only activating the tooling when close enough from the spline
-            if(s_ShowAddHandle)
-                DataPointAddHandle(id, spline, splineData, s_Position, s_T, useDefaultValueOnAdd);
+            DataPointAddHandle(id, spline, splineData, useDefaultValueOnAdd, splineID);
 
-            //Remove DataPoint functionality
-            TryRemoveDataPoint(splineData);
-
-            //Draw Default manipulation handles
+            // Draw Default manipulation handles
             DataPointMoveHandles(spline, splineData);
+
+            // Remove DataPoint functionality
+            TryRemoveDataPoint(splineData);
         }
+
 
         static void TryRemoveDataPoint<TData>(SplineData<TData> splineData)
         {
             var evt = Event.current;
             //Remove data point only when not adding one and when using right click button
-            if(!s_AddingDataPoint && GUIUtility.hotControl == 0
+            if(float.IsNaN(s_AddingDataPoint) && GUIUtility.hotControl == 0
                 && evt.type == EventType.MouseDown && evt.button == 1
                 && s_DataPointsIDs.Contains(HandleUtility.nearestControl))
             {
                 var dataPointIndex = splineData.Indexes.ElementAt(Array.IndexOf(s_DataPointsIDs, HandleUtility.nearestControl));
                 splineData.RemoveDataPoint(dataPointIndex);
+                GUI.changed = true;
                 evt.Use();
             }
+        }
+
+        static bool IsHotControl(float splineID)
+        {
+            return !float.IsNaN(s_AddingDataPoint) && splineID.Equals(s_AddingDataPoint);
         }
 
         static void DataPointAddHandle<TSpline, TData>(
             int controlID,
             TSpline spline,
             SplineData<TData> splineData,
-            float3 pos,
-            float t,
-            bool useDefaultValueOnAdd = false)
+            bool useDefaultValueOnAdd,
+            int splineID)
             where TSpline : ISpline
         {
             Event evt = Event.current;
@@ -99,14 +112,20 @@ namespace UnityEditor.Splines
             {
                 case EventType.Layout:
                 {
-                    if(!Tools.viewToolActive)
+                    if (!Tools.viewToolActive)
+                    {
+                        var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
+                        SplineUtility.GetNearestPoint(spline, ray, out var pos, out _);
                         HandleUtility.AddControl(controlID, HandleUtility.DistanceToCircle(pos, 0.1f));
+                    }
                     break;
                 }
 
                 case EventType.Repaint:
-                    if(HandleUtility.nearestControl == controlID && GUIUtility.hotControl == 0 || s_AddingDataPoint)
+                    if ((HandleUtility.nearestControl == controlID && GUIUtility.hotControl == 0 && float.IsNaN(s_AddingDataPoint)) || IsHotControl(splineID))
                     {
+                        var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
+                        SplineUtility.GetNearestPoint(spline, ray, out var pos, out var t);
                         var upDir = spline.EvaluateUpVector(t);
                         Handles.CircleHandleCap(controlID, pos, Quaternion.LookRotation(upDir), 0.15f * HandleUtility.GetHandleSize(pos), EventType.Repaint);
                     }
@@ -114,35 +133,41 @@ namespace UnityEditor.Splines
 
                 case EventType.MouseDown:
                     if (evt.button == 0
+                        && !Tools.viewToolActive
                         && HandleUtility.nearestControl == controlID
                         && GUIUtility.hotControl == 0)
                     {
-                        s_AddingDataPoint = true;
+                        s_AddingDataPoint = splineID;
+                        var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
+                        SplineUtility.GetNearestPoint(spline, ray, out _, out var t);
                         var index = SplineUtility.ConvertIndexUnit(
                             spline, t,
                             splineData.PathIndexUnit);
 
                         s_NewDataPointIndex = splineData.AddDataPointWithDefaultValue(index, useDefaultValueOnAdd);
+                        GUI.changed = true;
                         evt.Use();
                     }
                     break;
 
                 case EventType.MouseDrag:
-                    if (evt.button == 0 && s_AddingDataPoint)
+                    if (evt.button == 0 && IsHotControl(splineID))
                     {
-                        GUIUtility.hotControl = 0;
+                        var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
+                        SplineUtility.GetNearestPoint(spline, ray, out _, out var t);
                         var index = SplineUtility.ConvertIndexUnit(
                             spline, t,
                             splineData.PathIndexUnit);
                         s_NewDataPointIndex = splineData.MoveDataPoint(s_NewDataPointIndex, index);
+                        GUI.changed = true;
                         evt.Use();
                     }
                     break;
 
                 case EventType.MouseUp:
-                    if (evt.button == 0 && s_AddingDataPoint)
+                    if (evt.button == 0 && IsHotControl(splineID))
                     {
-                        s_AddingDataPoint = false;
+                        s_AddingDataPoint = float.NaN;
                         s_NewDataPointIndex = -1;
                         GUIUtility.hotControl = 0;
                         evt.Use();
@@ -168,8 +193,6 @@ namespace UnityEditor.Splines
             //Draw all data points handles on the spline
             for(int dataIndex = 0; dataIndex < splineData.Count; dataIndex++)
             {
-                var id = GUIUtility.GetControlID(FocusType.Passive);
-
                 var index = splineData.Indexes.ElementAt(dataIndex);
                 SplineDataHandle(
                     s_DataPointsIDs[dataIndex],
@@ -182,7 +205,7 @@ namespace UnityEditor.Splines
                 if(GUIUtility.hotControl == s_DataPointsIDs[dataIndex])
                 {
                     var newDataIndex = splineData.MoveDataPoint(dataIndex, newIndex);
-                    //If the current DataPoint is moved across another DataPoint, then update the hotControl ID
+                    // If the current DataPoint is moved across another DataPoint, then update the hotControl ID
                     if(newDataIndex - index != 0)
                         GUIUtility.hotControl = s_DataPointsIDs[newDataIndex];
                 }
@@ -218,11 +241,13 @@ namespace UnityEditor.Splines
 
                 case EventType.MouseDown:
                     if (evt.button == 0
+                        && !Tools.viewToolActive
                         && HandleUtility.nearestControl == controlID
                         && GUIUtility.hotControl == 0)
                     {
                         GUIUtility.hotControl = controlID;
                         newTime = GetClosestSplineDataT(spline, splineData);
+                        GUI.changed = true;
                         evt.Use();
                     }
                     break;
@@ -231,6 +256,7 @@ namespace UnityEditor.Splines
                     if (GUIUtility.hotControl == controlID)
                     {
                         newTime = GetClosestSplineDataT(spline, splineData);
+                        GUI.changed = true;
                         evt.Use();
                     }
                     break;

@@ -9,9 +9,9 @@ The Splines package contains:
 * A standard data format and storage model for commonly used splines. 
 * Samples of implementations that address common spline use cases, such as creating a road, animating a GameObject's position and rotation along a spline, instantiating prefabs along a spline to create environments, and more.
 
-## Compatibility with Unity versions
+## Supported Unity versions
 
-Splines is compatible with Unity version 2022.1 and later.
+Splines is supported in Unity version 2022.1 and later.
 
 ## Install Splines
  
@@ -23,7 +23,9 @@ To install this package, follow the instructions in the [Package Manager documen
 
 The Splines package contains sample scenes that demonstrate different use cases for splines. 
 
-To import Splines' sample scenes:
+To import these sample scenes, you must install the Splines package.
+
+To import sample scenes from the Splines package:
 1. Go to **Window** > **Package Manager** to open the Package Manager. 
 1. In the Package Manager, select **Splines**.
 1. Expand the **Samples** section.

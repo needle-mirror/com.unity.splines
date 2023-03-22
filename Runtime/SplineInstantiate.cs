@@ -479,6 +479,24 @@ namespace UnityEngine.Splines
         [SerializeField, HideInInspector, FormerlySerializedAs("m_Instances")]
         List<GameObject> m_DeprecatedInstances = new List<GameObject>();
 
+        const string k_InstancesRootName = "root-"; 
+        GameObject m_InstancesRoot;
+
+        Transform instancesRootTransform
+        {
+            get
+            {
+                if (m_InstancesRoot == null)
+                {
+                    m_InstancesRoot = new GameObject(k_InstancesRootName+GetInstanceID());
+                    m_InstancesRoot.hideFlags |= HideFlags.HideAndDontSave;
+                    m_InstancesRoot.transform.parent = transform;
+                    m_InstancesRoot.transform.localPosition = Vector3.zero;
+                    m_InstancesRoot.transform.localRotation = Quaternion.identity;
+                }
+                return m_InstancesRoot.transform;
+            }
+        }
         readonly List<GameObject> m_Instances = new List<GameObject>();
         internal List<GameObject> instances => m_Instances;
         bool m_InstancesCacheDirty = false;
@@ -530,6 +548,10 @@ namespace UnityEngine.Splines
             Undo.undoRedoPerformed += UndoRedoPerformed;
 #endif
 
+            //Bugfix for SPLB-107: Duplicating a SplineInstantiate is making children visible
+            //This ensure to delete the invalid children. 
+            CheckChildrenValidity();
+            
             Spline.Changed += OnSplineChanged;
             UpdateInstances();
         }
@@ -552,22 +574,69 @@ namespace UnityEngine.Splines
 
             m_SplineDirty = m_AutoRefresh;
 
+            EnsureItemsValidity();
+            
+            m_PositionOffset.CheckMinMaxValidity();
+            m_RotationOffset.CheckMinMaxValidity();
+            m_ScaleOffset.CheckMinMaxValidity();
+
+        }
+
+        void EnsureItemsValidity()
+        {
             float probability = 0;
             for (int i = 0; i < m_ItemsToInstantiate.Count; i++)
             {
                 var item = m_ItemsToInstantiate[i];
 
                 if (item.Prefab != null)
-                    probability += item.Probability;
+                {
+                    if (transform.IsChildOf(item.Prefab.transform))
+                    {
+                        Debug.LogWarning("Instantiating a parent of the SplineInstantiate object itself is not permitted" +
+                            $" ({item.Prefab.name} is a parent of {transform.gameObject.name}).");
+                        item.Prefab = null;
+                        m_ItemsToInstantiate[i] = item;
+                    }
+                    else
+                        probability += item.Probability;
+                }
             }
-
-            m_PositionOffset.CheckMinMaxValidity();
-            m_RotationOffset.CheckMinMaxValidity();
-            m_ScaleOffset.CheckMinMaxValidity();
-
             maxProbability = probability;
         }
 
+        void CheckChildrenValidity()
+        {
+            // All the children have to be checked in case multiple SplineInstantiate components are used on the same GameObject.
+            // We want to be able to have multiple components as it allows for example to instantiate grass and
+            // trees with different parameters on the same object. 
+            var ids = GetComponents<SplineInstantiate>().Select(sInstantiate => sInstantiate.GetInstanceID()).ToList();
+            var childCount = transform.childCount;
+            for (int i = childCount - 1; i >= 0; --i)
+            {
+                var child = transform.GetChild(i).gameObject;
+                if (child.name.StartsWith(k_InstancesRootName))
+                {
+                    var invalid = true;
+                    foreach (var instanceID  in ids)
+                    {
+                        if (child.name.Equals(k_InstancesRootName + instanceID))
+                        {
+                            invalid = false;
+                            break;
+                        }
+                    }
+                    
+                    if (invalid)
+#if UNITY_EDITOR
+                        DestroyImmediate(child);
+#else
+                        Destroy(child);
+#endif
+                }
+            }
+        }
+        
         void ValidateSpacing()
         {
             var xSpacing = Mathf.Max(0.1f, m_Spacing.x);
@@ -649,6 +718,11 @@ namespace UnityEngine.Splines
 #endif
                 }
 
+#if UNITY_EDITOR
+                DestroyImmediate(m_InstancesRoot);
+#else
+                Destroy(m_InstancesRoot);
+#endif
                 m_Instances.Clear();
                 m_InstancesCacheDirty = false;
             }
@@ -682,7 +756,7 @@ namespace UnityEngine.Splines
             if (m_SplineDirty)
                 UpdateInstances();
         }
-
+        
         /// <summary>
         /// Create and update all instances along the spline based on the list of available prefabs/objects.  
         /// </summary>
@@ -733,6 +807,9 @@ namespace UnityEngine.Splines
                 else
                     instanceCountModeStep = totalSplineLength / ((int)spacing - 1);
             }
+
+            //Needs to ensure the validity of the items to instantiate to be certain we don't have a parent of the hierarchy in these.
+            EnsureItemsValidity();
             
             for (int splineIndex = 0; splineIndex < m_Container.Splines.Count; splineIndex++)
             {
@@ -951,11 +1028,11 @@ namespace UnityEngine.Splines
                     return false;
                 }
 
-                if (assetType != PrefabAssetType.NotAPrefab)
-                    m_Instances.Add(PrefabUtility.InstantiatePrefab(m_CurrentItem.Prefab, transform) as GameObject);
+                if (assetType != PrefabAssetType.NotAPrefab && !Application.isPlaying)
+                    m_Instances.Add(PrefabUtility.InstantiatePrefab(m_CurrentItem.Prefab, instancesRootTransform) as GameObject);
                 else
 #endif
-                    m_Instances.Add(Instantiate(m_CurrentItem.Prefab, transform));
+                    m_Instances.Add(Instantiate(m_CurrentItem.Prefab, instancesRootTransform));
 
                 m_Instances[index].hideFlags |= HideFlags.HideAndDontSave;
             }

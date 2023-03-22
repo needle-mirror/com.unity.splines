@@ -9,7 +9,7 @@ namespace UnityEditor.Splines
         public static GUIContent splineRotateTool = EditorGUIUtility.TrIconContent("RotateTool", "Spline Rotate Tool");
         public static GUIContent splineScaleTool = EditorGUIUtility.TrIconContent("ScaleTool", "Spline Scale Tool");
 
-        static Texture2D GetIcon(string name)
+        public static Texture2D GetIcon(string name)
         {
             bool is2x = EditorGUIUtility.pixelsPerPoint > 1;
             bool darkSkin = EditorGUIUtility.isProSkin;

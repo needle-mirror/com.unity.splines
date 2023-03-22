@@ -13,7 +13,7 @@ Knots support the following tangent modes:
 
 Use the **Linear** tangent mode to create a spline with straight lines or sharp corners. 
 
-The **Linear** tangent mode sets a knot's tangents to a magnitude of `0` so that they point directly at the preceding and following knots.  
+The **Linear** tangent mode sets a knot's tangents to a length of `0` so that they point directly at the preceding and following knots.  
 
 In **Linear** mode, tangents are automatically computed and cannot be directly manipulated in the Scene view. 
 
@@ -41,18 +41,18 @@ You can select the following **Bezier** modes for knots in the **Bezier** tangen
 
 ### Mirrored Bezier mode
 
-Set a knot's tangents to point in opposite directions and have equal magnitudes. 
+Set a knot's tangents to point in opposite directions and have equal lengths. 
 
 A knot in **Mirrored** mode always points to its **Out** tangent. If you move tangents in **Mirrored** mode, the parent knot rotates to point to its **Out** tangent. If you rotate a knot in **Mirrored** mode, its tangents rotate with it. 
 
 > [!NOTE]
 > For splines with non-uniform scaling, a knot in **Mirrored** mode might not point to its **Out** tangent. Non-uniform scaling is when the Scale in a Transform has different values for the x-axis, y-axis, and z-axis. For example, a spline with Scale values of (1 , 5, 10) has non-uniform scaling. 
 
-If you select a tangent and set it to **Mirrored** mode, it mirrors the opposite tangent. For example, if you set an Out tangent to **Mirrored**, the In tangent's magnitude and direction change, but the Out tangent's magnitude and direction do not change.
+If you select a tangent and set it to **Mirrored** mode, it mirrors the opposite tangent. For example, if you set an Out tangent to **Mirrored**, the In tangent's length and direction change, but the Out tangent's length and direction do not change.
 
 ### Continuous Bezier mode
 
-Align a knot's tangents so they always point in opposite directions. The magnitude of tangents in **Continuous** mode are independent of each other and you can set them to different values. 
+Align a knot's tangents so they always point in opposite directions. The length of tangents in **Continuous** mode are independent of each other and you can set them to different values. 
 
 A knot in **Continuous** mode always points to its **Out** tangent. If you move tangents in **Continuous** mode, the parent knot rotates to point to its **Out** tangent. If you rotate a knot in **Continuous** mode, its tangents rotate with it.
 
@@ -63,7 +63,7 @@ If you select a tangent and set it to **Continuous** mode, it aligns with the op
 
 ### Broken Bezier mode
 
-Dissociate a knot's tangents from each other. Use the **Broken** mode to  directly manipulate each tangent's magnitude and direction.
+Dissociate a knot's tangents from each other. Use the **Broken** mode to  directly manipulate each tangent's length and direction.
 
 If you rotate a knot in **Broken** mode, its tangents rotate with it. 
 

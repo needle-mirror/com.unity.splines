@@ -19,3 +19,9 @@ Use the Spline Animate component to animate the position and rotation of a GameO
 | **Preview** | Play, pause, or reset the animation. |
 |**Time** |  Select a specific time in the sequence of the animation. |
 
+## Additional resources
+
+* [Animate a GameObject along a spline](animate-spline.md)
+* [Control the animated GameObject's movement](animate-movement.md)
+* [Change the alignment of an animated GameObject](animate-alignment.md)
+* [Use components](xref:UsingComponents)

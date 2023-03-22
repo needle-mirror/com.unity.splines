@@ -163,9 +163,7 @@ namespace UnityEngine.Splines
         {
             TryGetComponent(out m_Container);
 
-            if (TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh != null)
-                m_Mesh = filter.sharedMesh;
-            else
+            if (TryGetComponent<MeshFilter>(out var filter))
                 filter.sharedMesh = m_Mesh = CreateMeshAsset();
 
             if (TryGetComponent<MeshRenderer>(out var renderer) && renderer.sharedMaterial == null)
@@ -222,7 +220,7 @@ namespace UnityEngine.Splines
         /// </summary>
         public void Rebuild()
         {
-            if(m_Mesh == null && (m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
+            if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
                 return;
             
             SplineMesh.Extrude(Splines, m_Mesh, m_Radius, m_Sides, m_SegmentsPerUnit, m_Capped, m_Range);
@@ -272,7 +270,7 @@ namespace UnityEngine.Splines
                     Directory.CreateDirectory(sceneDataDir);
             }
 
-            var path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath($"{sceneDataDir}/{mesh.name}.asset");
+            var path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath($"{sceneDataDir}/SplineExtrude_{mesh.name}.asset");
             UnityEditor.AssetDatabase.CreateAsset(mesh, path);
             mesh = UnityEditor.AssetDatabase.LoadAssetAtPath<Mesh>(path);
             UnityEditor.EditorGUIUtility.PingObject(mesh);

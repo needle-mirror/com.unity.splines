@@ -173,5 +173,11 @@ namespace UnityEngine.Splines
             /// </summary>
             public void Dispose() { }
         }
+
+        /// <summary>
+        /// Returns a string summary of this range.
+        /// </summary>
+        /// <returns>Returns a string summary of this range.</returns>
+        public override string ToString() => $"{{{Start}..{End}}}";
     }
 }

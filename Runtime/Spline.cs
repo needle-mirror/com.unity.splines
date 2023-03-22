@@ -1,38 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Unity.Mathematics;
+using UObject = UnityEngine.Object;
 
 namespace UnityEngine.Splines
 {
-    /// <summary>
-    /// Describes the different types of changes that can occur to a spline.
-    /// </summary>
-    public enum SplineModification
-    {
-        /// <summary>
-        /// The default modification type. This is used when no other SplineModification types apply, or when the Spline is modified in the Inspector.
-        /// </summary>
-        Default,
-        /// <summary>
-        /// The spline's <see cref="Spline.Closed"/> property was modified.
-        /// </summary>
-        ClosedModified,
-        /// <summary>
-        /// A knot was modified.
-        /// </summary>
-        KnotModified,
-        /// <summary>
-        /// A knot was inserted.
-        /// </summary>
-        KnotInserted,
-        /// <summary>
-        /// A knot was removed.
-        /// </summary>
-        KnotRemoved
-    }
-
     /// <summary>
     /// The Spline class is a collection of <see cref="BezierKnot"/>, the closed/open state, and editing representation.
     /// </summary>
@@ -48,39 +23,38 @@ namespace UnityEngine.Splines
         {
             public TangentMode Mode;
             public float Tension;
-            public DistanceToInterpolation[] Length;
+            public DistanceToInterpolation[] DistanceToInterpolation = new DistanceToInterpolation[k_CurveDistanceLutResolution];
 
             public MetaData()
             {
                 Mode = k_DefaultTangentMode;
-                Length = null;
-                Tension = SplineUtility.DefaultTension;
+                Tension = SplineUtility.CatmullRomTension;
+                InvalidateCache();
             }
 
             public MetaData(MetaData toCopy)
             {
                 Mode = toCopy.Mode;
-                if (toCopy.Length != null)
-                {
-                    Length = new DistanceToInterpolation[toCopy.Length.Length];
-                    Array.Copy(toCopy.Length, Length, Length.Length);
-                }
-                else
-                    Length = null;
-
+                Array.Copy(toCopy.DistanceToInterpolation, DistanceToInterpolation, DistanceToInterpolation.Length);
                 Tension = toCopy.Tension;
+            }
+
+            public void InvalidateCache()
+            {
+                DistanceToInterpolation[0] = Splines.DistanceToInterpolation.Invalid;
             }
         }
 
         const int k_CurveDistanceLutResolution = 30;
 
-        [SerializeField, Obsolete]
+        [SerializeField, Obsolete, HideInInspector]
+#pragma warning disable CS0618
         SplineType m_EditModeType = SplineType.Bezier;
+#pragma warning restore CS0618
 
         [SerializeField]
         List<BezierKnot> m_Knots = new List<BezierKnot>();
 
-        [SerializeField, HideInInspector]
         float m_Length = -1f;
 
         [SerializeField, HideInInspector]
@@ -88,6 +62,151 @@ namespace UnityEngine.Splines
 
         [SerializeField]
         bool m_Closed;
+
+        [SerializeField]
+        SplineDataDictionary<int> m_IntData = new SplineDataDictionary<int>();
+
+        [SerializeField]
+        SplineDataDictionary<float> m_FloatData = new SplineDataDictionary<float>();
+
+        [SerializeField]
+        SplineDataDictionary<float4> m_Float4Data = new SplineDataDictionary<float4>();
+
+        [SerializeField]
+        SplineDataDictionary<UObject> m_ObjectData = new SplineDataDictionary<UObject>();
+
+        IEnumerable<ISplineModificationHandler> embeddedSplineData
+        {
+            get
+            {
+                foreach (var data in m_IntData) yield return data.Value;
+                foreach (var data in m_FloatData) yield return data.Value;
+                foreach (var data in m_Float4Data) yield return data.Value;
+                foreach (var data in m_ObjectData) yield return data.Value;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve a <see cref="SplineData{T}"/> reference for <param name="key"></param> if it exists.
+        /// Note that this is a reference to the stored <see cref="SplineData{T}"/>, not a copy. Any modifications to
+        /// this collection will affect the <see cref="Spline"/> data.
+        /// </summary>
+        /// <param name="key">The string key value to search for. Only one instance of a key value can exist in an
+        /// embedded <see cref="SplineData{T}"/> collection, however keys are unique to each data type. The same key
+        /// can be re-used to store float data and Object data.</param>
+        /// <param name="data">The output <see cref="SplineData{T}"/> if the key is found.</param>
+        /// <returns>True if the key and type combination are found, otherwise false.</returns>
+        public bool TryGetFloatData(string key, out SplineData<float> data) => m_FloatData.TryGetValue(key, out data);
+
+        /// <inheritdoc cref="TryGetFloatData"/>
+        public bool TryGetFloat4Data(string key, out SplineData<float4> data) => m_Float4Data.TryGetValue(key, out data);
+
+        /// <inheritdoc cref="TryGetFloatData"/>
+        public bool TryGetIntData(string key, out SplineData<int> data) => m_IntData.TryGetValue(key, out data);
+
+        /// <inheritdoc cref="TryGetFloatData"/>
+        public bool TryGetObjectData(string key, out SplineData<UObject> data) => m_ObjectData.TryGetValue(key, out data);
+
+        /// <summary>
+        /// Returns a <see cref="SplineData{T}"/> for <paramref name="key"/>. If an instance matching the key and
+        /// type does not exist, a new entry is appended to the internal collection and returned.
+        /// Note that this is a reference to the stored <see cref="SplineData{T}"/>, not a copy. Any modifications to
+        /// this collection will affect the <see cref="Spline"/> data.
+        /// </summary>
+        /// <param name="key">The string key value to search for. Only one instance of a key value can exist in an
+        /// embedded <see cref="SplineData{T}"/> collection, however keys are unique to each data type. The same key
+        /// can be re-used to store float data and Object data.</param>
+        /// <returns>A <see cref="SplineData{T}"/> of the requested type.</returns>
+        public SplineData<float> GetOrCreateFloatData(string key) => m_FloatData.GetOrCreate(key);
+
+        /// <inheritdoc cref="GetOrCreateFloatData"/>
+        public SplineData<float4> GetOrCreateFloat4Data(string key) => m_Float4Data.GetOrCreate(key);
+
+        /// <inheritdoc cref="GetOrCreateFloatData"/>
+        public SplineData<int> GetOrCreateIntData(string key) => m_IntData.GetOrCreate(key);
+
+        /// <inheritdoc cref="GetOrCreateFloatData"/>
+        public SplineData<UObject> GetOrCreateObjectData(string key) => m_ObjectData.GetOrCreate(key);
+
+        /// <summary>
+        /// Remove a <see cref="SplineData{T}"/> value.
+        /// </summary>
+        /// <param name="key">The string key value to search for. Only one instance of a key value can exist in an
+        /// embedded <see cref="SplineData{T}"/> collection, however keys are unique to each data type. The same key
+        /// can be re-used to store float data and Object data.</param>
+        /// <returns>Returns true if a matching <see cref="SplineData{T}"/> key value pair was found and removed, or
+        /// false if no match was found.</returns>
+        public bool RemoveFloatData(string key) => m_FloatData.Remove(key);
+
+        /// <inheritdoc cref="RemoveFloatData"/>
+        public bool RemoveFloat4Data(string key) => m_Float4Data.Remove(key);
+
+        /// <inheritdoc cref="RemoveFloatData"/>
+        public bool RemoveIntData(string key) => m_IntData.Remove(key);
+
+        /// <inheritdoc cref="RemoveFloatData"/>
+        public bool RemoveObjectData(string key) => m_ObjectData.Remove(key);
+
+        /// <summary>
+        /// Get a collection of the keys of embedded <see cref="SplineData{T}"/> for this type.
+        /// </summary>
+        /// <returns>An enumerable list of keys present for the requested type.</returns>
+        public IEnumerable<string> GetFloatDataKeys() => m_FloatData.Keys;
+
+        /// <inheritdoc cref="GetFloatDataKeys"/>
+        public IEnumerable<string> GetFloat4DataKeys() => m_Float4Data.Keys;
+
+        /// <inheritdoc cref="GetFloatDataKeys"/>
+        public IEnumerable<string> GetIntDataKeys() => m_IntData.Keys;
+
+        /// <inheritdoc cref="GetFloatDataKeys"/>
+        public IEnumerable<string> GetObjectDataKeys() => m_ObjectData.Keys;
+
+        /// <inheritdoc cref="GetFloatDataKeys"/>
+        public IEnumerable<string> GetSplineDataKeys(EmbeddedSplineDataType type)
+        {
+            switch (type)
+            {
+                case EmbeddedSplineDataType.Float: return m_FloatData.Keys;
+                case EmbeddedSplineDataType.Float4: return m_Float4Data.Keys;
+                case EmbeddedSplineDataType.Int: return m_IntData.Keys;
+                case EmbeddedSplineDataType.Object: return m_ObjectData.Keys;
+                default: throw new InvalidEnumArgumentException();
+            }
+        }
+
+        /// <summary>
+        /// Get a collection of the <see cref="SplineData{T}"/> values for this type.
+        /// </summary>
+        /// <returns>An enumerable list of values present for the requested type.</returns>
+        public IEnumerable<SplineData<float>> GetFloatDataValues() => m_FloatData.Values;
+
+        /// <inheritdoc cref="GetFloatDataValues"/>
+        public IEnumerable<SplineData<float4>> GetFloat4DataValues() => m_Float4Data.Values;
+
+        /// <inheritdoc cref="GetFloatDataValues"/>
+        public IEnumerable<SplineData<int>> GetIntDataValues() => m_IntData.Values;
+
+        /// <inheritdoc cref="GetFloatDataValues"/>
+        public IEnumerable<SplineData<Object>> GetObjectDataValues() => m_ObjectData.Values;
+
+        /// <summary>
+        /// Set the <see cref="SplineData{T}"/> for <param name="key"></param>.
+        /// </summary>
+        /// <param name="key">The string key value to search for. Only one instance of a key value can exist in an
+        /// embedded <see cref="SplineData{T}"/> collection, however keys are unique to each data type. The same key
+        /// can be re-used to store float data and Object data.</param>
+        /// <param name="value">The <see cref="SplineData{T}"/> to set. This value will be copied.</param>
+        public void SetFloatData(string key, SplineData<float> value) => m_FloatData[key] = value;
+
+        /// <inheritdoc cref="SetFloatData"/>
+        public void SetFloat4Data(string key, SplineData<float4> value) => m_Float4Data[key] = value;
+
+        /// <inheritdoc cref="SetFloatData"/>
+        public void SetIntData(string key, SplineData<int> value) => m_IntData[key] = value;
+
+        /// <inheritdoc cref="SetFloatData"/>
+        public void SetObjectData(string key, SplineData<UObject> value) => m_ObjectData[key] = value;
 
         /// <summary>
         /// Return the number of knots.
@@ -115,7 +234,7 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <remarks>
         /// First parameter is the target Spline that the event is raised for, second parameter is
-        /// the knot index and the third parameter represents the type of change that occured.
+        /// the knot index and the third parameter represents the type of change that occurred.
         /// If the event does not target a specific knot, the second parameter will have the value of -1.
         ///
         /// In the editor this callback can be invoked many times per-frame.
@@ -128,27 +247,44 @@ namespace UnityEngine.Splines
 #if UNITY_EDITOR
         internal static Action<Spline> afterSplineWasModified;
         [NonSerialized]
-        bool m_Dirty;
+        bool m_QueueAfterSplineModifiedCallback;
 #endif
+        
+        (float curve0, float curve1) m_LastKnotChangeCurveLengths;
 
-        internal void SetDirty()
+        internal void SetDirtyNoNotify()
         {
-            SetLengthCacheDirty();
+            EnsureMetaDataValid();
+            m_Length = -1f;
+            for (int i = 0, c = m_MetaData.Count; i < c; ++i)
+                m_MetaData[i].InvalidateCache();
+        }
+
+        internal void SetDirty(SplineModification modificationEvent, int knotIndex = k_BatchModification)
+        {
+            SetDirtyNoNotify();
+
 #pragma warning disable 618
             changed?.Invoke();
 #pragma warning restore 618
+
             OnSplineChanged();
 
+            foreach (var data in embeddedSplineData)
+                data.OnSplineModified(new SplineModificationData(this, modificationEvent, knotIndex, m_LastKnotChangeCurveLengths.curve0, m_LastKnotChangeCurveLengths.curve1));
+
+            Changed?.Invoke(this, knotIndex, modificationEvent);
+
 #if UNITY_EDITOR
-            if (m_Dirty)
+            if (m_QueueAfterSplineModifiedCallback)
                 return;
 
-            m_Dirty = true;
+            m_QueueAfterSplineModifiedCallback = true;
 
             UnityEditor.EditorApplication.delayCall += () =>
             {
                 afterSplineWasModified?.Invoke(this);
-                m_Dirty = false;
+                m_QueueAfterSplineModifiedCallback = false;
             };
 #endif
         }
@@ -158,7 +294,7 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <remarks>
         /// In the editor this can be invoked many times per-frame.
-        /// Prefer to use <see cref="UnityEditor.Splines.EditorSplineUtility.afterSplineWasModified"/> when working
+        /// Prefer to use <see cref="UnityEditor.Splines.EditorSplineUtility.AfterSplineWasModified"/> when working
         /// with splines in the editor.
         /// </remarks>
         protected virtual void OnSplineChanged()
@@ -167,11 +303,31 @@ namespace UnityEngine.Splines
 
         void EnsureMetaDataValid()
         {
-            if (m_MetaData.Count == m_Knots.Count)
-                return;
-            m_MetaData = new List<MetaData>(m_Knots.Count);
-            for (int i = 0, c = m_Knots.Count; i < c; ++i)
+            while(m_MetaData.Count < m_Knots.Count)
                 m_MetaData.Add(new MetaData());
+        }
+
+        /// <summary>
+        /// Ensure that a <see cref="BezierKnot"/> has the correct tangent and rotation values to match it's
+        /// <see cref="TangentMode"/> and tension. This can be necessary if knot data is modified outside of the Spline
+        /// class (ex, manually setting the <see cref="Knots"/> array without taking care to also set the tangent
+        /// modes).
+        /// </summary>
+        /// <param name="index">The knot index to set tangent and rotation values for.</param>
+        public void EnforceTangentModeNoNotify(int index) => EnforceTangentModeNoNotify(new SplineRange(index, 1));
+
+        /// <summary>
+        /// Ensure that a <see cref="BezierKnot"/> has the correct tangent and rotation values to match it's
+        /// <see cref="TangentMode"/> and tension. This can be necessary if knot data is modified outside of the Spline
+        /// class (ex, manually setting the <see cref="Knots"/> array without taking care to also set the tangent
+        /// modes).
+        /// </summary>
+        /// <param name="range">The <see cref="SplineRange"/> range of knot indices to set tangent and rotation values
+        /// for.</param>
+        public void EnforceTangentModeNoNotify(SplineRange range)
+        {
+            for(int i = range.Start; i <= range.End; ++i)
+                ApplyTangentModeNoNotify(i);
         }
 
         /// <summary>
@@ -191,8 +347,7 @@ namespace UnityEngine.Splines
         /// <param name="mode">The <see cref="TangentMode"/> to apply to each knot.</param>
         public void SetTangentMode(TangentMode mode)
         {
-            for(int i = 0; i < Count; ++i)
-                SetTangentMode(i, mode);
+            SetTangentMode(new SplineRange(0, Count), mode);
         }
 
         /// <summary>
@@ -223,8 +378,11 @@ namespace UnityEngine.Splines
         public void SetTangentMode(SplineRange range, TangentMode mode, BezierTangent main = k_DefaultMainTangent)
         {
             foreach (var index in range)
+            {
+                CacheKnotOperationCurves(index);
                 SetTangentModeNoNotify(index, mode, main);
-            Changed?.Invoke(this, range.Count == 1 ? range[0] : k_BatchModification, SplineModification.KnotModified);
+                SetDirty(SplineModification.KnotModified, index);
+            }
         }
 
         /// <summary>
@@ -239,36 +397,19 @@ namespace UnityEngine.Splines
         public void SetTangentModeNoNotify(int index, TangentMode mode, BezierTangent main = k_DefaultMainTangent)
         {
             EnsureMetaDataValid();
-            var previous = m_MetaData[index].Mode;
-            m_MetaData[index].Mode = mode;
+
             var knot = m_Knots[index];
 
-            if(previous == TangentMode.Linear || previous == TangentMode.AutoSmooth)
+            // If coming from a tangent mode where tangents are locked to 0 length, preset the Bezier tangents with a
+            // likely non-zero length.
+            if(m_MetaData[index].Mode == TangentMode.Linear && mode >= TangentMode.Mirrored)
             {
-                switch (mode)
-                {
-                    case TangentMode.Broken:
-                        knot.TangentIn = SplineUtility.GetExplicitLinearTangent(knot, this.Previous(index));
-                        knot.TangentOut = SplineUtility.GetExplicitLinearTangent(knot, this.Next(index));
-                        break;
 
-                    case TangentMode.Continuous:
-                    case TangentMode.Mirrored:
-                    case TangentMode.AutoSmooth:
-                        knot = SplineUtility.GetAutoSmoothKnot(knot.Position, this.Previous(index).Position, this.Next(index).Position, math.mul(knot.Rotation, math.up()));
-                        break;
-                }
+                knot.TangentIn = SplineUtility.GetExplicitLinearTangent(knot, this.Previous(index));
+                knot.TangentOut = SplineUtility.GetExplicitLinearTangent(knot, this.Next(index));
             }
 
-            // Spline tools enforce that TangentMode.{Continuous, Mirrored} are exclusively rotated. Tangents are
-            // always set to +/- vec3.forward. When coming from a bezier mode where that is not enforced, we need to
-            // make sure that the knot rotation is aligned to the leading tangent.
-            if (previous == TangentMode.Broken && (mode == TangentMode.Continuous || mode == TangentMode.Mirrored))
-            {
-                var tan = math.mul(knot.Rotation, main == BezierTangent.In ? -knot.TangentIn : knot.TangentOut);
-                knot.Rotation = SplineUtility.GetKnotRotation(tan, math.mul(knot.Rotation,math.up()));
-            }
-
+            m_MetaData[index].Mode = mode;
             m_Knots[index] = knot;
             ApplyTangentModeNoNotify(index, main);
         }
@@ -290,14 +431,11 @@ namespace UnityEngine.Splines
             switch(mode)
             {
                 case TangentMode.Continuous:
-                    knot.TangentIn = new float3(0, 0, -math.length(knot.TangentIn));
-                    knot.TangentOut = new float3(0, 0, math.length(knot.TangentOut));
+                    knot = knot.BakeTangentDirectionToRotation(false, main);
                     break;
 
                 case TangentMode.Mirrored:
-                    var lead = main == BezierTangent.In ? knot.TangentIn : knot.TangentOut;
-                    knot.TangentOut = new float3(0f, 0f, math.length(lead));
-                    knot.TangentIn = -knot.TangentOut;
+                    knot = knot.BakeTangentDirectionToRotation(true, main);
                     break;
 
                 case TangentMode.Linear:
@@ -306,14 +444,16 @@ namespace UnityEngine.Splines
                     break;
 
                 case TangentMode.AutoSmooth:
-                    var tan = SplineUtility.GetAutoSmoothTangent(this.Previous(index).Position, knot.Position, this.Next(index).Position, m_MetaData[index].Tension);
-                    knot.TangentOut = math.rotate(math.inverse(knot.Rotation), tan);
-                    knot.TangentIn = -knot.TangentOut;
+                    knot = SplineUtility.GetAutoSmoothKnot(knot.Position,
+                        this.Previous(index).Position,
+                        this.Next(index).Position,
+                        math.mul(knot.Rotation, math.up()),
+                        m_MetaData[index].Tension);
                     break;
             }
 
             m_Knots[index] = knot;
-            SetLengthCacheDirty();
+            SetDirtyNoNotify();
         }
 
         /// <summary>
@@ -344,8 +484,7 @@ namespace UnityEngine.Splines
         /// <param name="tension">Set the length of the tangent vectors.</param>
         public void SetAutoSmoothTension(SplineRange range, float tension)
         {
-            SetAutoSmoothTensionNoNotify(range, tension);
-            Changed?.Invoke(this, range.Count == 1 ? range[0] : k_BatchModification, SplineModification.KnotModified);
+            SetAutoSmoothTensionInternal(range, tension, true);
         }
 
         /// <summary>
@@ -358,7 +497,7 @@ namespace UnityEngine.Splines
         /// <param name="tension">Set the length of the tangent vectors for a knot set to <see cref="TangentMode.AutoSmooth"/>.</param>
         public void SetAutoSmoothTensionNoNotify(int index, float tension)
         {
-            SetAutoSmoothTensionNoNotify(new SplineRange(index, 1), tension);
+            SetAutoSmoothTensionInternal(new SplineRange(index, 1), tension, false);
         }
 
         /// <summary>
@@ -371,34 +510,29 @@ namespace UnityEngine.Splines
         /// <param name="tension">Set the length of the tangent vectors for a knot set to <see cref="TangentMode.AutoSmooth"/>.</param>
         public void SetAutoSmoothTensionNoNotify(SplineRange range, float tension)
         {
+            SetAutoSmoothTensionInternal(range, tension, false);
+        }
+
+        void SetAutoSmoothTensionInternal(SplineRange range, float tension, bool setDirty)
+        {
             for (int i = 0, c = range.Count; i < c; ++i)
             {
                 var index = range[i];
+                CacheKnotOperationCurves(index);
                 m_MetaData[index].Tension = tension;
                 if(m_MetaData[index].Mode == TangentMode.AutoSmooth)
                     ApplyTangentModeNoNotify(index);
-            }
-            // SetDirty is intentionally not called here. It will be invoked in ApplyTangentModeNoNotify if any changes
-            // are made.
-        }
 
-        // todo Only Catmull Rom requires every curve to be re-evaluated when dirty.
-        // Linear and cubic bezier could be more selective about dirtying cached curve lengths.
-        // Important - This function also serves to enable backwards compatibility with serialized Spline instances
-        // that did not have a length cache.
-        void SetLengthCacheDirty()
-        {
-            EnsureMetaDataValid();
-            m_Length = -1f;
-            for (int i = 0; i < m_MetaData.Count; i++)
-                m_MetaData[i].Length = null;
+                if (setDirty)
+                    SetDirty(SplineModification.KnotModified, index);
+            }
         }
 
         /// <summary>
         /// The SplineType that this spline should be presented as to the user.
         /// </summary>
         /// <remarks>
-        /// Internally all splines are stored as a collection of bezier knots, and when editing converted or displayed
+        /// Internally all splines are stored as a collection of Bezier knots, and when editing converted or displayed
         /// with the handles appropriate to the editable type.
         /// </remarks>
         [Obsolete("Use GetTangentMode and SetTangentMode.")]
@@ -412,9 +546,8 @@ namespace UnityEngine.Splines
                 m_EditModeType = value;
                 var mode = value.GetTangentMode();
                 for(int i = 0; i < Count; ++i)
-                    SetTangentMode(i, mode);
-                SetDirty();
-                Changed?.Invoke(this, k_BatchModification, SplineModification.Default);
+                    SetTangentModeNoNotify(i, mode);
+                SetDirty(SplineModification.Default);
             }
         }
 
@@ -428,8 +561,7 @@ namespace UnityEngine.Splines
             {
                 m_Knots = new List<BezierKnot>(value);
                 m_MetaData = new List<MetaData>(m_Knots.Count);
-                SetDirty();
-                Changed?.Invoke(this, k_BatchModification, SplineModification.Default);
+                SetDirty(SplineModification.Default);
             }
         }
 
@@ -444,8 +576,7 @@ namespace UnityEngine.Splines
                 if (m_Closed == value)
                     return;
                 m_Closed = value;
-                SetDirty();
-                Changed?.Invoke(this, k_BatchModification, SplineModification.ClosedModified);
+                SetDirty(SplineModification.ClosedModified);
             }
         }
 
@@ -462,7 +593,7 @@ namespace UnityEngine.Splines
         /// <param name="index">The zero-based index to insert the new element.</param>
         /// <param name="knot">The <see cref="BezierKnot"/> to insert.</param>
         public void Insert(int index, BezierKnot knot) =>
-            Insert(index, knot, k_DefaultTangentMode, SplineUtility.DefaultTension);
+            Insert(index, knot, k_DefaultTangentMode, SplineUtility.CatmullRomTension);
 
         /// <summary>
         /// Inserts a <see cref="BezierKnot"/> at the specified <paramref name="index"/>.
@@ -472,7 +603,7 @@ namespace UnityEngine.Splines
         /// <param name="mode">The <see cref="TangentMode"/> to apply to this knot. Tangent modes are enforced
         /// when a knot value is set.</param>
         public void Insert(int index, BezierKnot knot, TangentMode mode) =>
-            Insert(index, knot, mode, SplineUtility.DefaultTension);
+            Insert(index, knot, mode, SplineUtility.CatmullRomTension);
 
         /// <summary>
         /// Adds a <see cref="BezierKnot"/> at the specified <paramref name="index"/>.
@@ -488,13 +619,51 @@ namespace UnityEngine.Splines
         public void Insert(int index, BezierKnot knot, TangentMode mode, float tension)
         {
             EnsureMetaDataValid();
+            CacheKnotOperationCurves(index);
             m_Knots.Insert(index, knot);
             m_MetaData.Insert(index, new MetaData() { Mode = mode, Tension = tension });
             ApplyTangentModeNoNotify(this.PreviousIndex(index));
             ApplyTangentModeNoNotify(index);
             ApplyTangentModeNoNotify(this.NextIndex(index));
-            SetDirty();
-            Changed?.Invoke(this, index, SplineModification.KnotInserted);
+            SetDirty(SplineModification.KnotInserted, index);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="BezierKnot"/> at the specified <paramref name="index"/> with a <paramref name="curveT"/> normalized offset.
+        /// </summary>
+        /// <param name="index">The zero-based index to insert the new element at.</param>
+        /// <param name="curveT">The normalized offset along the curve.</param>
+        /// </param>
+        internal void InsertOnCurve(int index, float curveT)
+        {
+            var previousIndex = SplineUtility.PreviousIndex(index, Count, Closed);
+            var previous = m_Knots[previousIndex];
+            var next = m_Knots[index];
+
+            var curveToSplit = new BezierCurve(previous, m_Knots[index]);
+            CurveUtility.Split(curveToSplit, curveT, out var leftCurve, out var rightCurve);
+
+            if (GetTangentMode(previousIndex) == TangentMode.Mirrored)
+                SetTangentMode(previousIndex, TangentMode.Continuous);
+
+            if (GetTangentMode(index) == TangentMode.Mirrored)
+                SetTangentMode(index, TangentMode.Continuous);
+
+            if (SplineUtility.AreTangentsModifiable(GetTangentMode(previousIndex)))
+                previous.TangentOut = math.mul(math.inverse(previous.Rotation), leftCurve.Tangent0);
+            if (SplineUtility.AreTangentsModifiable(GetTangentMode(index)))
+                next.TangentIn = math.mul(math.inverse(next.Rotation), rightCurve.Tangent1);
+
+            var up = CurveUtility.EvaluateUpVector(curveToSplit, curveT, math.rotate(previous.Rotation, math.up()), math.rotate(next.Rotation, math.up()));
+            var rotation = quaternion.LookRotationSafe(math.normalizesafe(rightCurve.Tangent0), up);
+            var inverseRotation = math.inverse(rotation);
+
+            SetKnotNoNotify(previousIndex, previous);
+            SetKnotNoNotify(index, next);
+
+            // Inserting the knot at the right position to compute correctly auto-smooth tangents
+            var bezierKnot = new BezierKnot(leftCurve.P3, math.mul(inverseRotation, leftCurve.Tangent1), math.mul(inverseRotation, rightCurve.Tangent0), rotation);
+            Insert(index, bezierKnot);
         }
 
         /// <summary>
@@ -504,6 +673,7 @@ namespace UnityEngine.Splines
         public void RemoveAt(int index)
         {
             EnsureMetaDataValid();
+            CacheKnotOperationCurves(index);
             m_Knots.RemoveAt(index);
             m_MetaData.RemoveAt(index);
             var next = Mathf.Clamp(index, 0, Count-1);
@@ -514,8 +684,7 @@ namespace UnityEngine.Splines
                 ApplyTangentModeNoNotify(next);
             }
 
-            SetDirty();
-            Changed?.Invoke(this, index, SplineModification.KnotRemoved);
+            SetDirty(SplineModification.KnotRemoved, index);
         }
 
         /// <summary>
@@ -537,8 +706,9 @@ namespace UnityEngine.Splines
         /// <see cref="TangentMode"/> set for this knot.</param>
         public void SetKnot(int index, BezierKnot value, BezierTangent main = k_DefaultMainTangent)
         {
+            CacheKnotOperationCurves(index);
             SetKnotNoNotify(index, value, main);
-            Changed?.Invoke(this, index, SplineModification.KnotModified);
+            SetDirty(SplineModification.KnotModified, index);
         }
 
         /// <summary>
@@ -559,7 +729,6 @@ namespace UnityEngine.Splines
                 ApplyTangentModeNoNotify(p, main);
             if(m_MetaData[n].Mode == TangentMode.AutoSmooth)
                 ApplyTangentModeNoNotify(n, main);
-            SetDirty();
         }
 
         /// <summary>
@@ -587,13 +756,26 @@ namespace UnityEngine.Splines
         {
             m_Knots = knots.ToList();
             m_Closed = closed;
-            SetDirty();
-            Changed?.Invoke(this, k_BatchModification, SplineModification.Default);
         }
-
-        internal void SendSplineModificationEvent(SplineModification modificationEvent, int knotIndex = k_BatchModification)
+        
+        /// <summary>
+        /// Create a copy of a spline.
+        /// </summary>
+        /// <param name="spline">The spline to copy in that new instance.</param>
+        public Spline(Spline spline)
         {
-            Changed?.Invoke(this, knotIndex, modificationEvent);
+            m_Knots = spline.Knots.ToList();
+            m_Closed = spline.Closed;
+
+            //Deep copy of the 4 embedded SplineData
+            foreach (var data in spline.m_IntData)
+                m_IntData[data.Key] = data.Value;
+            foreach (var data in spline.m_FloatData)
+                m_FloatData[data.Key] = data.Value;
+            foreach (var data in spline.m_Float4Data)
+                m_Float4Data[data.Key] = data.Value;
+            foreach (var data in spline.m_ObjectData)
+                m_ObjectData[data.Key] = data.Value;
         }
 
         /// <summary>
@@ -619,13 +801,9 @@ namespace UnityEngine.Splines
         public float GetCurveLength(int index)
         {
             EnsureMetaDataValid();
-            if(m_MetaData[index].Length == null)
-            {
-                m_MetaData[index].Length = new DistanceToInterpolation[k_CurveDistanceLutResolution];
-                CurveUtility.CalculateCurveLengths(GetCurve(index), m_MetaData[index].Length);
-            }
-
-            var cumulativeCurveLengths = m_MetaData[index].Length;
+            if(m_MetaData[index].DistanceToInterpolation[0].Distance < 0f)
+                CurveUtility.CalculateCurveLengths(GetCurve(index), m_MetaData[index].DistanceToInterpolation);
+            var cumulativeCurveLengths = m_MetaData[index].DistanceToInterpolation;
             return cumulativeCurveLengths.Length > 0 ? cumulativeCurveLengths[cumulativeCurveLengths.Length - 1].Distance : 0f;
         }
 
@@ -656,13 +834,10 @@ namespace UnityEngine.Splines
 
         DistanceToInterpolation[] GetCurveDistanceLut(int index)
         {
-            if (m_MetaData[index].Length == null)
-            {
-                m_MetaData[index].Length = new DistanceToInterpolation[k_CurveDistanceLutResolution];
-                CurveUtility.CalculateCurveLengths(GetCurve(index), m_MetaData[index].Length);
-            }
+            if (m_MetaData[index].DistanceToInterpolation[0].Distance < 0f)
+                CurveUtility.CalculateCurveLengths(GetCurve(index), m_MetaData[index].DistanceToInterpolation);
 
-            return m_MetaData[index].Length;
+            return m_MetaData[index].DistanceToInterpolation;
         }
 
         /// <summary>
@@ -690,29 +865,27 @@ namespace UnityEngine.Splines
         public void Resize(int newSize)
         {
             int originalSize = Count;
+            newSize = math.max(0, newSize);
+
             if (newSize == originalSize)
                 return;
 
-            EnsureMetaDataValid();
             if (newSize > originalSize)
             {
                 while (m_Knots.Count < newSize)
-                {
-                    m_Knots.Add(new BezierKnot { Rotation = quaternion.identity });
-                    m_MetaData.Add(new MetaData());
-                }
+                    Add(new BezierKnot());
+
             }
             else if (newSize < originalSize)
             {
-                m_Knots.RemoveRange(newSize, m_Knots.Count - newSize);
-                m_MetaData.RemoveRange(newSize, m_Knots.Count - newSize);
+                while(newSize < Count)
+                    RemoveAt(Count-1);
+                var last = newSize - 1;
+                if(last > -1 && last < m_Knots.Count)
+                    ApplyTangentModeNoNotify(last);
             }
-
-            SetDirty();
-            Changed?.Invoke(this, k_BatchModification, SplineModification.Default);
-            SendSizeChangeEvent(originalSize, newSize);
         }
-        
+
         /// <summary>
         /// Create an array of spline knots.
         /// </summary>
@@ -731,7 +904,6 @@ namespace UnityEngine.Splines
             if (copyFrom == this)
                 return;
 
-            var previousSize = m_Knots.Count;
             m_Closed = copyFrom.Closed;
             m_Knots.Clear();
             m_Knots.AddRange(copyFrom.m_Knots);
@@ -739,23 +911,7 @@ namespace UnityEngine.Splines
             for (int i = 0; i < copyFrom.m_MetaData.Count; ++i)
                 m_MetaData.Add(new MetaData(copyFrom.m_MetaData[i]));
 
-            SetDirty();
-            Changed?.Invoke(this, k_BatchModification, SplineModification.Default);
-            SendSizeChangeEvent(previousSize, m_Knots.Count);
-        }
-
-        void SendSizeChangeEvent(int previousSize, int newSize)
-        {
-            var sizeDiff = newSize - previousSize;
-            // Elements were removed
-            if (sizeDiff < 0)
-                for (int i = 0, count = math.abs(sizeDiff); i < count; ++i)
-                    Changed?.Invoke(this, previousSize - 1 - i, SplineModification.KnotRemoved);
-
-            // Elements were added
-            else if (sizeDiff > 0)
-                for (int i = 0; i < sizeDiff; ++i)
-                    Changed?.Invoke(this, previousSize + i, SplineModification.KnotInserted);
+            SetDirty(SplineModification.Default);
         }
 
         /// <summary>
@@ -805,12 +961,10 @@ namespace UnityEngine.Splines
         /// </summary>
         public void Clear()
         {
-            var previousSize = Count;
+
             m_Knots.Clear();
             m_MetaData.Clear();
-            SetDirty();
-            Changed?.Invoke(this, k_BatchModification, SplineModification.Default);
-            SendSizeChangeEvent(previousSize, 0);
+            SetDirty(SplineModification.KnotRemoved);
         }
 
         /// <summary>
@@ -842,6 +996,31 @@ namespace UnityEngine.Splines
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Remove any unused embedded <see cref="SplineData{T}"/> entries.
+        /// </summary>
+        /// <seealso cref="GetOrCreateFloatData"/>
+        /// <seealso cref="GetOrCreateFloat4Data"/>
+        /// <seealso cref="GetOrCreateIntData"/>
+        /// <seealso cref="GetOrCreateObjectData"/>
+        internal void RemoveUnusedSplineData()
+        {
+            m_FloatData.RemoveEmpty();
+            m_Float4Data.RemoveEmpty();
+            m_IntData.RemoveEmpty();
+            m_ObjectData.RemoveEmpty();
+        }
+        
+        internal void CacheKnotOperationCurves(int index)
+        {
+            if (Count <= 1)
+                return;
+            
+            m_LastKnotChangeCurveLengths.curve0= GetCurveLength(this.PreviousIndex(index));
+            if (index < Count)
+                m_LastKnotChangeCurveLengths.curve1 = GetCurveLength(index);
         }
     }
 }

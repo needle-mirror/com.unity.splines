@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace UnityEngine.Splines
@@ -17,12 +18,11 @@ namespace UnityEngine.Splines
         }
 
         const int k_NormalsPerCurve = 16;
-        static readonly float3[] s_NormalBuffer = new float3[k_NormalsPerCurve];
-
+        
         /// <summary>
-        /// Given a bezier curve, return an interpolated position at ratio t.
+        /// Given a Bezier curve, return an interpolated position at ratio t.
         /// </summary>
-        /// <param name="curve">A cubic bezier curve.</param>
+        /// <param name="curve">A cubic Bezier curve.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>A position on the curve.</returns>
         public static float3 EvaluatePosition(BezierCurve curve,  float t)
@@ -40,9 +40,9 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given a bezier curve, return an interpolated tangent at ratio t.
+        /// Given a Bezier curve, return an interpolated tangent at ratio t.
         /// </summary>
-        /// <param name="curve">A cubic bezier curve.</param>
+        /// <param name="curve">A cubic Bezier curve.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>A tangent on the curve.</returns>
         public static float3 EvaluateTangent(BezierCurve curve, float t)
@@ -60,9 +60,9 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given a bezier curve, return an interpolated acceleration at ratio t.
+        /// Given a Bezier curve, return an interpolated acceleration at ratio t.
         /// </summary>
-        /// <param name="curve">A cubic bezier curve.</param>
+        /// <param name="curve">A cubic Bezier curve.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>An acceleration vector on the curve.</returns>
         public static float3 EvaluateAcceleration(BezierCurve curve,  float t)
@@ -79,9 +79,9 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given a bezier curve, return an interpolated curvature at ratio t.
+        /// Given a Bezier curve, return an interpolated curvature at ratio t.
         /// </summary>
-        /// <param name="curve">A cubic bezier curve.</param>
+        /// <param name="curve">A cubic Bezier curve.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>A curvature value on the curve.</returns>
         public static float EvaluateCurvature(BezierCurve curve, float t)
@@ -102,9 +102,9 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given a bezier curve, return an interpolated position at ratio t.
+        /// Given a Bezier curve, return an interpolated position at ratio t.
         /// </summary>
-        /// <param name="curve">A cubic bezier curve.</param>
+        /// <param name="curve">A cubic Bezier curve.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <returns>A position on the curve.</returns>
         static float3 DeCasteljau(BezierCurve curve, float t)
@@ -196,7 +196,18 @@ namespace UnityEngine.Splines
                 prev = point;
             }
         }
-
+        
+        const float k_Epsilon = 0.0001f;
+        /// <summary>
+        /// Mathf.Approximately is not working when using BurstCompile, causing NaN values in the EvaluateUpVector
+        /// method when tangents have a 0 length. Using this method instead fixes that.
+        /// </summary>
+        static bool Approximately(float a, float b)
+        {
+            // Reusing Mathf.Approximately code
+            return math.abs(b - a) < math.max(0.000001f * math.max(math.abs(a), math.abs(b)), k_Epsilon * 8);
+        }
+        
         /// <summary>
         /// Calculate the approximate length of a <see cref="BezierCurve"/>. This is less accurate than
         /// <seealso cref="CalculateLength"/>, but can be significantly faster. Use this when accuracy is
@@ -216,19 +227,21 @@ namespace UnityEngine.Splines
             // Ensure we have workable tangents by linearizing ones that are of zero length
             var linearTangentLen = math.length(SplineUtility.GetExplicitLinearTangent(curve.P0, curve.P3));
             var linearTangentOut = math.normalize(curve.P3 - curve.P0) * linearTangentLen;
-            if (Mathf.Approximately(math.length(curve.P0 - curve.P1), 0f))
+            if (Approximately(math.length(curve.P1 - curve.P0), 0f)) 
                 curve.P1 = curve.P0 + linearTangentOut;
-            if (Mathf.Approximately(math.length(curve.P2 - curve.P3), 0f))
+            if (Approximately(math.length(curve.P2 - curve.P3), 0f))
                 curve.P2 = curve.P3 - linearTangentOut;
 
+            var normalBuffer = new NativeArray<float3>(k_NormalsPerCurve, Allocator.Temp);
+            
             // Construct initial frenet frame
             FrenetFrame frame;
             frame.origin = curve.P0;
             frame.tangent = curve.P1 - curve.P0;
             frame.normal = startUp;
             frame.binormal = math.normalize(math.cross(frame.tangent, frame.normal));
-            s_NormalBuffer[0] = frame.normal;
-
+            normalBuffer[0] = frame.normal;
+            
             // Continue building remaining rotation minimizing frames
             var stepSize = 1f / (k_NormalsPerCurve - 1);
             var currentT = stepSize;
@@ -239,13 +252,14 @@ namespace UnityEngine.Splines
             {
                 prevFrame = frame;
                 frame = GetNextRotationMinimizingFrame(curve, prevFrame, currentT);
-                s_NormalBuffer[i] = frame.normal;
+                normalBuffer[i] = frame.normal;
 
                 if (prevT <= t && currentT >= t)
                 {
                     var lerpT = (t - prevT) / stepSize;
                     upVector = Vector3.Slerp(prevFrame.normal, frame.normal, lerpT);
                 }
+
                 prevT = currentT;
                 currentT += stepSize;
             }
@@ -253,7 +267,7 @@ namespace UnityEngine.Splines
             if (prevT <= t && currentT >= t)
                 upVector = endUp;
 
-            var lastFrameNormal = s_NormalBuffer[k_NormalsPerCurve - 1];
+            var lastFrameNormal = normalBuffer[k_NormalsPerCurve - 1];
 
             var angleBetweenNormals = math.acos(math.clamp(math.dot(lastFrameNormal, endUp), -1f, 1f));
             if (angleBetweenNormals == 0f)
@@ -272,20 +286,20 @@ namespace UnityEngine.Splines
 
             currentT = stepSize;
             prevT = 0f;
-            for (int i = 1; i < s_NormalBuffer.Length; i++)
+            for (int i = 1; i < normalBuffer.Length; i++)
             {
-                var normal = s_NormalBuffer[i];
+                var normal = normalBuffer[i];
                 var adjustmentAngle = math.lerp(0f, angleBetweenNormals, currentT);
-                var tangent = math.normalize(CurveUtility.EvaluateTangent(curve, currentT));
+                var tangent = math.normalize(EvaluateTangent(curve, currentT));
                 var adjustedNormal = math.rotate(quaternion.AxisAngle(tangent, -adjustmentAngle), normal);
 
-                s_NormalBuffer[i] = adjustedNormal;
+                normalBuffer[i] = adjustedNormal;
 
                 // Early exit if we've already adjusted the normals at offsets that curveT is in between
                 if (prevT <= t && currentT >= t)
                 {
                     var lerpT = (t - prevT) / stepSize;
-                    upVector = Vector3.Slerp(s_NormalBuffer[i - 1], s_NormalBuffer[i], lerpT);
+                    upVector = Vector3.Slerp(normalBuffer[i - 1], normalBuffer[i], lerpT);
 
                     return upVector;
                 }
@@ -302,8 +316,8 @@ namespace UnityEngine.Splines
             FrenetFrame nextRMFrame;
 
             // Evaluate position and tangent for next RM frame
-            nextRMFrame.origin = CurveUtility.EvaluatePosition(curve, nextRMFrameT);
-            nextRMFrame.tangent = CurveUtility.EvaluateTangent(curve, nextRMFrameT);
+            nextRMFrame.origin = EvaluatePosition(curve, nextRMFrameT);
+            nextRMFrame.tangent = EvaluateTangent(curve, nextRMFrameT);
 
             // Mirror the rotational axis and tangent
             float3 toCurrentFrame = nextRMFrame.origin - previousRMFrame.origin;

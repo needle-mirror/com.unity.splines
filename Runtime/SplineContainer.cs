@@ -6,7 +6,7 @@ using Unity.Mathematics;
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// A Component that holds a <see cref="Spline"/> object.
+    /// A component that holds a <see cref="Spline"/> object.
     /// </summary>
 #if UNITY_2021_2_OR_NEWER
     [Icon(k_IconPath)]
@@ -17,7 +17,7 @@ namespace UnityEngine.Splines
     {
         const string k_IconPath = "Packages/com.unity.splines/Editor/Resources/Icons/SplineComponent.png";
 
-        //Keeping a main spline to be backwards compatible with older versions of the spline package
+        // Keeping a main spline to be backwards compatible with older versions of the spline package
         [SerializeField, Obsolete, HideInInspector]
         Spline m_Spline;
 
@@ -26,6 +26,35 @@ namespace UnityEngine.Splines
 
         [SerializeField]
         KnotLinkCollection m_Knots = new KnotLinkCollection();
+
+        List<(int previousIndex, int newIndex)> m_ReorderedSplinesIndices = new List<(int, int)>();
+        List<int> m_RemovedSplinesIndices = new List<int>();
+        List<int> m_AddedSplinesIndices = new List<int>();
+
+        /// <summary>
+        /// Invoked any time a spline is added to the container.
+        /// </summary>
+        /// <remarks>
+        /// The parameter corresponds to the spline index.
+        /// </remarks>
+        public static event Action<SplineContainer, int> SplineAdded;
+
+        /// <summary>
+        /// Invoked any time a spline is removed from the container.
+        /// </summary>
+        /// <remarks>
+        /// The parameter corresponds to the spline index.
+        /// </remarks>
+        public static event Action<SplineContainer, int> SplineRemoved;
+
+        /// <summary>
+        /// Invoked any time a spline is reordered in the container.
+        /// </summary>
+        /// <remarks>
+        /// The first parameter corresponds to the previous spline index,
+        /// the second parameter corresponds to the new spline index.
+        /// </remarks>
+        public static event Action<SplineContainer, int, int> SplineReordered;
 
         /// <summary>
         /// The list of all splines attached to that container.
@@ -41,10 +70,51 @@ namespace UnityEngine.Splines
                     return;
                 }
 
+                m_ReorderedSplinesIndices.Clear();
+                m_RemovedSplinesIndices.Clear();
+                m_AddedSplinesIndices.Clear();
+
+                for (var i = 0; i < m_Splines.Length; i++)
+                {
+                    var index = IndexOf(value, m_Splines[i]);
+                    if (index == -1)
+                        m_RemovedSplinesIndices.Add(i);
+                    else if (index != i)
+                        m_ReorderedSplinesIndices.Add((i, index));
+                }
+
+                for (var i = 0; i < value.Count; i++)
+                {
+                    var index = Array.FindIndex(m_Splines, spline => spline == value[i]);
+                    if (index == -1)
+                        m_AddedSplinesIndices.Add(i);
+                }
+
                 m_Splines = new Spline[value.Count];
                 for (int i = 0; i < m_Splines.Length; ++i)
                     m_Splines[i] = value[i];
+
+                foreach (var removedIndex in m_RemovedSplinesIndices)
+                    SplineRemoved?.Invoke(this, removedIndex);
+
+                foreach (var addedIndex in m_AddedSplinesIndices)
+                    SplineAdded?.Invoke(this, addedIndex);
+
+                foreach (var reorderedSpline in m_ReorderedSplinesIndices)
+                    SplineReordered?.Invoke(this, reorderedSpline.previousIndex, reorderedSpline.newIndex);
             }
+        }
+
+        static int IndexOf(IReadOnlyList<Spline> self, Spline elementToFind)
+        {
+            for (var i = 0; i < self.Count; i++)
+            {
+                var element = self[i];
+                if (element == elementToFind)
+                    return i;
+            }
+
+            return -1;
         }
 
         /// <summary>
@@ -82,6 +152,7 @@ namespace UnityEngine.Splines
                     this.SetLinkedKnotPosition(new SplineKnotIndex(splineIndex, index));
                     break;
 
+                case SplineModification.KnotReordered:
                 case SplineModification.KnotInserted:
                     m_Knots.KnotInserted(splineIndex, index);
                     break;
@@ -142,17 +213,18 @@ namespace UnityEngine.Splines
             => Evaluate(Splines[splineIndex], t, out position, out tangent, out upVector);
 
         /// <summary>
-        /// Gets the interpolated position, direction, and upDirection at ratio t for a spline.  This method gets the three  
-        /// vectors faster than EvaluateSplinePosition, EvaluateSplineTangent and EvaluateSplineUpVector for the same 
-        /// time t, because it reduces some redundant computation. 
+        /// Gets the interpolated position, direction, and upDirection at ratio t for a spline.  This method gets the three
+        /// vectors faster than EvaluateSplinePosition, EvaluateSplineTangent and EvaluateSplineUpVector for the same
+        /// time t, because it reduces some redundant computation.
         /// </summary>
+        /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 that represents the ratio along the curve.</param>
         /// <param name="position">The output variable for the float3 position at t.</param>
         /// <param name="tangent">The output variable for the float3 tangent at t.</param>
         /// <param name="upVector">The output variable for the float3 up direction at t.</param>
         /// <returns>True if a valid set of output variables is computed and false otherwise.</returns>
-        public bool Evaluate<T>(T spline, float t, out float3 position,  out float3 tangent,  out float3 upVector) where T : ISpline
+        public bool Evaluate<T>(T spline, float t, out float3 position, out float3 tangent, out float3 upVector) where T : ISpline
         {
             if (spline == null)
             {
@@ -180,7 +252,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// valuates the position of a point, t, on a spline in world space.
+        /// Evaluates the position of a point, t, on a spline in world space.
         /// </summary>
         /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
         /// <returns>A tangent vector.</returns>
@@ -197,6 +269,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Evaluates the position of a point, t, on a given spline, in world space.
         /// </summary>
+        /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
         /// <returns>A world position along the spline.</returns>
@@ -204,7 +277,7 @@ namespace UnityEngine.Splines
         {
             if (spline== null)
                 return float.PositiveInfinity;
-            
+
             if (IsScaled)
             {
                 using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
@@ -232,6 +305,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Evaluates the tangent vector of a point, t, on a given spline, in world space.
         /// </summary>
+        /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed tangent vector.</returns>
@@ -262,10 +336,11 @@ namespace UnityEngine.Splines
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed up direction.</returns>
         public float3 EvaluateUpVector(int splineIndex, float t) => EvaluateUpVector(Splines[splineIndex], t);
-        
+
         /// <summary>
         /// Evaluates the up vector of a point, t, on a given spline, in world space.
         /// </summary>
+        /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The Spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed up direction.</returns>
@@ -273,14 +348,14 @@ namespace UnityEngine.Splines
         {
             if (spline == null)
                 return float3.zero;
-            
+
             if (IsScaled)
             {
                 using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
                 return SplineUtility.EvaluateUpVector(nativeSpline, t);
             }
 
-            //Using TransformDirection as up direction is Not sensible to scale
+            //Using TransformDirection as up direction is not sensible to scale.
             return transform.TransformDirection(SplineUtility.EvaluateUpVector(spline, t));
         }
 
@@ -303,6 +378,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Evaluates the acceleration vector of a point, t, on a given Spline,  in world space.
         /// </summary>
+        /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The Spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed acceleration vector.</returns>
@@ -310,13 +386,13 @@ namespace UnityEngine.Splines
         {
             if (spline == null)
                 return float3.zero;
-            
+
             if (IsScaled)
             {
                 using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
                 return SplineUtility.EvaluateAcceleration(nativeSpline, t);
             }
-            
+
             return transform.TransformVector(SplineUtility.EvaluateAcceleration(spline, t));
         }
 

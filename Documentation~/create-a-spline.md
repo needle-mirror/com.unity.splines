@@ -9,9 +9,9 @@ To create a spline:
 
 1. Do one of the following: 
     * Go to **GameObject** &gt; **Spline** &gt; **Draw Splines Tool**.
-    * In the [Hierarchy window](https://docs.unity3d.com/Manual/Hierarchy.html), right-click and select **Spline** &gt; **Draw Splines Tool**.
-1. Click in the [Scene view](https://docs.unity3d.com/Manual/UsingTheSceneView.html) to create knots for the spline's path to follow. If you want to add a curve to the knot's segment, click and drag to create a knot with tangents.
+    * In the [Hierarchy window](xref:Hierarchy), right-click and select **Spline** &gt; **Draw Splines Tool**.
+1. Click in the [Scene view](xref:UsingTheSceneView) to create knots for the spline's path to follow. If you want to add a curve to the knot's segment, click and drag to create a knot with tangents.
    
     > [!TIP]
     > When you use the Draw Splines Tool, if you click on the surface of a GameObject, the knot snaps to that surface. Otherwise, the knot snaps to the grid.
-1. To exit the **Draw Splines Tool**, select the **Draw Splines Tool** in the Tools overlay or press Escape.
+1. To exit the **Draw Splines Tool**, select a tool in the Tools overlay or press Escape.

@@ -68,7 +68,7 @@ namespace UnityEditor.Splines
 
         static int CompareKnot(SelectableKnot a, SelectableKnot b)
         {
-            var compareTarget = (int)math.sign(a.SplineInfo.Target.GetInstanceID() - b.SplineInfo.Target.GetInstanceID());
+            var compareTarget = (int)math.sign(a.SplineInfo.Object.GetInstanceID() - b.SplineInfo.Object.GetInstanceID());
             if (compareTarget != 0)
                 return compareTarget;
 

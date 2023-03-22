@@ -9,7 +9,7 @@ namespace UnityEngine.Splines
 {
     /// <summary>
     /// A read-only representation of <see cref="Spline"/> that is optimized for efficient access and queries.
-    /// NativeSpline can be constructed with a Spline and Transform. If a transform is applied, all values will be
+    /// NativeSpline can be constructed with a spline and Transform. If a transform is applied, all values will be
     /// relative to the transformed knot positions.
     /// </summary>
     /// <remarks>

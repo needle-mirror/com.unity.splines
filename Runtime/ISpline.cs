@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace UnityEngine.Splines
@@ -7,6 +8,7 @@ namespace UnityEngine.Splines
     /// attributes to ensure uniform distribution of sampling points.
     /// </summary>
     /// <seealso cref="CurveUtility.CalculateCurveLengths"/>
+    [Serializable]
     public struct DistanceToInterpolation
     {
         /// <summary>
@@ -18,6 +20,8 @@ namespace UnityEngine.Splines
         /// A normalized interpolation ratio ('t').
         /// </summary>
         public float T;
+
+        internal static readonly DistanceToInterpolation Invalid = new () { Distance = -1f, T = -1f };
     }
 
     /// <summary>

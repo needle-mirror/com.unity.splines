@@ -5,7 +5,7 @@ namespace UnityEngine.Splines
 {
     static class MathUtility
     {
-        // Tansforms a direction by this matrix - float4x4 equivalent of Matrix4x4.MultiplyVector.
+        // Transforms a direction by this matrix - float4x4 equivalent of Matrix4x4.MultiplyVector.
         public static float3 MultiplyVector(float4x4 matrix, float3 vector)
         {
             float3 res;

@@ -4,10 +4,10 @@ using Unity.Mathematics;
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// Control points for a cubic bezier curve.
+    /// Control points for a cubic Bezier curve.
     ///
     /// Points P0 through P3 are in sequential order, describing the starting point, second, third, and ending controls
-    /// for a cubic bezier curve.
+    /// for a cubic Bezier curve.
     /// </summary>
     public struct BezierCurve : IEquatable<BezierCurve>
     {
@@ -52,7 +52,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Construct a cubic bezier curve from a linear curve. A linear curve is simply a straight line.
+        /// Construct a cubic Bezier curve from a linear curve. A linear curve is a straight line.
         /// </summary>
         /// <param name="p0">The first control point. This is the start point of the curve.</param>
         /// <param name="p1">The second control point. This is the end point of the curve.</param>
@@ -63,7 +63,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Construct a cubic bezier curve by elevating a quadratic curve.
+        /// Construct a cubic Bezier curve by elevating a quadratic curve.
         /// </summary>
         /// <param name="p0">The first control point. This is the start point of the curve.</param>
         /// <param name="p1">The second control point.</param>
@@ -81,7 +81,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Construct a cubic bezier curve from a series of control points.
+        /// Construct a cubic Bezier curve from a series of control points.
         /// </summary>
         /// <param name="p0">The first control point. This is the start point of the curve.</param>
         /// <param name="p1">The second control point.</param>
@@ -96,7 +96,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Construct a cubic bezier curve from a start and end <see cref="BezierKnot"/>.
+        /// Construct a cubic Bezier curve from a start and end <see cref="BezierKnot"/>.
         /// </summary>
         /// <param name="a">The knot to use as the first and second control points. The first control point is equal
         /// to <see cref="BezierKnot.Position"/>, and the second control point is equal to

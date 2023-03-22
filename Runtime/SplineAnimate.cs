@@ -154,6 +154,8 @@ namespace UnityEngine.Splines
                     for (int i = 0; i < m_Target.Splines.Count; i++)
                         OnSplineChange(m_Target.Splines[i], -1, SplineModification.Default);
                 }
+
+                UpdateStartOffsetT();
             }
         }
 
@@ -327,7 +329,7 @@ namespace UnityEngine.Splines
                     RebuildSplinePath();
 
                 m_StartOffset = Mathf.Clamp01(value);
-                m_StartOffsetT = m_SplinePath.ConvertIndexUnit(m_StartOffset * m_SplineLength, PathIndexUnit.Distance, PathIndexUnit.Normalized);
+                UpdateStartOffsetT();
             }
         }
 
@@ -531,6 +533,12 @@ namespace UnityEngine.Splines
             m_NormalizedTime = Mathf.Floor(m_NormalizedTime) + t;
             if (m_NormalizedTime >= 1f && m_LoopMode == LoopMode.Once)
                 m_Playing = false;
+        }
+
+        void UpdateStartOffsetT()
+        {
+            if (m_SplinePath != null)
+                m_StartOffsetT = m_SplinePath.ConvertIndexUnit(m_StartOffset * m_SplineLength, PathIndexUnit.Distance, PathIndexUnit.Normalized);
         }
 
         void UpdateTransform()

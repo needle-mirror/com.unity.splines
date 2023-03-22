@@ -41,10 +41,10 @@ namespace UnityEditor.Splines
             m_SplineAnimate = target as SplineAnimate;
             if (m_SplineAnimate == null)
                 return;
-            
+
             m_SplineAnimate.Updated += OnSplineAnimateUpdated;
 
-            try { 
+            try {
                 m_TargetProperty = serializedObject.FindProperty("m_Target");
                 m_MethodProperty = serializedObject.FindProperty("m_Method");
                 m_DurationProperty = serializedObject.FindProperty("m_Duration");
@@ -69,8 +69,8 @@ namespace UnityEditor.Splines
 
             EditorApplication.update += OnEditorUpdate;
             Spline.Changed += OnSplineChange;
-            ISplineContainer.SplineAdded += OnContainerSplineSetModified;
-            ISplineContainer.SplineRemoved += OnContainerSplineSetModified;
+            SplineContainer.SplineAdded += OnContainerSplineSetModified;
+            SplineContainer.SplineRemoved += OnContainerSplineSetModified;
         }
 
         void OnDisable()
@@ -92,8 +92,8 @@ namespace UnityEditor.Splines
 
             EditorApplication.update -= OnEditorUpdate;
             Spline.Changed -= OnSplineChange;
-            ISplineContainer.SplineAdded -= OnContainerSplineSetModified;
-            ISplineContainer.SplineRemoved -= OnContainerSplineSetModified;
+            SplineContainer.SplineAdded -= OnContainerSplineSetModified;
+            SplineContainer.SplineRemoved -= OnContainerSplineSetModified;
         }
 
         void OnEditorUpdate()
@@ -119,14 +119,14 @@ namespace UnityEditor.Splines
             }
         }
 
-        void OnContainerSplineSetModified(ISplineContainer container, int spline)
+        void OnContainerSplineSetModified(SplineContainer container, int spline)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
 
             foreach (var animate in m_Components)
             {
-                if (animate.Container == (System.Object)container)
+                if (animate.Container == container)
                     animate.RecalculateAnimationParameters();
             }
         }
@@ -265,6 +265,9 @@ namespace UnityEditor.Splines
 
         void OnSplineAnimateUpdated(Vector3 position, Quaternion rotation)
         {
+            if (m_SplineAnimate == null)
+                return;
+
             if (!EditorApplication.isPlaying)
             {
                 m_TransformSO.Update();

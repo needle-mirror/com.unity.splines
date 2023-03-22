@@ -11,7 +11,7 @@ namespace UnityEditor.Splines
 
         internal static void ValidateTangentSelection(SelectableKnot knot)
         {
-            if (!EditorSplineUtility.AreTangentsModifiable(knot.Mode))
+            if (!SplineUtility.AreTangentsModifiable(knot.Mode))
             {
                 SplineSelection.Remove(knot.TangentIn);
                 SplineSelection.Remove(knot.TangentOut);
@@ -131,7 +131,7 @@ namespace UnityEditor.Splines
         internal static bool IsSelectable(SelectableTangent tangent)
         {
             // Tangents should not be selectable if not modifiable
-            if(!EditorSplineUtility.AreTangentsModifiable(tangent.Owner.Mode))
+            if(!SplineUtility.AreTangentsModifiable(tangent.Owner.Mode))
                 return false;
 
             // For open splines, tangentIn of first knot and tangentOut of last knot should not be selectable

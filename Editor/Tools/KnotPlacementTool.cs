@@ -5,6 +5,7 @@ using UnityEditor.EditorTools;
 using UnityEngine;
 using UnityEngine.Splines;
 using Unity.Mathematics;
+using UnityEditor.SettingsManagement;
 using UnityEditor.ShortcutManagement;
 using Object = UnityEngine.Object;
 
@@ -38,6 +39,13 @@ namespace UnityEditor.Splines
     [EditorTool("Draw Spline", typeof(ISplineContainer), typeof(SplineToolContext))]
     sealed class KnotPlacementTool : SplineTool
     {
+        // 6f is the threshold used in RectSelection, but felt a little too sensitive when drawing a path.
+        const float k_MinDragThreshold = 8f;
+
+        [UserSetting("Knot Placement", "Drag to Set Tangent Length", "When placing new knots, click then drag to adjust" +
+            " the length and direction of the tangents. Disable this option to always place auto-smooth knots.")]
+        static Pref<bool> s_EnableDragTangent = new ($"{nameof(KnotPlacementHandle)}.{nameof(s_EnableDragTangent)}", true);
+
         sealed class DrawingOperation : IDisposable
         {
             /// <summary>
@@ -225,7 +233,7 @@ namespace UnityEditor.Splines
                 position = ApplyIncrementalSnap(position, lastKnot.Position);
 
                 if (mode == TangentMode.AutoSmooth)
-                    tangent = SplineUtility.GetAutoSmoothTangent(lastKnot.Position, position);
+                    tangent = SplineUtility.GetAutoSmoothTangent(lastKnot.Position, position, SplineUtility.CatmullRomTension);
 
                 BezierCurve previewCurve = m_Direction == DrawingDirection.Start
                     ? EditorSplineUtility.GetPreviewCurveFromStart(CurrentSplineInfo, lastKnot.KnotIndex, position, tangent, mode)
@@ -233,7 +241,7 @@ namespace UnityEditor.Splines
 
                 CurveHandles.Draw(-1, previewCurve);
 
-                if (EditorSplineUtility.AreTangentsModifiable(lastKnot.Mode) && CurrentSplineInfo.Spline.Count > 0)
+                if (SplineUtility.AreTangentsModifiable(lastKnot.Mode) && CurrentSplineInfo.Spline.Count > 0)
                     TangentHandles.DrawInformativeTangent(previewCurve.P1, previewCurve.P0);
 #if UNITY_2022_2_OR_NEWER
                 KnotHandles.Draw(position, SplineUtility.GetKnotRotation(tangent, normal), Handles.elementColor, false, false);
@@ -397,7 +405,7 @@ namespace UnityEditor.Splines
 #else
                             KnotHandles.Draw(new SelectableKnot(splineInfo, knotIndex), SplineHandleUtility.knotColor, false, isHovered);
 #endif
-                            if (EditorSplineUtility.AreTangentsModifiable(spline.GetTangentMode(knotIndex)))
+                            if (SplineUtility.AreTangentsModifiable(spline.GetTangentMode(knotIndex)))
                             {
                                 //Tangent In
                                 if (spline.Closed || knotIndex != 0)
@@ -423,7 +431,7 @@ namespace UnityEditor.Splines
 
         void AddKnotOnKnot(SelectableKnot startFrom, float3 tangent)
         {
-            Undo.RecordObject(startFrom.SplineInfo.Target, "Draw Spline");
+            Undo.RecordObject(startFrom.SplineInfo.Object, "Draw Spline");
 
             EndDrawingOperation();
 
@@ -615,7 +623,7 @@ namespace UnityEditor.Splines
 
                 case EventType.MouseDown:
                 {
-                    if (evt.button != 0)
+                    if (evt.button != 0 || Tools.viewToolActive)
                         break;
 
                     if (HandleUtility.nearestControl == controlId)
@@ -626,16 +634,16 @@ namespace UnityEditor.Splines
                         var mousePosition = Event.current.mousePosition;
                         if (EditorSplineUtility.TryGetNearestKnot(splines, out SelectableKnot knot))
                         {
-                            s_PlacementData = new KnotPlacementData(knot);
+                            s_PlacementData = new KnotPlacementData(evt.mousePosition, knot);
                         }
                         else if (EditorSplineUtility.TryGetNearestPositionOnCurve(splines, out SplineCurveHit hit))
                         {
-                            s_PlacementData = new CurvePlacementData(hit);
+                            s_PlacementData = new CurvePlacementData(evt.mousePosition, hit);
                         }
                         else if (SplineHandleUtility.GetPointOnSurfaces(mousePosition, out Vector3 position,
                                      out Vector3 normal))
                         {
-                            s_PlacementData = new PlacementData(position, normal);
+                            s_PlacementData = new PlacementData(evt.mousePosition, position, normal);
                         }
                     }
 
@@ -647,7 +655,9 @@ namespace UnityEditor.Splines
                     {
                         evt.Use();
 
-                        if (s_PlacementData != null)
+                        if (s_PlacementData != null
+                            && s_EnableDragTangent
+                            && Vector3.Distance(evt.mousePosition, s_PlacementData.MousePosition) > k_MinDragThreshold)
                         {
                             var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
                             if (s_PlacementData.Plane.Raycast(ray, out float distance))
@@ -725,7 +735,7 @@ namespace UnityEditor.Splines
 
         int GetTargetIndex(SplineInfo info)
         {
-            return targets.ToList().IndexOf(info.Target);
+            return targets.ToList().IndexOf(info.Object);
         }
 
         IReadOnlyList<Object> GetSortedTargets(out Object mainTarget)
@@ -738,9 +748,9 @@ namespace UnityEditor.Splines
 
             mainTarget = m_SortedTargets[m_ActiveObjectIndex];
             if (m_CurrentDrawingOperation != null)
-                mainTarget = m_CurrentDrawingOperation.CurrentSplineInfo.Target;
+                mainTarget = m_CurrentDrawingOperation.CurrentSplineInfo.Object;
             else if (!s_ClosestSpline.Equals(default))
-                mainTarget = s_ClosestSpline.Target;
+                mainTarget = s_ClosestSpline.Object;
 
             // Move main target to the end for rendering/picking
             m_SortedTargets.Remove(mainTarget);

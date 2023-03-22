@@ -8,7 +8,7 @@ namespace UnityEditor.Splines
     {
         readonly SplineCurveHit m_Hit;
 
-        public CurvePlacementData(SplineCurveHit hit) : base(hit.Position, hit.Normal)
+        public CurvePlacementData(Vector2 mouse, SplineCurveHit hit) : base(mouse, hit.Position, hit.Normal)
         {
             m_Hit = hit;
         }
@@ -24,7 +24,7 @@ namespace UnityEditor.Splines
     {
         readonly SelectableKnot m_Target;
 
-        public KnotPlacementData(SelectableKnot target) : base(target.Position, math.mul(target.Rotation, math.up()))
+        public KnotPlacementData(Vector3 mouse, SelectableKnot target) : base(mouse, target.Position, math.mul(target.Rotation, math.up()))
         {
             m_Target = target;
         }
@@ -37,19 +37,21 @@ namespace UnityEditor.Splines
 
     class PlacementData
     {
+        public Vector2 MousePosition { get; }
         public Vector3 TangentOut { get; set; }
         public Vector3 Position { get; }
         public Vector3 Normal { get; }
         public Plane Plane { get; }
 
-        public PlacementData(Vector3 position, Vector3 normal)
+        public PlacementData(Vector2 mouse, Vector3 position, Vector3 normal)
         {
+            MousePosition = mouse;
             Position = position;
             Normal = normal;
             TangentOut = Vector3.zero;
             Plane = new Plane(normal, position);
         }
-        
+
         public virtual SelectableKnot GetOrCreateLinkedKnot() => default;
     }
 }
