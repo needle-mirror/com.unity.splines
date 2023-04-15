@@ -591,7 +591,7 @@ namespace UnityEngine.Splines
                 var point = m_DataPoints[dataIdx];
                 var dataKnotOldIdx = (int)math.floor(point.Index);
                 var fracIdx = point.Index - dataKnotOldIdx;
-                
+
                 if (data.Modification == SplineModification.KnotInserted)
                 {
                     var currentLength = data.Spline.GetCurveLength(data.Spline.PreviousIndex(editedKnotOldIdx));
@@ -622,7 +622,7 @@ namespace UnityEngine.Splines
                     }
 
                     var removingHardLink = (fracIdx == 0f && dataKnotOldIdx == editedKnotOldIdx);
-                    
+
                     var removingEndKnots = !data.Spline.Closed &&
                         ((dataKnotOldIdx <= 0 && editedKnotOldIdx == 0) || // Removed first curve with data points on it.
                         (editedKnotOldIdx == data.Spline.Count &&          // Removed last curve

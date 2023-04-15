@@ -100,7 +100,17 @@ namespace Unity.Splines.Examples
         List<Vector3> m_Normals = new List<Vector3>();
         List<Vector2> m_Textures = new List<Vector2>();
         List<int> m_Indices = new List<int>();
+        bool m_LoftRoadsRequested = false;
 
+        void Update()
+        {
+            if (m_LoftRoadsRequested)
+            {
+                LoftAllRoads();
+                m_LoftRoadsRequested = false;
+            }
+        }
+        
         public void OnEnable()
         {
             // Avoid to point to an existing instance when duplicating the GameObject
@@ -198,7 +208,7 @@ namespace Unity.Splines.Examples
             {
                 if (s == spline)
                 {
-                    LoftAllRoads();
+                    m_LoftRoadsRequested = true;
                     break;
                 }
             }
@@ -215,7 +225,7 @@ namespace Unity.Splines.Examples
             {
                 if (splineData == width)
                 {
-                    LoftAllRoads();
+                    m_LoftRoadsRequested = true;
                     break;
                 }
             }
@@ -228,6 +238,10 @@ namespace Unity.Splines.Examples
             m_Normals.Clear();
             m_Textures.Clear();
             m_Indices.Clear();
+            m_Positions.Capacity = 0;
+            m_Normals.Capacity = 0;
+            m_Textures.Capacity = 0;
+            m_Indices.Capacity = 0;
 
             for (var i = 0; i < LoftSplines.Count; i++)
                 Loft(LoftSplines[i], i);

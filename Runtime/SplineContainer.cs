@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace UnityEngine.Splines
@@ -57,7 +58,9 @@ namespace UnityEngine.Splines
         public static event Action<SplineContainer, int, int> SplineReordered;
 
         ReadOnlyCollection<Spline> m_ReadOnlySplines;
-
+        Dictionary<ISpline, NativeSpline> m_NativeSplinesCache = new();
+        float4x4 m_NativeSplinesCacheTransform = float4x4.identity;
+        
         /// <summary>
         /// The list of all splines attached to that container.
         /// </summary>
@@ -75,6 +78,7 @@ namespace UnityEngine.Splines
                 m_ReorderedSplinesIndices.Clear();
                 m_RemovedSplinesIndices.Clear();
                 m_AddedSplinesIndices.Clear();
+                DisposeNativeSplinesCache();
 
                 for (var i = 0; i < m_Splines.Length; i++)
                 {
@@ -94,7 +98,11 @@ namespace UnityEngine.Splines
 
                 m_Splines = new Spline[value.Count];
                 for (int i = 0; i < m_Splines.Length; ++i)
+                {
                     m_Splines[i] = value[i];
+                    if (IsNonUniformlyScaled) 
+                        GetOrBakeNativeSpline(m_Splines[i]);
+                }
 
                 m_ReadOnlySplines = new ReadOnlyCollection<Spline>(m_Splines);
 
@@ -144,6 +152,33 @@ namespace UnityEngine.Splines
             Spline.Changed -= OnSplineChanged;
         }
 
+        void OnDestroy()
+        {
+            DisposeNativeSplinesCache();
+        }
+        
+        /// <summary>
+        /// Ensure that all caches contain valid data. Call this to avoid unexpected performance costs when evaluating
+        /// splines data. Caches remain valid until any part of the splines state is modified.
+        /// </summary>
+        public void Warmup()
+        {
+            for (int i = 0; i < Splines.Count; ++i)
+            {
+                var spline = Splines[i];
+                spline.Warmup();
+                GetOrBakeNativeSpline(spline);
+            }
+        }
+        
+        void DisposeNativeSplinesCache()
+        {
+            // Dispose cached native splines
+            foreach (var splineToNativePair in m_NativeSplinesCache)
+                splineToNativePair.Value.Dispose();
+            m_NativeSplinesCache.Clear();
+        }
+
         void OnSplineChanged(Spline spline, int index, SplineModification modificationType)
         {
             var splineIndex = Array.IndexOf(m_Splines, spline);
@@ -165,6 +200,8 @@ namespace UnityEngine.Splines
                     m_Knots.KnotRemoved(splineIndex, index);
                     break;
             }
+            
+            m_NativeSplinesCache.Remove(spline);
         }
 
         void OnKnotModified(Spline spline, int index)
@@ -174,7 +211,14 @@ namespace UnityEngine.Splines
                 this.SetLinkedKnotPosition(new SplineKnotIndex(splineIndex, index));
         }
 
-        bool IsScaled => transform.lossyScale != Vector3.one;
+        bool IsNonUniformlyScaled
+        {
+            get
+            {
+                float3 lossyScale = transform.lossyScale;
+                return !math.all(lossyScale == lossyScale.x);
+            }
+        }
 
         /// <summary>
         /// The main <see cref="Spline"/> attached to this component.
@@ -238,11 +282,8 @@ namespace UnityEngine.Splines
                 return false;
             }
 
-            if (IsScaled)
-            {
-                using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
-                return SplineUtility.Evaluate(nativeSpline, t, out position, out tangent, out upVector);
-            }
+            if (IsNonUniformlyScaled)
+                return SplineUtility.Evaluate(GetOrBakeNativeSpline(spline), t, out position, out tangent, out upVector);
 
             var evaluationStatus = SplineUtility.Evaluate(spline, t, out position, out tangent, out upVector);
             if (evaluationStatus)
@@ -282,11 +323,8 @@ namespace UnityEngine.Splines
             if (spline== null)
                 return float.PositiveInfinity;
 
-            if (IsScaled)
-            {
-                using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
-                return SplineUtility.EvaluatePosition(nativeSpline, t);
-            }
+            if (IsNonUniformlyScaled)
+                return SplineUtility.EvaluatePosition(GetOrBakeNativeSpline(spline), t);
 
             return transform.TransformPoint(SplineUtility.EvaluatePosition(spline, t));
         }
@@ -318,11 +356,9 @@ namespace UnityEngine.Splines
             if (spline == null)
                 return float.PositiveInfinity;
 
-            if (IsScaled)
-            {
-                using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
-                return SplineUtility.EvaluateTangent(nativeSpline, t);
-            }
+            if (IsNonUniformlyScaled)
+                return SplineUtility.EvaluateTangent(GetOrBakeNativeSpline(spline), t);
+            
             return transform.TransformVector(SplineUtility.EvaluateTangent(spline, t));
         }
 
@@ -353,11 +389,8 @@ namespace UnityEngine.Splines
             if (spline == null)
                 return float3.zero;
 
-            if (IsScaled)
-            {
-                using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix, true);
-                return SplineUtility.EvaluateUpVector(nativeSpline, t);
-            }
+            if (IsNonUniformlyScaled)
+                return SplineUtility.EvaluateUpVector(GetOrBakeNativeSpline(spline), t);
 
             //Using TransformDirection as up direction is not sensible to scale.
             return transform.TransformDirection(SplineUtility.EvaluateUpVector(spline, t));
@@ -391,11 +424,8 @@ namespace UnityEngine.Splines
             if (spline == null)
                 return float3.zero;
 
-            if (IsScaled)
-            {
-                using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
-                return SplineUtility.EvaluateAcceleration(nativeSpline, t);
-            }
+            if (IsNonUniformlyScaled)
+                return SplineUtility.EvaluateAcceleration(GetOrBakeNativeSpline(spline), t);
 
             return transform.TransformVector(SplineUtility.EvaluateAcceleration(spline, t));
         }
@@ -440,6 +470,27 @@ namespace UnityEngine.Splines
                 m_Spline = new Spline(); //Clear spline
             }
 #pragma warning restore 612, 618
+        }
+
+        NativeSpline GetOrBakeNativeSpline<T>(T spline) where T : ISpline
+        {
+            // Build native spline if we don't have one cached for this spline
+            if (!m_NativeSplinesCache.TryGetValue(spline, out var cachedNativeSpline))
+            {
+                m_NativeSplinesCacheTransform = transform.localToWorldMatrix;
+                cachedNativeSpline = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
+                m_NativeSplinesCache.Add(spline, cachedNativeSpline);
+            } 
+            // or if the cached spline was baked using different transform
+            else if (!MathUtility.All(m_NativeSplinesCacheTransform, transform.localToWorldMatrix))
+            {
+                m_NativeSplinesCacheTransform = transform.localToWorldMatrix;
+                cachedNativeSpline.Dispose();
+                cachedNativeSpline = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
+                m_NativeSplinesCache[spline] = cachedNativeSpline;
+            }
+
+            return cachedNativeSpline;
         }
     }
 }

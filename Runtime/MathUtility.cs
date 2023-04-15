@@ -14,5 +14,17 @@ namespace UnityEngine.Splines
             res.z = matrix.c0.z * vector.x + matrix.c1.z * vector.y + matrix.c2.z * vector.z;
             return res;
         }
+
+        // Returns true if the corresponding elements in each of the matrices are equal
+        // Unity.Mathematics does not have a math.all(bool4x4).
+        public static bool All(float4x4 matrixA, float4x4 matrixB)
+        {
+            var equal4x4 = (matrixA == matrixB);
+
+            return math.all(equal4x4.c0) &&
+                   math.all(equal4x4.c1) &&
+                   math.all(equal4x4.c2) &&
+                   math.all(equal4x4.c3);
+        }
     }
 }

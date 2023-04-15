@@ -182,13 +182,13 @@ namespace UnityEngine.Splines
         {
             if (m_Container == null || m_Container.Spline == null)
             {
-                Debug.LogError("Spline Extrude does not have a valid SplineContainer set.");
+                Debug.LogError("Spline Extrude does not have a valid SplineContainer set.", this);
                 return;
             }
 
             if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
                 Debug.LogError("SplineExtrude.createMeshInstance is disabled, but there is no valid mesh assigned. " +
-                    "Please create or assign a writable mesh asset.");
+                    "Please create or assign a writable mesh asset.", this);
 
             Rebuild();
         }

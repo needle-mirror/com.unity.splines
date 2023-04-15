@@ -5,6 +5,28 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2023-04-15
+
+### Added
+
+- Added new APIs that enable users to directly provide a collection of `float3` knot positions to a `Spline` constructor, or to the new `Add`, `AddRange`, `Insert`, and `InsertRange` methods, instead of using `BezierKnots`.
+- Added an event to the `SplineAnimate` component that is triggered when the animation or loop is completed.
+
+### Changed
+
+- Changed supported version in the documentation dropdown selector to 2022.3 and later. 
+
+### Bug Fixes
+
+- [SPLB-246] Fixed performance and garbage collection (GC) memory allocation issues when evaluating splines using `SplineContainer` API.
+- [STO-3176] Fixed an issue where `FitSplineToPoints` utility would not fit splines correctly.
+- [SPLB-249] Fixed a bug where setting a spline game object position was overridden by the knot placement tool.
+- Fixed a bug where using the knot placement tool on scaled objects would not create the correct tangents.
+- Fixed a bug where changing the scale of a spline game object would not update the scene view handles.
+- [SPLB-239] Fixed a bug where reverting overrides of a spline prefab instance would not properly update its visuals.
+- [SPLB-238] Fixed a bug where `SplineAnimate` component would continuously output messages to the Console when in playmode and animated object was selected.
+- [SPLB-245] Fixed a bug where `SplineAnimate` component would rotate the animated object on playmode exit.
+
 ## [2.5.2] - 2023-12-22
 
 ### Added

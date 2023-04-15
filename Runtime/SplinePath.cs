@@ -67,6 +67,16 @@ namespace UnityEngine.Splines
     /// The SplinePath type is an implementation of <see cref="ISpline"/> that is composed of multiple sections of
     /// other splines (see <see cref="SplineSlice{T}"/>). This is useful when you want to evaluate a path that follows
     /// multiple splines, typically in the case where splines share linked knots.
+    ///
+    /// This class is a data structure that defines the range of curves to associate together. This class is not meant to be
+    /// used intensively for runtime evaluation because it is not performant. Data is not meant to be
+    /// stored in that struct and that struct is not reactive to spline changes. The GameObject that contains this
+    /// slice can be scaled and the knots of the targeted spline that can moved around the curve length cannot be stored 
+    /// here so evaluating positions, tangents and up vectors is expensive.
+    /// 
+    /// If performance is a critical requirement, create a new <see cref="Spline"/> or
+    /// <see cref="NativeSpline"/> from your <see cref="SplinePath{T}"/>. Note that you might pass a <see cref="SplinePath{T}"/>
+    /// to constructors for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
     /// </summary>
     /// <seealso cref="SplineRange"/>
     /// <seealso cref="KnotLinkCollection"/>
@@ -86,6 +96,10 @@ namespace UnityEngine.Splines
     /// The SplinePath type is an implementation of <see cref="ISpline"/> that is composed of multiple sections of
     /// other splines (see <see cref="SplineSlice{T}"/>). This is useful when you want to evaluate a path that follows
     /// multiple splines, typically in the case where splines share linked knots.
+    /// 
+    /// If performance is a critical requirement, create a new <see cref="Spline"/> or
+    /// <see cref="NativeSpline"/> from your <see cref="SplinePath{T}"/>. Note that you might pass a <see cref="SplinePath{T}"/>
+    /// to constructors for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
     /// </summary>
     /// <seealso cref="SplineRange"/>
     /// <seealso cref="KnotLinkCollection"/>

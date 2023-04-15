@@ -77,7 +77,7 @@ namespace UnityEngine.Splines
         
         /// <summary>
         /// Return the up vector for a t ratio on the curve. Contrary to <see cref="SplineUtility.EvaluateUpVector"/>,
-        /// this method is trying to used cached values when possible for better performance when accessing to
+        /// this method uses cached values when possible for better performance when accessing
         /// these values regularly.
         /// </summary>
         /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>

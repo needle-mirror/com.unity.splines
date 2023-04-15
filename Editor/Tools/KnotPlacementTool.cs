@@ -254,9 +254,9 @@ namespace UnityEditor.Splines
                 if (SplineUtility.AreTangentsModifiable(lastKnot.Mode) && CurrentSplineInfo.Spline.Count > 0)
                     TangentHandles.DrawInformativeTangent(previewCurve.P1, previewCurve.P0);
 #if UNITY_2022_2_OR_NEWER
-                KnotHandles.Draw(position, SplineUtility.GetKnotRotation(tangent, normal), Handles.elementColor, false, false);
+                KnotHandles.Draw(position, SplineUtility.GetKnotRotation(s_MainTarget.transform.InverseTransformVector(tangent), normal), Handles.elementColor, false, false);
 #else
-                KnotHandles.Draw(position, SplineUtility.GetKnotRotation(tangent, normal), SplineHandleUtility.knotColor, false, false);
+                KnotHandles.Draw(position, SplineUtility.GetKnotRotation(s_MainTarget.transform.InverseTransformVector(tangent), normal), SplineHandleUtility.knotColor, false, false);
 #endif
             }
 
@@ -294,12 +294,12 @@ namespace UnityEditor.Splines
         readonly List<SplineInfo> m_SplineBuffer = new List<SplineInfo>(4);
         static readonly List<SelectableKnot> s_KnotsBuffer = new List<SelectableKnot>();
         DrawingOperation m_CurrentDrawingOperation;
-        Object m_MainTarget;
+        static Component s_MainTarget;
         //Needed for Tests
-        internal Object MainTarget
+        internal static Component MainTarget
         {
-            get => m_MainTarget;
-            set => m_MainTarget = value;
+            get => s_MainTarget;
+            set => s_MainTarget = value;
         }
 
         public override void OnActivated()
@@ -320,7 +320,8 @@ namespace UnityEditor.Splines
 
         public override void OnToolGUI(EditorWindow window)
         {
-            var targets = GetSortedTargets(out m_MainTarget);
+            var targets = GetSortedTargets(out var mainTarget);
+            s_MainTarget = mainTarget as Component;
             var allSplines = EditorSplineUtility.GetSplinesFromTargetsInternal(targets);
 
             //If the spline being drawn on doesn't exist anymore, end the drawing operation
@@ -329,7 +330,7 @@ namespace UnityEditor.Splines
                   m_CurrentDrawingOperation.CurrentSplineInfo.Spline.Count == 0 ))
                 EndDrawingOperation();
 
-            DrawSplines(targets, allSplines, m_MainTarget);
+            DrawSplines(targets, allSplines, s_MainTarget);
 
             if (m_CurrentDrawingOperation == null)
                 KnotPlacementHandle(allSplines, null, AddKnotOnKnot, AddKnotOnSurface, DrawKnotCreationPreview);
@@ -377,15 +378,6 @@ namespace UnityEditor.Splines
                                         new BezierCurve(curveKnots[knotIndex], curveKnots[knotIndex + 1]);
                                     previewCurve = previewCurve.Transform(localToWorld);
                                     CurveHandles.Draw(previewCurve, isMainTarget);
-                                    // if (isMainTarget)
-                                    // {
-                                    //     CurveHandles.DrawFlow(
-                                    //         previewCurve,
-                                    //         null,
-                                    //         -1,
-                                    //         math.rotate(new SelectableKnot(splineInfo, i).Rotation, math.up()),
-                                    //         math.rotate(new SelectableKnot(splineInfo, SplineUtility.NextIndex(i, spline.Count, spline.Closed)).Rotation, math.up()));
-                                    // }
                                 }
 
                                 previewIndex++;
@@ -495,20 +487,21 @@ namespace UnityEditor.Splines
 
         void AddKnotOnSurface(float3 position, float3 normal, float3 tangentOut)
         {
-            Undo.RecordObject(m_MainTarget, k_KnotPlacementUndoMessage);
+            Undo.RecordObject(s_MainTarget, k_KnotPlacementUndoMessage);
 
             EndDrawingOperation();
 
-            var container = (ISplineContainer)m_MainTarget;
+            var container = (ISplineContainer)s_MainTarget;
 
             // Check component count to ensure that we only move the transform of a newly created
             // spline. I.e., we don't want to move a GameObject that has other components like
             // a MeshRenderer, for example.
             if (( container.Splines.Count == 1 && container.Splines[0].Count == 0
                   || container.Splines.Count == 0 )
-                && ( (Component)m_MainTarget ).GetComponents<Component>().Length == 2)
+                && s_MainTarget.GetComponents<Component>().Length == 2)
             {
-                ( (Component)m_MainTarget ).transform.position = position;
+                if(!s_MainTarget.transform.hasChanged)
+                    s_MainTarget.transform.position = position;
             }
 
             SplineInfo splineInfo;
@@ -530,9 +523,9 @@ namespace UnityEditor.Splines
                 TangentHandles.Draw(position + tangentOut, position, normal);
 
 #if UNITY_2022_2_OR_NEWER
-            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(tangentOut, normal), Handles.elementColor, false, false);
+            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(s_MainTarget.transform.InverseTransformVector(tangentOut), normal), Handles.elementColor, false, false);
 #else
-            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(tangentOut, normal), SplineHandleUtility.knotColor, false, false);
+            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(s_MainTarget.transform.InverseTransformVector(tangentOut), normal), SplineHandleUtility.knotColor, false, false);
 #endif
         }
 
@@ -583,16 +576,11 @@ namespace UnityEditor.Splines
 
                     if (s_PlacementData != null)
                     {
-                        var knotPosition = s_PlacementData.Position;
-                        var tangentOut = s_PlacementData.TangentOut;
-
-                        if (!Mathf.Approximately(math.length(s_PlacementData.TangentOut), 0))
-                        {
-                            TangentHandles.Draw(knotPosition - tangentOut, knotPosition, s_PlacementData.Normal);
-                            TangentHandles.Draw(knotPosition + tangentOut, knotPosition, s_PlacementData.Normal);
-                        }
-
-                        drawPreview.Invoke(s_PlacementData.Position, s_PlacementData.Normal, s_PlacementData.TangentOut,
+                        var scale = s_MainTarget.transform.lossyScale;
+                        var tan = new Vector3(s_PlacementData.TangentOut.x * scale.x,
+                            s_PlacementData.TangentOut.y * scale.y,
+                            s_PlacementData.TangentOut.z * scale.z);
+                        drawPreview.Invoke(s_PlacementData.Position, s_PlacementData.Normal, tan,
                             default);
                     }
 
@@ -657,7 +645,11 @@ namespace UnityEditor.Splines
                         else if (SplineHandleUtility.GetPointOnSurfaces(mousePosition, out Vector3 position,
                                      out Vector3 normal))
                         {
-                            s_PlacementData = new PlacementData(evt.mousePosition, position, normal);
+                            s_PlacementData = new PlacementData(
+                                evt.mousePosition, 
+                                position, 
+                                normal, 
+                                s_MainTarget.transform.lossyScale);
                         }
                     }
 
@@ -676,8 +668,11 @@ namespace UnityEditor.Splines
                             var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
                             if (s_PlacementData.Plane.Raycast(ray, out float distance))
                             {
-                                s_PlacementData.TangentOut =
-                                    ( ray.origin + ray.direction * distance ) - s_PlacementData.Position;
+                                var tangent = ( ray.origin + ray.direction * distance ) - s_PlacementData.Position;
+                                s_PlacementData.TangentOut = new Vector3( 
+                                    tangent.x / s_PlacementData.Scale.x, 
+                                    tangent.y / s_PlacementData.Scale.y, 
+                                    tangent.z / s_PlacementData.Scale.z );
                             }
                         }
                     }
@@ -808,6 +803,7 @@ namespace UnityEditor.Splines
             if(endDrawing)
                 EndDrawingOperation();
         }
+        
         /// <summary>
         /// Used for tests
         /// </summary>

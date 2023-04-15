@@ -352,6 +352,11 @@ namespace UnityEngine.Splines
         /// <summary> Invoked each time object's animation along the Spline is updated.</summary>
         public event Action<Vector3, Quaternion> Updated;
 
+        private bool m_EndReached = false;
+        /// <summary> Invoked every time the object's animation reaches the end of the Spline.
+        /// In case the animation loops, this event is called at the end of each loop.</summary>
+        public event Action Completed; 
+
         void Start()
         {
 #if UNITY_EDITOR      
@@ -397,7 +402,7 @@ namespace UnityEngine.Splines
                     break;
 
                 default:
-                    Debug.Log($"{m_Method} animation method is not supported!");
+                    Debug.Log($"{m_Method} animation method is not supported!", this);
                     break;
             }
         }
@@ -407,7 +412,7 @@ namespace UnityEngine.Splines
             if (m_Target == null || m_Target.Splines.Count == 0)
             {
                 if(Application.isPlaying)
-                    Debug.LogError("SplineAnimate does not have a valid SplineContainer set.");
+                    Debug.LogError("SplineAnimate does not have a valid SplineContainer set.", this);
                 return true;
             }
 
@@ -454,7 +459,7 @@ namespace UnityEngine.Splines
                     break;
 
                 default:
-                    Debug.Log($"{m_Method} animation method is not supported!");
+                    Debug.Log($"{m_Method} animation method is not supported!", this);
                     break;
             }
             UpdateTransform();
@@ -486,6 +491,7 @@ namespace UnityEngine.Splines
 
         void CalculateNormalizedTime(float deltaTime)
         {
+            var previousElapsedTime = m_ElapsedTime;
             m_ElapsedTime += deltaTime;
             var currentDuration = m_Duration;
 
@@ -498,6 +504,7 @@ namespace UnityEngine.Splines
 
                 case LoopMode.Loop:
                     t = m_ElapsedTime % currentDuration;
+                    UpdateEndReached(previousElapsedTime, currentDuration);
                     break;
 
                 case LoopMode.LoopEaseInOnce:
@@ -507,14 +514,16 @@ namespace UnityEngine.Splines
                         m_ElapsedTime >= currentDuration)
                         currentDuration *= 0.5f;
                     t = m_ElapsedTime % currentDuration;
+                    UpdateEndReached(previousElapsedTime, currentDuration);
                     break;
 
                 case LoopMode.PingPong:
                     t = Mathf.PingPong(m_ElapsedTime, currentDuration);
+                    UpdateEndReached(previousElapsedTime, currentDuration);
                     break;
 
                 default:
-                    Debug.Log($"{m_LoopMode} animation loop mode is not supported!");
+                    Debug.Log($"{m_LoopMode} animation loop mode is not supported!", this);
                     break;
             }
             t /= currentDuration;
@@ -547,7 +556,15 @@ namespace UnityEngine.Splines
             // forcing reset to 0 if the m_NormalizedTime reach the end of the spline previously (1).
             m_NormalizedTime = t == 0 ? 0f : Mathf.Floor(m_NormalizedTime) + t;
             if (m_NormalizedTime >= 1f && m_LoopMode == LoopMode.Once)
+            {
+                m_EndReached = true;
                 m_Playing = false;
+            }
+        }
+        
+        void UpdateEndReached(float previousTime, float currentDuration)
+        {
+            m_EndReached = Mathf.FloorToInt(previousTime/currentDuration) < Mathf.FloorToInt(m_ElapsedTime/currentDuration);
         }
 
         void UpdateStartOffsetT()
@@ -576,6 +593,12 @@ namespace UnityEngine.Splines
 #endif
             onUpdated?.Invoke(position, rotation);
             Updated?.Invoke(position, rotation);
+
+            if (m_EndReached)
+            {
+                m_EndReached = false;
+                Completed?.Invoke();
+            }
         }
 
         void EvaluatePositionAndRotation(out Vector3 position, out Quaternion rotation)
@@ -597,7 +620,15 @@ namespace UnityEngine.Splines
                 switch (m_AlignmentMode)
                 {
                     case AlignmentMode.SplineElement:
-                        forward = Vector3.Normalize(m_Target.EvaluateTangent(m_SplinePath, t));
+                        forward = m_Target.EvaluateTangent(m_SplinePath, t);
+                        if (Vector3.Magnitude(forward) <= Mathf.Epsilon)
+                        {
+                            if (t < 1f)
+                                forward = m_Target.EvaluateTangent(m_SplinePath, Mathf.Min(1f, t + 0.01f));
+                            else
+                                forward = m_Target.EvaluateTangent(m_SplinePath, t - 0.01f);
+                        }
+                        forward.Normalize();
                         up = m_Target.EvaluateUpVector(m_SplinePath, t);
                         break;
 
@@ -608,14 +639,14 @@ namespace UnityEngine.Splines
                         break;
 
                     default:
-                        Debug.Log($"{m_AlignmentMode} animation aligment mode is not supported!");
+                        Debug.Log($"{m_AlignmentMode} animation alignment mode is not supported!", this);
                         break;
                 }
 
                 rotation = Quaternion.LookRotation(forward, up) * axisRemapRotation;
             }
             else
-                rotation = axisRemapRotation;
+                rotation = transform.rotation;
         }
 
         void CalculateDuration()
@@ -638,7 +669,7 @@ namespace UnityEngine.Splines
                         break;
 
                     default:
-                        Debug.Log($"{m_EasingMode} animation easing mode is not supported!");
+                        Debug.Log($"{m_EasingMode} animation easing mode is not supported!", this);
                         break;
                 }
             }
@@ -664,7 +695,7 @@ namespace UnityEngine.Splines
                         break;
 
                     default:
-                        Debug.Log($"{m_EasingMode} animation easing mode is not supported!");
+                        Debug.Log($"{m_EasingMode} animation easing mode is not supported!", this);
                         break;
                 }
             }

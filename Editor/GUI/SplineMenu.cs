@@ -45,8 +45,10 @@ namespace UnityEditor.Splines
             gameObject.transform.localRotation = Quaternion.identity;
 
             Selection.activeObject = gameObject;
+            // Ensuring trackers are rebuilt before changing to SplineContext
             ActiveEditorTracker.sharedTracker.RebuildIfNecessary();
-            //Ensuring trackers are rebuilt before changing to SplineContext
+            // Set hasChanged to false as we don't want to override a custom transform set by the user.
+            gameObject.transform.hasChanged = false;
             EditorApplication.delayCall += SetKnotPlacementTool;
         }
 

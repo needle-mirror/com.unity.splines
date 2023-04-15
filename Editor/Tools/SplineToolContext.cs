@@ -154,9 +154,20 @@ namespace UnityEditor.Splines
                 SplineInspectorOverlay.SetSelectedSplines(m_Splines);
 
             m_RectSelector.OnGUI(m_Splines);
-            
-            if(!s_UseCustomSplineHandles)
+
+            if (!s_UseCustomSplineHandles)
+            {
+                foreach (var sInfo in m_Splines)
+                {
+                    if (sInfo.Transform.hasChanged)
+                    {
+                        SplineCacheUtility.ClearCache();
+                        sInfo.Transform.hasChanged = false;
+                    }
+                }
+                
                 SplineHandles.DoHandles(m_Splines);
+            }
 
             SplineHandleUtility.canDrawOnCurves = false;
 

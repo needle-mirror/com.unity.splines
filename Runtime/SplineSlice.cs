@@ -10,6 +10,16 @@ namespace UnityEngine.Splines
     /// a separate <see cref="Spline"/>, then retrieves knots by iterating the <see cref="SplineRange"/>.
     /// Use <see cref="SplineSlice{T}"/> in conjunction with <see cref="SplinePath"/> to create seamless paths from
     /// discrete <see cref="Spline"/> segments.
+    ///
+    /// This class is a data structure that defines the range of curves to associate together. This class is not meant to be
+    /// used intensively for runtime evaluation because it is not performant. Data is not meant to be
+    /// stored in that struct and that struct is not reactive to spline changes. The GameObject that contains this
+    /// slice can be scaled and the knots of the targeted spline that can moved around the curve length cannot be stored 
+    /// here so evaluating positions, tangents and up vectors is expensive. 
+    /// 
+    /// If performance is a critical requirement, create a new <see cref="Spline"/> or
+    /// <see cref="NativeSpline"/> from the relevant <see cref="SplinePath{T}"/> or <see cref="SplineSlice{T}"/>.
+    /// Note that you might pass a <see cref="SplineSlice{T}"/> to constructors for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
     /// </summary>
     /// <remarks>
     /// Iterating a <see cref="SplineSlice{T}"/> is not as efficient as iterating a <see cref="Spline"/> or
@@ -169,10 +179,13 @@ namespace UnityEngine.Splines
         /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>
         /// <seealso cref="GetLength"/>
         /// <remarks>
-        /// It is inefficient to call this method frequently, as it will calculate the length of the curve every time
-        /// it is invoked. In cases where performance is critical, create a new <see cref="Spline"/> or
-        /// <see cref="NativeSpline"/> instead. Note that you may pass a <see cref="SplineSlice{T}"/> to constructors
-        /// for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
+        /// The curve length cannot be cached here because the transform matrix associated to this slice might impact that
+        /// value, like using a non-uniform scale on the GameObject associated with that slice. It is inefficient
+        /// to call this method frequently, because it calculates the length of the curve every time
+        /// it is invoked.
+        /// If performance is a critical requirement, create a new <see cref="Spline"/> or
+        /// <see cref="NativeSpline"/> from the relevant <see cref="SplinePath{T}"/> or <see cref="SplineSlice{T}"/>.
+        /// Note that you might pass a <see cref="SplineSlice{T}"/> to constructors for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
         /// </remarks>
         /// <returns>
         /// Returns the length of the curve of index 'index' in the spline.

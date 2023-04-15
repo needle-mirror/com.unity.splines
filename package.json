@@ -1,8 +1,8 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.5.2",
-  "unity": "2021.3",
+  "version": "2.6.0",
+  "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
     "com.unity.settings-manager": "1.0.3",
@@ -24,17 +24,17 @@
   "category": "Tool",
   "type": "tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.5.2"
+    "com.unity.splines.tests": "2.6.0"
   },
   "_upm": {
-    "changelog": "### Added\n\n- [SPLB-222] Added safety checks to spline changed events. \n\n### Changed\n\n- [SPLB-233] Removed transform handles while dragging a knot using direct manipulation.\n- [SPLB-234] Removed unnecessary spline metadata which was saved on disk.\n\n### Bug Fixes\n\n- [SPLB-230] Fixed a bug where modifying the tangent mode on the last knot would change the spline shape unpredictably.\n- [SPLB-225] Fixed a bug where closing a Spline with the `Draw Splines Tool` had inconsistent behaviour.\n- [SPLB-236] Fixed a bug where the spline instantiate inspector was throwing an exception when the selection contained objects without that component.\n- [SPLB-235] Fixed a bug where hovering a knot was create highlights when dragging tangents.\n- [SPLB-234] Fixed a bug where it was impossible to add a knot on the latest added knot.\n- [SPLB-214] Fixed an exception that would when adding a spline via the inspector if no other spline exists.\n- [SPLB-226] Fixed broken preview when adding knots to a closed spline"
+    "changelog": "### Added\n\n- Added new APIs that enable users to directly provide a collection of `float3` knot positions to a `Spline` constructor, or to the new `Add`, `AddRange`, `Insert`, and `InsertRange` methods, instead of using `BezierKnots`.\n- Added an event to the `SplineAnimate` component that is triggered when the animation or loop is completed.\n\n### Changed\n\n- Changed supported version in the documentation dropdown selector to 2022.3 and later. \n\n### Bug Fixes\n\n- [SPLB-246] Fixed performance and garbage collection (GC) memory allocation issues when evaluating splines using `SplineContainer` API.\n- [STO-3176] Fixed an issue where `FitSplineToPoints` utility would not fit splines correctly.\n- [SPLB-249] Fixed a bug where setting a spline game object position was overridden by the knot placement tool.\n- Fixed a bug where using the knot placement tool on scaled objects would not create the correct tangents.\n- Fixed a bug where changing the scale of a spline game object would not update the scene view handles.\n- [SPLB-239] Fixed a bug where reverting overrides of a spline prefab instance would not properly update its visuals.\n- [SPLB-238] Fixed a bug where `SplineAnimate` component would continuously output messages to the Console when in playmode and animated object was selected.\n- [SPLB-245] Fixed a bug where `SplineAnimate` component would rotate the animated object on playmode exit."
   },
   "upmCi": {
-    "footprint": "5472d3222ddecc6ed093401833da98d49bd1a16f"
+    "footprint": "196370dfa5851ee63bdaedfc0f098511a7c12301"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "80fae673490cb05db4e1532f2eeae338a9603846"
+    "revision": "65b428969b9590a4e35cee1c042a490669555e17"
   }
 }

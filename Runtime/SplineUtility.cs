@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Collections;
 using Unity.Mathematics;
 
 namespace UnityEngine.Splines
@@ -234,11 +235,11 @@ namespace UnityEngine.Splines
             var curve = spline.GetCurve(SplineToCurveT(spline, t, out var curveT));
             return CurveUtility.EvaluateTangent(curve, curveT);
         }
-        
+
         /// <summary>
         /// Evaluate the normal (up) vector of a spline.
         /// </summary>
-        /// <param name="spline">The <seealso cref="NativeSpline"/> to evaluate.</param>
+        /// <param name="spline">The spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a ratio of the curve.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>An up vector</returns>
@@ -250,7 +251,7 @@ namespace UnityEngine.Splines
             var curveIndex = SplineToCurveT(spline, t, out var curveT);
             return spline.GetCurveUpVector(curveIndex, curveT);
         }
-        
+
         /// <summary>
         /// Calculate the normal (up) vector of a spline. This is a more accurate but more expensive operation
         /// than <seealso cref="EvaluateUpVector{T}"/>.
@@ -263,7 +264,7 @@ namespace UnityEngine.Splines
         {
             if (spline.Count < 1)
                 return float3.zero;
-        
+
             var curveIndex = SplineToCurveT(spline, t, out var curveT);
             return spline.CalculateUpVector(curveIndex, curveT);
         }
@@ -287,23 +288,34 @@ namespace UnityEngine.Splines
                 return curveEndUp;
 
             var up = CurveUtility.EvaluateUpVector(curve, curveT, curveStartUp, curveEndUp);
-                
+
             return up;
         }
-        
-        internal static void EvaluateUpVectorsForCurve<T>(this T spline, int curveIndex, Vector3[] upVectors) where T : ISpline
+
+        internal static void EvaluateUpVectorsForCurve<T>(this T spline, int curveIndex, NativeArray<float3> upVectors)
+            where T : ISpline
         {
-            if (spline.Count < 1 || upVectors == null)
+            if (spline.Count < 1 || !upVectors.IsCreated)
                 return;
-            
+
             var curveStartRotation = spline[curveIndex].Rotation;
             var curveStartUp = math.rotate(curveStartRotation, math.up());
 
             var endKnotIndex = spline.NextIndex(curveIndex);
             var curveEndRotation = spline[endKnotIndex].Rotation;
             var curveEndUp = math.rotate(curveEndRotation, math.up());
-            
+
             CurveUtility.EvaluateUpVectors(spline.GetCurve(curveIndex), curveStartUp, curveEndUp, upVectors);
+        }
+
+        internal static void EvaluateUpVectorsForCurve<T>(this T spline, int curveIndex, float3[] upVectors) where T : ISpline
+        {
+            if (upVectors == null)
+                return;
+
+            var upVectorsNative = new NativeArray<float3>(upVectors, Allocator.Temp);
+            EvaluateUpVectorsForCurve(spline, curveIndex, upVectorsNative);
+            upVectorsNative.CopyTo(upVectors);
         }
 
         /// <summary>
@@ -990,9 +1002,9 @@ namespace UnityEngine.Splines
         {
             var d1 = math.length(current - previous);
             var d2 = math.length(next - current);
-            
+
             if (d1 == 0f) // If we're only working with 2 valid points, then calculate roughly Uniform parametrization tangent and scale it down so we can atleast build rotation.
-                return (next - current) * 0.1f; 
+                return (next - current) * 0.1f;
             else if (d2 == 0f)
                 return (current - previous) * 0.1f;
 
@@ -1000,12 +1012,12 @@ namespace UnityEngine.Splines
             // Catmull-Rom parameterization: a = 0 - Uniform, a = 0.5 - Centripetal, a = 1.0 - Chordal.
             var a = tension;
             var twoA = 2f * tension;
-            
+
             var d1PowA = math.pow(d1, a);
-            var d1Pow2A = math.pow(d1, twoA); 
+            var d1Pow2A = math.pow(d1, twoA);
             var d2PowA = math.pow(d2, a);
             var d2Pow2A = math.pow(d2, twoA);
-            
+
             return (d1Pow2A * next - d2Pow2A * previous + (d2Pow2A - d1Pow2A) * current) / (3f * d1PowA * (d1PowA +  d2PowA));
         }
 
@@ -1104,57 +1116,140 @@ namespace UnityEngine.Splines
         public static bool FitSplineToPoints(List<float3> points, float errorThreshold, bool closed,
             out Spline spline)
         {
-            /*
-                Implementation based on:
-                "Algorithm for Automatically Fitting Digitized Curves"
-                by Philip J. Schneider
-                "Graphics Gems", Academic Press, 1990
-            */
-
-            spline = new Spline();
-            var maxIterations = 4;
-
-            var leftTangent = math.normalize(points[1] - points[0]);
-            var rightTangent = math.normalize(points[points.Count - 1] - points[points.Count - 2]);
-
-            if (points.Count == 2)
+        /*
+            Implementation based on:
+            "Algorithm for Automatically Fitting Digitized Curves"
+            by Philip J. Schneider
+            "Graphics Gems", Academic Press, 1990
+        */
+            const float epsilon = 0.001f;
+            if (points == null || points.Count < 2)
             {
-                var difference = points[0] - points[1];
-                var diffLength = math.sqrt(math.pow(difference.x, 2) + math.pow(difference.y, 2) +
-                                              math.pow(difference.z, 2));
+                Debug.LogError("FitSplineToPoints failed: The provided points list is either null, empty or contains only one point.");
+                spline = new Spline();
+                return false;
+            }
 
-                var quat1 = GetKnotRotation(leftTangent, math.normalize(math.cross(leftTangent, math.right())));
+            var pointsCopy = new List<float3>(points);
+            if (closed)
+            {
+                // As the base algorithm does not have a notion of closed splines, we add 2-3 extra/extension points to the input list
+                // to help the algorithm smooth out tangents at the connecting/closing point. They are removed from the resulting
+                // spline at the end of the processing.
+
+                // 1) If the first and last points do not match, we duplicate the first and add it to the end of the curve
+                if (math.length(pointsCopy[0] - pointsCopy[^1]) > epsilon)
+                    pointsCopy.Add(pointsCopy[0]);
+
+                // 2) We then do a forward loop/revolution of one point by duplicating the second knot and attaching it to the end
+                pointsCopy.Add(pointsCopy[1]);
+
+                // 3) What was initially the last point, we duplicate and insert at front - backward loop/revolution of one point
+                pointsCopy.Insert(0, pointsCopy[^3]);
+            }
+
+            var leftTangent = math.normalize(pointsCopy[1] - pointsCopy[0]);
+            var rightTangent = math.normalize(pointsCopy[^2] - pointsCopy[^1]);
+
+            // Do recursive fitting
+            if (FitSplineToPointsStepInternal(pointsCopy, 0, pointsCopy.Count - 1, leftTangent, rightTangent, errorThreshold, closed, closed, out spline))
+            {
+                // For closed spline, clean up/merge knots that were added due to the appended extension points
+                if (closed && spline.Count > 2)
+                {
+                    // Remove 2 of the 3 extension knots of closed splines.
+                    spline.RemoveAt(0);
+                    spline.RemoveAt(spline.Count - 1);
+
+                    // Merge the overlaping front/end knots.
+                    var firstKnot = spline[0];
+                    firstKnot.TangentIn = spline[^1].TangentOut;
+                    spline[0] = firstKnot;
+                    spline.RemoveAt(spline.Count - 1);
+
+                    spline.Closed = true;
+                }
+
+                // At this point we have the final shape of the spline - tangents can now be baked into rotation.
+                var up = float3.zero;
+                for (int i = 0; i < spline.Count; ++i)
+                {
+                    var knot = spline[i];
+
+                    var knotDir = knot.TangentOut;
+                    if (math.lengthsq(knotDir) == 0f)
+                        knotDir = spline.EvaluateTangent(GetNormalizedInterpolation(spline, i, PathIndexUnit.Knot));
+                    var knotDirNorm = math.normalizesafe(knotDir);
+
+                    if (i == 0)
+                        up = CalculatePreferredNormalForDirection(knotDirNorm);
+                    else
+                        up = CurveUtility.EvaluateUpVector(spline.GetCurve(i - 1), 1f, up, float3.zero, false);
+
+                    var tangentMode = TangentMode.Broken;
+                    if (math.dot(math.normalizesafe(knot.TangentIn), math.normalizesafe(knot.TangentOut)) <= -1f + epsilon)
+                    {
+                        if (math.abs(math.length(knot.TangentIn) - math.length(knot.TangentOut)) <= epsilon)
+                            tangentMode = TangentMode.Mirrored;
+                        else
+                            tangentMode = TangentMode.Continuous;
+                    }
+
+                    knot.TangentIn = new float3(0f, 0f, -math.length(knot.TangentIn));
+                    knot.TangentOut = new float3(0f, 0f, math.length(knot.TangentOut));
+                    knot.Rotation = quaternion.LookRotationSafe(knotDirNorm, up);
+                    spline[i] = knot;
+
+                    if (tangentMode != TangentMode.Broken)
+                        spline.SetTangentModeNoNotify(i, tangentMode);
+                }
+
+                return true;
+            }
+            return false;
+        }
+
+        private static bool FitSplineToPointsStepInternal(IReadOnlyList<float3> allPoints, int rangeStart, int rangeEnd, float3 leftTangent, float3 rightTangent, float errorThreshold, bool closed, bool splineClosed,
+            out Spline spline)
+        {
+            const int maxIterations = 4;
+            spline = new Spline();
+
+            var curRangePointCount = rangeEnd - rangeStart + 1;
+            if (curRangePointCount < 2)
+                return false;
+
+            if (curRangePointCount == 2)
+            {
+                var difference = allPoints[rangeStart] - allPoints[rangeEnd];
                 //we use 1/3 of the distance between each of the points as described in the graphics gems paper.
-                var firstKnot = new BezierKnot(points[0], new float3(0, 0, -diffLength / 3f),
-                    new float3(0, 0, diffLength / 3f), quat1);
+                var diffLength = math.length(difference) / 3f;
+                var leftTanScaled = leftTangent * diffLength;
+                var rightTanScaled = rightTangent * diffLength;
 
-                var quat2 = GetKnotRotation(rightTangent, math.normalize(math.cross(rightTangent, math.right())));
-                var secondKnot = new BezierKnot(points[1], new float3(0, 0, -diffLength / 3f),
-                    new float3(0, 0, diffLength / 3f), quat2);
+                var firstKnot = new BezierKnot(allPoints[rangeStart], -leftTanScaled, leftTanScaled, Quaternion.identity);
+                var secondKnot = new BezierKnot(allPoints[rangeStart + 1], rightTanScaled, -rightTanScaled, Quaternion.identity);
 
-                spline = new Spline(new BezierKnot[2] { firstKnot, secondKnot }, closed);
+                spline = new Spline();
+                spline.Add(firstKnot, TangentMode.Broken);
+                spline.Add(secondKnot, TangentMode.Broken);
+                spline.Closed = closed;
+
                 return true;
             }
 
-            //find corresponding t values for each point so we can compute errors (chord-length parameterization)
-            var correspondingTValues = new float[points.Count];
-
-            var firstPassTValues = new float[points.Count];
+            // Find corresponding t values for each point so we can compute errors (chord-length parameterization)
+            var correspondingTValues = new float[curRangePointCount];
+            var firstPassTValues = new float[curRangePointCount];
 
             firstPassTValues[0] = 0f;
-
-            var cumulativeChordLengths = new float[points.Count - 1];
+            var cumulativeChordLengths = new float[curRangePointCount - 1];
 
             var chordLengthSum = 0f;
-            float3 chord;
-            for (int i = 1; i < points.Count; i++)
+            for (int i = 1; i < curRangePointCount; i++)
             {
-                chord = points[i] - points[i - 1];
-                chordLengthSum += math.sqrt(
-                    chord.x * chord.x +
-                    chord.y * chord.y +
-                    chord.z * chord.z
-                );
+                var chord = allPoints[rangeStart + i] - allPoints[rangeStart + i - 1];
+                chordLengthSum += math.length(chord);
                 cumulativeChordLengths[i - 1] = chordLengthSum;
             }
 
@@ -1165,9 +1260,9 @@ namespace UnityEngine.Splines
 
             correspondingTValues = firstPassTValues;
 
-            spline = GenerateSplineFromTValues(points, closed, correspondingTValues);
+            spline = GenerateSplineFromTValues(allPoints, rangeStart, rangeEnd, closed, correspondingTValues, leftTangent, rightTangent);
 
-            var tPositions = new float3[points.Count];
+            var tPositions = new float3[curRangePointCount];
             for (int i = 0; i < correspondingTValues.Length; i++)
             {
                 float t = correspondingTValues[i];
@@ -1175,16 +1270,14 @@ namespace UnityEngine.Splines
                 tPositions[i] = position;
             }
 
-            (float, int) errorResult = ComputeMaxError(points, tPositions);
+            var errorResult = ComputeMaxError(allPoints, rangeStart, rangeEnd, tPositions, errorThreshold, splineClosed);
 
-            var errorBeforeReparameterization = errorResult.Item1;
-            var splitPoint = errorResult.Item2;
+            var errorBeforeReparameterization = errorResult.maxError;
+            var splitPoint = errorResult.maxErrorIndex;
 
             if (errorBeforeReparameterization < errorThreshold)
-            {
                 return true;
-            }
-            //if error is small enough, try reparameterizing and fitting again
+            // If error is small enough, try reparameterizing and fitting again
             else if (errorBeforeReparameterization < 4 * errorThreshold)
             {
                 var numIterations = 0;
@@ -1199,8 +1292,8 @@ namespace UnityEngine.Splines
                     }
 
                     var P0 = curveKnots[0].Position;
-                    var P1 = curveKnots[0].Position + math.rotate(curveKnots[0].Rotation, curveKnots[0].TangentOut);
-                    var P2 = curveKnots[1].Position + math.rotate(curveKnots[1].Rotation, curveKnots[1].TangentIn);
+                    var P1 = curveKnots[0].Position + curveKnots[0].TangentOut;
+                    var P2 = curveKnots[1].Position + curveKnots[1].TangentIn;
                     var P3 = curveKnots[1].Position;
 
                     var P = new float3[] { P0, P1, P2, P3 };
@@ -1217,7 +1310,7 @@ namespace UnityEngine.Splines
                         q2[j] = (q1[j + 1] - q1[j]) * 2f;
                     }
 
-                    for (int k = 0; k < points.Count; k++)
+                    for (int k = rangeStart; k < curRangePointCount-1; k++)
                     {
                         var t = correspondingTValues[k];
                         var q = Bernstein(t, P, 3);
@@ -1231,19 +1324,18 @@ namespace UnityEngine.Splines
                             correspondingTValues[k] -= (numerator / denominator);
                     }
 
-                    spline = GenerateSplineFromTValues(points, closed, correspondingTValues);
+                    spline = GenerateSplineFromTValues(allPoints, rangeStart, rangeEnd, closed, correspondingTValues, leftTangent, rightTangent);
 
-                    tPositions = new float3[points.Count];
-                    for (int k = 0; k < correspondingTValues.Length; k++)
+                    for (int k = 0; k < tPositions.Length; k++)
                     {
                         var t = correspondingTValues[k];
                         var position = spline.EvaluatePosition(t);
                         tPositions[k] = position;
                     }
 
-                    errorResult = ComputeMaxError(points, tPositions);
-                    var errorAfterReparameterization = errorResult.Item1;
-                    splitPoint = errorResult.Item2;
+                    errorResult = ComputeMaxError(allPoints, rangeStart, rangeEnd, tPositions, errorThreshold, splineClosed);
+                    var errorAfterReparameterization = errorResult.maxError;
+                    splitPoint = errorResult.maxErrorIndex;
                     if (errorAfterReparameterization < errorThreshold)
                     {
                         return true;
@@ -1252,63 +1344,67 @@ namespace UnityEngine.Splines
                 }
             }
 
-            //still not good enough. Try splitting at point of max error.
-            if (points.Count == 3) splitPoint = 1;
+            // Still not good enough. Try splitting at point of max error.
+            if (curRangePointCount == 3)
+                splitPoint = rangeStart + 1;
             else
             {
                 if (splitPoint == 0)
                     splitPoint++;
-                else if (splitPoint == points.Count - 1)
+                else if (splitPoint == curRangePointCount - 1)
                     splitPoint--;
             }
-            Spline firstSpline, secondSpline;
-            if (!FitSplineToPoints(points.GetRange(0, splitPoint + 1), errorThreshold, false, out firstSpline) ||
-                !FitSplineToPoints(points.GetRange(splitPoint, points.Count - splitPoint), errorThreshold, false,
-                    out secondSpline))
+
+            var splitTangent = CalculateCenterTangent(allPoints[splitPoint - 1], allPoints[splitPoint], allPoints[splitPoint + 1]);
+            if (!FitSplineToPointsStepInternal(allPoints, rangeStart, splitPoint, leftTangent, splitTangent, errorThreshold, false, splineClosed, out var firstSpline) ||
+                !FitSplineToPointsStepInternal(allPoints, splitPoint, rangeEnd, -splitTangent, rightTangent, errorThreshold, false, splineClosed, out var secondSpline))
             {
                 spline = new Spline();
                 return false;
             }
 
-            var firstKnots = new BezierKnot[firstSpline.Count];
-            var secondKnots = new BezierKnot[secondSpline.Count];
-            firstSpline.CopyTo(firstKnots, 0);
-            secondSpline.CopyTo(secondKnots, 0);
+            var splitPointIdx = firstSpline.Count - 1;
+            var splitPointTangentIn = firstSpline[^1].TangentIn;
 
-            var allKnots = new BezierKnot[firstKnots.Length + secondKnots.Length - 1];
+            firstSpline.RemoveAt(splitPointIdx);
+            firstSpline.Add(secondSpline);
+            spline = firstSpline;
 
-            var splitPointTangentIn = math.rotate(firstKnots[firstKnots.Length - 1].Rotation, firstKnots[firstKnots.Length - 1].TangentIn);
-            firstKnots.CopyTo(allKnots, 0);
-            secondKnots.CopyTo(allKnots, firstKnots.Length - 1);
-            allKnots[firstKnots.Length - 1].TangentIn = math.rotate(math.inverse(allKnots[firstKnots.Length - 1].Rotation), splitPointTangentIn);
+            var splitKnot = spline[splitPointIdx];
+            splitKnot.TangentIn = splitPointTangentIn;
+            spline[splitPointIdx] = splitKnot;
 
-            float3 firstKnotPos = allKnots[0].Position, lastKnotPos = allKnots[allKnots.Length - 1].Position;
-            bool firstIsLast = (
-                new float3(
-                    (float)Math.Round(firstKnotPos.x, 2),
-                    (float)Math.Round(firstKnotPos.y, 2),
-                    (float)Math.Round(firstKnotPos.z, 2)
-                ).Equals(new float3(
-                    (float)Math.Round(lastKnotPos.x, 2),
-                    (float)Math.Round(lastKnotPos.y, 2),
-                    (float)Math.Round(lastKnotPos.z, 2))
-                )
-            );
-
-            if (closed && firstIsLast)
-            {
-                var firstPointTangentOut = math.rotate(allKnots[0].Rotation, allKnots[0].TangentOut);
-                var prevAllKnots = allKnots;
-                allKnots = new BezierKnot[allKnots.Length - 1];
-                for (int i = 0; i < allKnots.Length; ++i)
-                {
-                    allKnots[i] = prevAllKnots[i + 1];
-                }
-
-                allKnots[allKnots.Length - 1].TangentOut = math.rotate(math.inverse(allKnots[allKnots.Length - 1].Rotation), firstPointTangentOut);
-            }
-            spline = new Spline(allKnots, closed);
             return true;
+        }
+
+        static float3 CalculatePreferredNormalForDirection(float3 splineDirection)
+        {
+            var dirNorm = math.normalizesafe(splineDirection);
+
+            float3 absDotRUF;
+            absDotRUF.x = math.abs(math.dot(dirNorm, math.right()));
+            absDotRUF.y = math.abs(math.dot(dirNorm, math.up()));
+            absDotRUF.z = math.abs(math.dot(dirNorm, math.forward()));
+
+            float3 right;
+            // Pick the right vector based on a world axis that the spline tangent is most orthogonal to
+            if (absDotRUF.x < absDotRUF.y && absDotRUF.x < absDotRUF.z)
+                right = math.normalizesafe(math.cross(math.right(), dirNorm));
+            else if (absDotRUF.y < absDotRUF.x && absDotRUF.y < absDotRUF.z)
+                right = math.normalizesafe(math.cross(math.up(), dirNorm));
+            else
+                right = math.normalizesafe(math.cross(math.forward(), dirNorm));
+
+            return math.normalizesafe(math.cross(dirNorm, right));
+        }
+
+        static float3 CalculateCenterTangent(float3 prevPoint, float3 centerPoint, float3 nextPoint)
+        {
+            var v1 = prevPoint - centerPoint;
+            var v2 = centerPoint - nextPoint;
+
+            var centerTangent = math.normalize((v1 + v2) / 2.0f);
+            return centerTangent;
         }
 
         //A helper method for FitSplineToPoints that computes bernstein basis functions
@@ -1331,37 +1427,35 @@ namespace UnityEngine.Splines
 
         //A helper method for FitSplineToPoints that generates a spline from a provided array of
         // interpolation values.
-        static Spline GenerateSplineFromTValues(List<float3> points, bool closed, float[] tValues)
+        static Spline GenerateSplineFromTValues(IReadOnlyList<float3> allPoints, int rangeStart, int rangeEnd, bool closed, float[] tValues, float3 leftTangent, float3 rightTangent)
         {
-            var leftTangent = math.normalize(points[1] - points[0]);
-            var rightTangent = math.normalize(points[points.Count - 2] - points[points.Count - 1]);
-
-            var aLeft = new float3[points.Count];
-            var aRight = new float3[points.Count];
-            for (int i = 0; i < points.Count; ++i)
+            var curRangePointCount = rangeEnd - rangeStart + 1;
+            var aLeft = new float3[curRangePointCount];
+            var aRight = new float3[curRangePointCount];
+            for (int i = 0; i < curRangePointCount; ++i)
             {
                 var t = tValues[i];
-                aLeft[i] = leftTangent * 3 * t * (1 - t) * (1 - t);
-                aRight[i] = rightTangent * 3 * t * t * (1 - t);
+                aLeft[i] = leftTangent * 3f * t * (1f - t) * (1f - t);
+                aRight[i] = rightTangent * 3f * t * t * (1f - t);
             }
 
             var c = new float[2, 2];
 
             float x1 = 0f, x2 = 0f;
 
-            for (int i = 0; i < points.Count; ++i)
+            for (int i = 0; i < curRangePointCount; ++i)
             {
                 var t = tValues[i];
                 c[0, 0] += math.dot(aLeft[i], aLeft[i]);
                 c[0, 1] += math.dot(aLeft[i], aRight[i]);
-                c[1, 0] += math.dot(aLeft[i], aRight[i]);
+                c[1, 0] = c[0, 1];
                 c[1, 1] += math.dot(aRight[i], aRight[i]);
 
-                var tmp = points[i] - (
-                    points[0] * (1 - t) * (1 - t) * (1 - t)
-                    + points[0] * 3 * (1 - t) * (1 - t) * t
-                    + points[points.Count - 1] * 3 * (1 - t) * t * t
-                    + points[points.Count - 1] * t * t * t
+                var tmp = allPoints[rangeStart + i] - (
+                    allPoints[rangeStart] * (1f - t) * (1f - t) * (1f - t)
+                    + allPoints[rangeStart] * 3f * t * (1f - t) * (1f - t)
+                    + allPoints[rangeEnd] * 3f * t * t * (1f - t)
+                    + allPoints[rangeEnd] * t * t * t
                 );
 
                 x1 += math.dot(aLeft[i], tmp);
@@ -1376,36 +1470,61 @@ namespace UnityEngine.Splines
             var alpha1 = c0_c1_determinant == 0 ? 0 : x_c1_determinant / c0_c1_determinant;
             var alpha2 = c0_c1_determinant == 0 ? 0 : c0_x_determinant / c0_c1_determinant;
 
-            quaternion quat1 = GetKnotRotation(leftTangent, math.normalize(math.cross(leftTangent, math.right())));
-            var first = new BezierKnot(points[0], new float3(0, 0, -alpha1), new float3(0, 0, alpha1), quat1);
+            // alpha1 and alpha2 can be zero and in that case the original algorithm just falls back to the value
+            // of 1/3 distance between the range's first and last points. Omitting this can introduce
+            // zero tangent curves that break the resulting spline's continuity around certain knots.
+            var segLength = math.length(allPoints[rangeEnd] - allPoints[rangeStart]);
+            var epsilon = 1.0e-6f * segLength;
+            if (alpha1 < epsilon || alpha2 < epsilon)
+                alpha1 = alpha2 = segLength / 3f;
 
-            quaternion quat2 = GetKnotRotation(-rightTangent, math.normalize(math.cross(-rightTangent, math.right())));
-            var second = new BezierKnot(points[points.Count - 1], new float3(0, 0, -alpha2),
-                new float3(0, 0, alpha2), quat2);
+            var first = new BezierKnot(allPoints[rangeStart], leftTangent * -alpha1, leftTangent * alpha1, quaternion.identity);
+            var second = new BezierKnot(allPoints[rangeEnd], rightTangent * alpha2, rightTangent * -alpha2, quaternion.identity);
 
-            return new Spline(new BezierKnot[2] { first, second }, closed);
+            var spline = new Spline();
+            spline.Closed = closed;
+            // Use broken tangent modes for now as we'll pick the correct mode once the spline curvature is finalized.
+            spline.Add(first, TangentMode.Broken);
+            spline.Add(second, TangentMode.Broken);
+
+            return spline;
         }
 
-        //Helper function for FitSplineToPoints that computes the maximum least squares distance error
+        // Helper function for FitSplineToPoints that computes the maximum least squares distance error
         // and the index of the point for which the error is maximum.
-        static (float maxError, int maxErrorIndex) ComputeMaxError(List<float3> points, float3[] positions)
+        static (float maxError, int maxErrorIndex) ComputeMaxError(IReadOnlyList<float3> allPoints, int rangeStart, int rangeEnd, float3[] positions, float errorThreshold, bool splineClosed)
         {
-            //use least squares difference to evaluate error.
+            var rangeCount = rangeEnd - rangeStart + 1;
+
+            // For closed spline, we force-split the fit curve at the extra/extension points that we add for closed spline points at the beginning.
+            // This gives the first and last knots additional adjacent knots that help the algorithm to smoothly unify the spline
+            // at the closing point (essentially treating closed splines as open splines that "loop" one extra knot forward and two extra knots backward).
+            // This also ensures that for all of the extension points that were added, there will be matching temporary spline knots
+            // that we can safely remove/merge at the end of the process.
+            if (splineClosed && rangeCount > 2)
+            {
+                var secondKnotIdx = 1;
+                if (rangeStart < secondKnotIdx && rangeEnd > secondKnotIdx)
+                    return (errorThreshold, secondKnotIdx);
+
+                var knotBeforeLastIdx = allPoints.Count - 2;
+                if (rangeStart < knotBeforeLastIdx && rangeEnd > knotBeforeLastIdx)
+                    return (errorThreshold, knotBeforeLastIdx);
+            }
+
+            // Use least squares difference to evaluate error.
             var maxError = 0f;
             var splitPoint = 0;
-            for (int i = 0; i < points.Count; ++i)
+            for (int i = 0; i < rangeCount; ++i)
             {
-                var difference = points[i] - positions[i];
-                var error = math.sqrt(
-                    difference.x * difference.x +
-                    difference.y * difference.y +
-                    difference.z * difference.z
-                );
+                var globalIndex = rangeStart + i;
+                var difference = allPoints[globalIndex] - positions[i];
+                var error = math.length(difference);
 
                 if (error > maxError)
                 {
                     maxError = error;
-                    splitPoint = i;
+                    splitPoint = globalIndex;
                 }
             }
 
@@ -1530,7 +1649,7 @@ namespace UnityEngine.Splines
                     return;
 
                 var knot = splines[i.Spline][i.Knot];
-                var originalPosition = knot.Position; 
+                var originalPosition = knot.Position;
                 knot.Position = position;
                 splines[i.Spline].SetKnotNoNotify(i.Knot, knot);
 
@@ -1551,8 +1670,8 @@ namespace UnityEngine.Splines
         public static void LinkKnots<T>(this T container, SplineKnotIndex knotA, SplineKnotIndex knotB) where T : ISplineContainer
         {
             bool similarPositions = Mathf.Approximately(math.length(container.Splines[knotA.Spline][knotA.Knot].Position - container.Splines[knotB.Spline][knotB.Knot].Position), 0f);
-            var knotsToNotify = similarPositions ? null : container.KnotLinkCollection.GetKnotLinks(knotB);   
-            
+            var knotsToNotify = similarPositions ? null : container.KnotLinkCollection.GetKnotLinks(knotB);
+
             container.KnotLinkCollection.Link(knotA, knotB);
 
             if (knotsToNotify != null)
@@ -1591,7 +1710,7 @@ namespace UnityEngine.Splines
 
             return false;
         }
-        
+
         /// <summary>
         /// Copies knot links between two splines of the same <see cref="ISplineContainer"/>.
         /// </summary>
@@ -1648,7 +1767,7 @@ namespace UnityEngine.Splines
             var rdp = new RamerDouglasPeucker<T>(line);
             rdp.Reduce(results, epsilon);
         }
-        
+
         internal static bool AreTangentsModifiable(TangentMode mode)
         {
             return mode == TangentMode.Broken || mode == TangentMode.Continuous || mode == TangentMode.Mirrored;
@@ -1729,14 +1848,14 @@ namespace UnityEngine.Splines
                     continue;
 
                 var originalKnot = linkedKnots[0];
-                originalKnot = new SplineKnotIndex(originalKnot.Spline, 
+                originalKnot = new SplineKnotIndex(originalKnot.Spline,
                     originalKnot.Spline.Equals(splineInfo.Index) ? spline.Count - 1 - originalKnot.Knot : originalKnot.Knot);
                 for(int i = 1; i < linkedKnots.Count; ++i)
                 {
                     var knotInfo = linkedKnots[i];
                     if (knotInfo.Spline.Equals(splineInfo.Index))
                         linkedKnots[i] = new SplineKnotIndex(splineInfo.Index, spline.Count - 1 - knotInfo.Knot);
-                    
+
                     splineInfo.Container.LinkKnots(originalKnot, linkedKnots[i]);
                 }
             }
@@ -1783,7 +1902,7 @@ namespace UnityEngine.Splines
                 spline[newKnotIndex] = knot;
             }
         }
-        
+
         /// <summary>
         /// Joins two splines together at the specified knots. The two splines must belong to the same container and
         /// the knots must be at an extremity of their respective splines.
@@ -1804,45 +1923,45 @@ namespace UnityEngine.Splines
         {
             if (mainKnot.Spline == otherKnot.Spline)
             {
-                Debug.LogError("Trying to join Knots already belonging to the same spline.");
+                Debug.LogError("Trying to join Knots already belonging to the same spline.", container as SplineContainer);
                 return new SplineKnotIndex();
             }
 
             if (mainKnot.Spline < 0 || mainKnot.Spline > container.Splines.Count)
             {
-                Debug.LogError($"Spline index {mainKnot.Spline} does not exist for the current container.");
+                Debug.LogError($"Spline index {mainKnot.Spline} does not exist for the current container.", container as SplineContainer);
                 return new SplineKnotIndex();
             }
             if(otherKnot.Spline < 0 || otherKnot.Spline > container.Splines.Count)
             {
-                Debug.LogError($"Spline index {otherKnot.Spline} does not exist for the current container.");
+                Debug.LogError($"Spline index {otherKnot.Spline} does not exist for the current container.", container as SplineContainer);
                 return new SplineKnotIndex();
             }
-            
+
             if(mainKnot.Knot < 0 || mainKnot.Knot > container.Splines[mainKnot.Spline].Count)
             {
-                Debug.LogError($"Knot index {mainKnot.Knot} does not exist for the current container for Spline[{mainKnot.Spline}].");
+                Debug.LogError($"Knot index {mainKnot.Knot} does not exist for the current container for Spline[{mainKnot.Spline}].", container as SplineContainer);
                 return new SplineKnotIndex();
             }
             if(otherKnot.Knot < 0 || otherKnot.Knot > container.Splines[otherKnot.Spline].Count)
             {
-                Debug.LogError($"Knot index {otherKnot.Knot} does not exist for the current container for Spline[{otherKnot.Spline}].");
+                Debug.LogError($"Knot index {otherKnot.Knot} does not exist for the current container for Spline[{otherKnot.Spline}].", container as SplineContainer);
                 return new SplineKnotIndex();
             }
-            
+
             if(mainKnot.Knot != 0 && mainKnot.Knot != container.Splines[mainKnot.Spline].Count - 1)
             {
                 Debug.LogError($"Knot index {mainKnot.Knot} is not an extremity knot for the current container for Spline[{mainKnot.Spline}]." +
-                    "Only extremity knots can be joined.");
+                    "Only extremity knots can be joined.", container as SplineContainer);
                 return new SplineKnotIndex();
             }
             if(otherKnot.Knot != 0 && otherKnot.Knot != container.Splines[otherKnot.Spline].Count - 1)
             {
                 Debug.LogError($"Knot index {otherKnot.Knot} is not an extremity knot for the current container for Spline[{otherKnot.Spline}]." +
-                    "Only extremity knots can be joined.");
+                    "Only extremity knots can be joined.", container as SplineContainer);
                 return new SplineKnotIndex();
             }
-            
+
             var isActiveKnotAtStart = mainKnot.Knot == 0;
             var isOtherKnotAtStart = otherKnot.Knot == 0;
 
@@ -1861,7 +1980,7 @@ namespace UnityEngine.Splines
             var otherSplineIndex = otherKnot.Spline;
             var otherSpline = container.Splines[otherSplineIndex];
             var otherSplineCount = otherSpline.Count;
-            
+
             // Get all LinkedKnots on the splines
             for(int i = 0; i < activeSplineCount; ++i)
             {
@@ -1873,7 +1992,7 @@ namespace UnityEngine.Splines
                 var knot = new SplineKnotIndex(otherKnot.Spline, i);
                 links.Add(container.KnotLinkCollection.GetKnotLinks(knot).ToList());
             }
-            
+
             //Unlink all knots in the spline
             foreach(var linkedKnots in links)
                 container.UnlinkKnots(linkedKnots);
@@ -1899,7 +2018,7 @@ namespace UnityEngine.Splines
 
             container.RemoveSplineAt(otherSplineIndex);
             var newActiveSplineIndex = otherSplineIndex > activeSplineIndex ? activeSplineIndex : mainKnot.Spline - 1;
-            
+
             //Restore links
             foreach (var linkedKnots in links)
             {
@@ -1927,15 +2046,15 @@ namespace UnityEngine.Splines
                             linkedKnots[i] = new SplineKnotIndex(knotInfo.Spline - 1,knotInfo.Knot);
                     }
                 }
-                
+
                 var originalKnot = linkedKnots[0];
                 for(int i = 1; i < linkedKnots.Count; ++i)
                     container.LinkKnots(originalKnot, linkedKnots[i]);
             }
-            
+
             return new SplineKnotIndex(newActiveSplineIndex, isActiveKnotAtStart ? otherSplineCount - 1 : mainKnot.Knot);
         }
-        
+
         internal static SplineKnotIndex DuplicateKnot(this ISplineContainer container, SplineKnotIndex originalKnot, int targetIndex)
         {
             var spline = container.Splines[originalKnot.Spline];
@@ -1944,7 +2063,7 @@ namespace UnityEngine.Splines
             spline.SetTangentMode(targetIndex, spline.GetTangentMode(originalKnot.Knot));
             return new SplineKnotIndex(originalKnot.Spline, targetIndex);
         }
-        
+
         /// <summary>
         /// Duplicate a spline between 2 knots of a source spline.
         /// </summary>
@@ -1954,9 +2073,9 @@ namespace UnityEngine.Splines
         /// <param name="newSplineIndex">The index of the new created spline in the container.</param>
         /// <exception cref="ArgumentException">Thrown when the provided knots aren't valid or aren't on the same spline.</exception>
         public static void DuplicateSpline(
-            this ISplineContainer container, 
-            SplineKnotIndex fromKnot, 
-            SplineKnotIndex toKnot, 
+            this ISplineContainer container,
+            SplineKnotIndex fromKnot,
+            SplineKnotIndex toKnot,
             out int newSplineIndex)
         {
             newSplineIndex = -1;
@@ -2023,7 +2142,7 @@ namespace UnityEngine.Splines
                     return firstKnot;
 
                 // If the knot wasn't the first one we also need need to link both ends of the spline to keep the same spline we had before
-                // Link knots is recording the changes to prefab instances so we don't need to add a call to RecordPrefabInstancePropertyModifications 
+                // Link knots is recording the changes to prefab instances so we don't need to add a call to RecordPrefabInstancePropertyModifications
                 container.LinkKnots(firstKnot, lastKnot);
             }
             // If not closed, split does nothing on the extremity of the spline

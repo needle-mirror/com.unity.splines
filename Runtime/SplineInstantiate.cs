@@ -598,7 +598,7 @@ namespace UnityEngine.Splines
                     if (transform.IsChildOf(item.Prefab.transform))
                     {
                         Debug.LogWarning("Instantiating a parent of the SplineInstantiate object itself is not permitted" +
-                            $" ({item.Prefab.name} is a parent of {transform.gameObject.name}).");
+                            $" ({item.Prefab.name} is a parent of {transform.gameObject.name}).", this);
                         item.Prefab = null;
                         m_ItemsToInstantiate[i] = item;
                     }
@@ -1029,7 +1029,7 @@ namespace UnityEngine.Splines
                 var assetType = PrefabUtility.GetPrefabAssetType(m_CurrentItem.Prefab);
                 if (assetType == PrefabAssetType.MissingAsset)
                 {
-                    Debug.LogError($"Trying to instantiate a missing asset for item index [{prefabIndex}].");
+                    Debug.LogError($"Trying to instantiate a missing asset for item index [{prefabIndex}].", this);
                     return false;
                 }
 

@@ -11,7 +11,7 @@ The Splines package contains:
 
 ## Supported Unity versions
 
-Splines is supported in Unity version 2022.1 and later.
+Splines is supported in Unity version 2022.3 and later.
 
 ## Install Splines
  

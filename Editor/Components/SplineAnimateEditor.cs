@@ -302,7 +302,15 @@ namespace UnityEditor.Splines
 #else
             using (new Handles.DrawingScope(SplineHandleUtility.knotColor))
 #endif
-                Handles.ConeHandleCap(-1, offsetPos, Quaternion.LookRotation(forward, up), k_OffsetGizmoSize * HandleUtility.GetHandleSize(offsetPos), EventType.Repaint);
+            if (Vector3.Magnitude(forward) <= Mathf.Epsilon)
+            {
+                if (splineAnimate.StartOffsetT < 1f)
+                    forward = splineAnimate.Container.EvaluateTangent(Mathf.Min(1f, splineAnimate.StartOffsetT + 0.01f));
+                else
+                    forward = splineAnimate.Container.EvaluateTangent(splineAnimate.StartOffsetT - 0.01f);
+                    
+            }
+            Handles.ConeHandleCap(-1, offsetPos, Quaternion.LookRotation(Vector3.Normalize(forward), up), k_OffsetGizmoSize * HandleUtility.GetHandleSize(offsetPos), EventType.Repaint);
         }
     }
 }

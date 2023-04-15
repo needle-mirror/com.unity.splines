@@ -215,28 +215,28 @@ namespace UnityEngine.Splines
         /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
         public NativeSpline(IReadOnlyList<BezierKnot> knots, IReadOnlyList<int> splits, bool closed, float4x4 transform, bool cacheUpVectors, Allocator allocator = Allocator.Temp)
         {
-                        int kc = knots.Count;
-            m_Knots = new NativeArray<BezierKnot>(kc, allocator);
-            m_Curves = new NativeArray<BezierCurve>(kc, allocator);
-            m_SegmentLengthsLookupTable = new NativeArray<DistanceToInterpolation>(kc * k_SegmentResolution, allocator);
+            int knotCount = knots.Count;
+            m_Knots = new NativeArray<BezierKnot>(knotCount, allocator);
+            m_Curves = new NativeArray<BezierCurve>(knotCount, allocator);
+            m_SegmentLengthsLookupTable = new NativeArray<DistanceToInterpolation>(knotCount * k_SegmentResolution, allocator);
             m_Closed = closed;
             m_Length = 0f;
 
             //Costly to do this for temporary NativeSpline that does not require to access/compute up vectors
-            m_UpVectorsLookupTable = new NativeArray<float3>(cacheUpVectors ? kc * k_SegmentResolution : 0, allocator);
+            m_UpVectorsLookupTable = new NativeArray<float3>(cacheUpVectors ? knotCount * k_SegmentResolution : 0, allocator);
 
             // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
             // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
 
-            DistanceToInterpolation[] distanceToTimes = new DistanceToInterpolation[k_SegmentResolution];
-            Vector3[] upVectors = cacheUpVectors ? new Vector3[k_SegmentResolution] : null;
+            var distanceToTimes = new NativeArray<DistanceToInterpolation>(k_SegmentResolution, Allocator.Temp);
+            var upVectors = cacheUpVectors ? new NativeArray<float3>(k_SegmentResolution, Allocator.Temp) : default;
 
-            if (knots.Count > 0)
+            if (knotCount > 0)
             {
                 BezierKnot cur = knots[0].Transform(transform);
-                for (int i = 0; i < kc; ++i)
+                for (int i = 0; i < knotCount; ++i)
                 {
-                    BezierKnot next = knots[(i + 1) % kc].Transform(transform);
+                    BezierKnot next = knots[(i + 1) % knotCount].Transform(transform);
                     m_Knots[i] = cur;
 
                     if (splits != null && splits.Contains(i))
@@ -265,7 +265,7 @@ namespace UnityEngine.Splines
                         }
                     }
 
-                    if (m_Closed || i < kc - 1)
+                    if (m_Closed || i < knotCount - 1)
                         m_Length += distanceToTimes[k_SegmentResolution - 1].Distance;
 
                     for (int index = 0; index < k_SegmentResolution; index++)

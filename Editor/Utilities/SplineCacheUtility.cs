@@ -19,6 +19,66 @@ namespace UnityEditor.Splines
             Spline.Changed += ClearCache;
             Undo.undoRedoPerformed +=  ClearAllCache;
             PrefabStage.prefabStageClosing += _ => ClearAllCache();
+            
+#if UNITY_2023_1_OR_NEWER
+            PrefabUtility.prefabInstanceReverting += _ => ClearAllCache();
+#else
+            // PrefabUtility.prefabInstanceReverting is unfortunately not backported yet.
+            ObjectChangeEvents.changesPublished += (ref ObjectChangeEventStream stream) =>
+            {
+                bool cacheCleared = false;
+                for (int i = 0; i < stream.length; ++i)
+                {
+                    if (cacheCleared)
+                        break;
+
+                    int instanceID = 0;
+                    switch (stream.GetEventType(i))
+                    {
+                        // Called after prefab instance override Revert All.
+                        case ObjectChangeKind.ChangeGameObjectStructureHierarchy:
+                            stream.GetChangeGameObjectStructureHierarchyEvent(i, out var changeGameObjectStructureHierarchyEvt);
+                            instanceID = changeGameObjectStructureHierarchyEvt.instanceId;
+                            break;
+                        // Called after prefab instance override Revert on field or component.
+                        case ObjectChangeKind.ChangeGameObjectOrComponentProperties:
+                            stream.GetChangeGameObjectOrComponentPropertiesEvent(i, out var changeGameObjectOrComponentPropertiesEvt);
+                            instanceID = changeGameObjectOrComponentPropertiesEvt.instanceId;
+                            break;
+                    }
+
+                    if (instanceID != 0)
+                    {
+                        var obj = EditorUtility.InstanceIDToObject(instanceID);
+                        var prefabStatus = PrefabUtility.GetPrefabInstanceStatus(obj);
+
+                        if (prefabStatus == PrefabInstanceStatus.Connected)
+                        {
+                            SplineContainer splineContainer = null;
+                            GameObject splineGO = obj as GameObject;
+                            
+                            if (splineGO != null)
+                                splineContainer = splineGO.GetComponent<SplineContainer>();
+                            else
+                                splineContainer = obj as SplineContainer;
+                          
+                            if (splineContainer != null)
+                            {
+                                foreach (var spline in splineContainer.Splines)
+                                {
+                                    if (s_SplineCacheTable.ContainsKey(spline))
+                                    {
+                                        ClearAllCache();
+                                        cacheCleared = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+#endif
         }
         
         internal static void ClearAllCache()

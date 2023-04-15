@@ -180,11 +180,24 @@ namespace UnityEngine.Splines
         /// <param name="lookupTable">A pre-allocated array to populate with distance to interpolation ratio data.</param>
         public static void CalculateCurveLengths(BezierCurve curve, DistanceToInterpolation[] lookupTable)
         {
+            var nativeLUT = new NativeArray<DistanceToInterpolation>(lookupTable, Allocator.Temp);
+            CalculateCurveLengths(curve, nativeLUT);
+            nativeLUT.CopyTo(lookupTable);
+        }
+
+        /// <summary>
+        /// Populate a pre-allocated lookupTable array with distance to 't' values. The number of table entries is
+        /// dependent on the size of the passed lookupTable.
+        /// </summary>
+        /// <param name="curve">The <see cref="BezierCurve"/> to create a distance to 't' lookup table for.</param>
+        /// <param name="lookupTable">A pre-allocated native array to populate with distance to interpolation ratio data.</param>
+        public static void CalculateCurveLengths(BezierCurve curve, NativeArray<DistanceToInterpolation> lookupTable)
+        {
             var resolution = lookupTable.Length;
 
             float magnitude = 0f;
             float3 prev = EvaluatePosition(curve, 0f);
-            lookupTable[0] = new DistanceToInterpolation() { Distance = 0f , T = 0f };
+            lookupTable[0] = new DistanceToInterpolation() { Distance = 0f, T = 0f };
 
             for (int i = 1; i < resolution; i++)
             {
@@ -192,7 +205,7 @@ namespace UnityEngine.Splines
                 var point = EvaluatePosition(curve, t);
                 var dir = point - prev;
                 magnitude += math.length(dir);
-                lookupTable[i] = new DistanceToInterpolation() { Distance = magnitude , T = t};
+                lookupTable[i] = new DistanceToInterpolation() { Distance = magnitude, T = t};
                 prev = point;
             }
         }
@@ -222,7 +235,7 @@ namespace UnityEngine.Splines
             return (net + chord) / 2;
         }
 
-        internal static void EvaluateUpVectors(BezierCurve curve, float3 startUp, float3 endUp, Vector3[] upVectors)
+        internal static void EvaluateUpVectors(BezierCurve curve, float3 startUp, float3 endUp, NativeArray<float3> upVectors)
         {
             upVectors[0] = startUp;
             upVectors[upVectors.Length - 1] = endUp;
@@ -234,7 +247,8 @@ namespace UnityEngine.Splines
             }
         }
         
-        internal static float3 EvaluateUpVector(BezierCurve curve, float t, float3 startUp, float3 endUp)
+        internal static float3 EvaluateUpVector(BezierCurve curve, float t, float3 startUp, float3 endUp,
+            bool fixEndUpMismatch = true)
         {
             // Ensure we have workable tangents by linearizing ones that are of zero length
             var linearTangentLen = math.length(SplineUtility.GetExplicitLinearTangent(curve.P0, curve.P3));
@@ -282,6 +296,9 @@ namespace UnityEngine.Splines
                 prevT = currentT;
                 currentT += stepSize;
             }
+
+            if (!fixEndUpMismatch)
+                return upVector;
 
             if (prevT <= t && currentT >= t)
                 upVector = endUp;
