@@ -515,5 +515,10 @@ namespace UnityEditor.Splines
         {
             return s_SelectedSplines.Contains(info);
         }
+        
+        internal static bool Remove(SplineInfo info)
+        {
+            return s_SelectedSplines.Remove(info);
+        }
     }
 }

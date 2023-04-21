@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEditor.SettingsManagement;
+using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
@@ -20,6 +21,8 @@ namespace UnityEditor.Splines
         static UserSetting<Color> s_MeshColor = new UserSetting<Color>(PathSettings.instance, "Handles.Debug.MeshColor", Color.white, SettingsScope.User);
         [UserSetting]
         static UserSetting<float> s_MeshSize = new UserSetting<float>(PathSettings.instance, "Handles.Debug.MeshSize", 0.1f, SettingsScope.User);
+        [UserSetting]
+        static UserSetting<int> s_MeshResolution = new UserSetting<int>(PathSettings.instance, "Handles.Debug.MeshResolution", SplineUtility.DrawResolutionDefault, SettingsScope.User);
 
         [UserSettingBlock("Spline Mesh")]
         static void HandleDebugPreferences(string searchContext)
@@ -28,6 +31,7 @@ namespace UnityEditor.Splines
 
             s_MeshColor.value = SettingsGUILayout.SettingsColorField("Color", s_MeshColor, searchContext);
             s_MeshSize.value = SettingsGUILayout.SettingsSlider("Size", s_MeshSize, 0.01f, 1f, searchContext);
+            s_MeshResolution.value = SettingsGUILayout.SettingsSlider("Resolution", s_MeshResolution, 4, 100, searchContext);
 
             if(EditorGUI.EndChangeCheck())
                 SceneView.RepaintAll();
@@ -59,5 +63,6 @@ namespace UnityEditor.Splines
 
         public static Color SplineMeshColor => s_MeshColor;
         public static float SplineMeshSize => s_MeshSize;
+        public static int SplineMeshResolution => s_MeshResolution;
     }
 }

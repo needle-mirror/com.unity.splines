@@ -5,6 +5,26 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2023-04-21
+
+### Added
+
+- [SPLB-100] Added a **Resolution** setting for spline meshes in Splines preference.
+
+### Changed
+
+- [SPLB-100] Improved `SplineMeshHandles` rendering. 
+
+### Fixed
+
+- Fixed a bug where spline selection would be incorrect after a spline was deleted. 
+- [SPLB-146] Fixed a bug that prevented actions from being undone with prefab instances that contained splines .
+- [SPLB-148] Fixed a bug in the `LoftRoadBehaviour` component where Undo calls prevented the project from building.
+
+### Changed
+
+- Changed `Knot Placement` tool behaviour regarding selection. Element selection is now empty when you exit the tool.
+
 ## [2.2.0] - 2023-03-22
 
 ### Added

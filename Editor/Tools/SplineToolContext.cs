@@ -195,6 +195,7 @@ namespace UnityEditor.Splines
                 for (int i = splinesToRemove.Count - 1; i >= 0; --i)
                 {
                     var spline = splinesToRemove[i];
+                    SplineSelection.Remove(spline);
                     spline.Container.RemoveSplineAt(spline.Index);
                 }
             }

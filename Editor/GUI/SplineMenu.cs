@@ -9,7 +9,7 @@ namespace UnityEditor.Splines
     {
         const string k_MenuPath = "GameObject/Spline";
 
-        static GameObject CreateSplineGameObject(MenuCommand menuCommand, Spline spline = null)
+        internal static GameObject CreateSplineGameObject(MenuCommand menuCommand, Spline spline = null)
         {
             var name = GameObjectUtility.GetUniqueNameForSibling(null, "Spline");
             var gameObject = ObjectFactory.CreateGameObject(name, typeof(SplineContainer));
@@ -28,9 +28,9 @@ namespace UnityEditor.Splines
             {
                 var container = gameObject.GetComponent<SplineContainer>();
                 container.Spline = spline;
-                Selection.activeGameObject = gameObject;
             }
-
+            
+            Selection.activeGameObject = gameObject;
             return gameObject;
         }
 

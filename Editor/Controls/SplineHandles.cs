@@ -74,7 +74,7 @@ namespace UnityEditor.Splines
                 using (var mesh = new SplineMeshHandle<NativeSpline>())
                 using (new ZTestScope(UnityEngine.Rendering.CompareFunction.Less))
                 {
-                    mesh.Do(nativeSpline, SplineHandleSettings.SplineMeshSize, SplineHandleSettings.SplineMeshColor);
+                    mesh.Do(nativeSpline, SplineHandleSettings.SplineMeshSize, SplineHandleSettings.SplineMeshColor, SplineHandleSettings.SplineMeshResolution);
                 }
             }
 

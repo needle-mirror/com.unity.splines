@@ -155,7 +155,9 @@ namespace Unity.Splines.Examples
                 var delta = LoftSplines.Count - m_Widths.Count;
                 for (var i = 0; i < delta; i++)
                 {
+#if  UNITY_EDITOR
                     Undo.RecordObject(this, "Modifying Widths SplineData");
+#endif
                     m_Widths.Add(new SplineData<float>() { DefaultValue = 1f });
                 }
             }
@@ -170,7 +172,9 @@ namespace Unity.Splines.Examples
 
             if (index < m_Widths.Count)
             {
+#if UNITY_EDITOR
                 Undo.RecordObject(this, "Modifying Widths SplineData");
+#endif
                 m_Widths.RemoveAt(index);
             }
 

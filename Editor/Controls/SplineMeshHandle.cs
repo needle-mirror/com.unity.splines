@@ -11,6 +11,58 @@ namespace UnityEditor.Splines
     /// <typeparam name="T">The type of ISpline.</typeparam>
     public class SplineMeshHandle<T> : IDisposable where T : ISpline
     {
+        class SplineMeshDrawingScope : IDisposable
+        {
+            Material m_Material;
+            
+            int m_HandleZTestId;
+            int m_BlendSrcModeId;
+            int m_BlendDstModeId;
+
+            float m_PreviousZTest;
+            int m_PreviousBlendSrcMode;
+            int m_PreviousBlendDstMode;
+            
+            public SplineMeshDrawingScope(Material material, Color color)
+            {
+                Shader.SetGlobalColor("_HandleColor", color);
+                Shader.SetGlobalFloat("_HandleSize", 1f);
+                Shader.SetGlobalMatrix("_ObjectToWorld", Handles.matrix);
+
+                if (material == null)
+                {
+                    m_Material = HandleUtility.handleMaterial;
+                    
+                    m_HandleZTestId = Shader.PropertyToID("_HandleZTest");
+                    m_BlendSrcModeId = Shader.PropertyToID("_BlendSrcMode");
+                    m_BlendDstModeId =  Shader.PropertyToID("_BlendDstMode");
+                    
+                    m_PreviousZTest = m_Material.GetFloat(m_HandleZTestId);
+                    m_PreviousBlendSrcMode = m_Material.GetInt(m_BlendSrcModeId);
+                    m_PreviousBlendDstMode = m_Material.GetInt(m_BlendDstModeId);
+                    
+                    m_Material.SetFloat(m_HandleZTestId, (float)Handles.zTest);
+                    m_Material.SetInt(m_BlendSrcModeId, (int)UnityEngine.Rendering.BlendMode.One);
+                    m_Material.SetInt(m_BlendDstModeId, (int)UnityEngine.Rendering.BlendMode.One);
+
+                    m_Material.SetPass(0);
+                }
+                else
+                    material.SetPass(0);
+            }
+
+            public void Dispose()
+            {
+                if (m_Material != null)
+                {
+                    m_Material.SetFloat(m_HandleZTestId, m_PreviousZTest);
+                    m_Material.SetInt(m_BlendSrcModeId, m_PreviousBlendSrcMode);
+                    m_Material.SetInt(m_BlendDstModeId, m_PreviousBlendDstMode);
+                }
+            }
+        }
+        
+        
         Mesh m_Mesh;
 
         Material m_Material;
@@ -47,19 +99,7 @@ namespace UnityEditor.Splines
             get => m_Material;
             set => m_Material = value;
         }
-
-        static Matrix4x4 StartCapDraw(Material material, Color color)
-        {
-            Shader.SetGlobalColor("_HandleColor", color);
-            Shader.SetGlobalFloat("_HandleSize", 1f);
-            Shader.SetGlobalMatrix("_ObjectToWorld", Handles.matrix);
-            var mat = material == null ? HandleUtility.handleMaterial : material; 
-            mat.SetFloat("_HandleZTest", (float) Handles.zTest);
-            mat.SetPass(0);
-
-            return Handles.matrix;
-        }
-
+        
         /// <summary>
         /// Draws a 3D mesh from a spline.
         /// </summary>
@@ -133,7 +173,9 @@ namespace UnityEditor.Splines
                         : HandleUtility.nearestControl == controlID
                             ? Handles.preselectionColor
                             : Handles.color;
-                    Graphics.DrawMeshNow(m_Mesh, StartCapDraw(m_Material, color));
+                    using (new SplineMeshDrawingScope(m_Material, color))
+                        Graphics.DrawMeshNow(m_Mesh, Handles.matrix);
+
                     break;
             }
         }

@@ -558,6 +558,9 @@ namespace UnityEngine.Splines
 
         void OnDisable()
         {
+#if UNITY_EDITOR
+            Undo.undoRedoPerformed -= UndoRedoPerformed;
+#endif
             Spline.Changed -= OnSplineChanged;
             Clear();
         }

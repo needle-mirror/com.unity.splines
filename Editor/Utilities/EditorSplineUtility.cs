@@ -273,7 +273,7 @@ namespace UnityEditor.Splines
         internal static SelectableKnot CreateSpline(SelectableKnot from, float3 tangentOut)
         {
             var splineInfo = CreateSpline(from.SplineInfo.Container);
-            var knot = AddKnotToTheEnd(splineInfo, from.Position, math.mul(from.Rotation, math.up()), tangentOut);
+            var knot = AddKnotToTheEnd(splineInfo, from.Position, math.mul(from.Rotation, math.up()), tangentOut, false);
             LinkKnots(knot, from);
             return knot;
         }
@@ -283,7 +283,7 @@ namespace UnityEditor.Splines
             return math.lengthsq(tangent) < float.Epsilon ? DefaultTangentMode : TangentMode.Mirrored;
         }
 
-        static SelectableKnot AddKnotInternal(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentOut, int index, int previousIndex)
+        static SelectableKnot AddKnotInternal(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentOut, int index, int previousIndex, bool updateSelection)
         {
             var spline = splineInfo.Spline;
 
@@ -326,20 +326,25 @@ namespace UnityEditor.Splines
                 spline[previousIndex] = current;
             }
 
+            // If the element is part of a prefab, the changes have to be recorded AFTER being done on the prefab instance
+            // otherwise they would not be saved in the scene.
+            PrefabUtility.RecordPrefabInstancePropertyModifications(splineInfo.Object);
+            
             var knot = new SelectableKnot(splineInfo, index);
-            SplineSelection.Set(knot);
-
+            if(updateSelection)
+                SplineSelection.Set(knot);
+            
             return knot;
         }
 
-        internal static SelectableKnot AddKnotToTheEnd(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentOut)
+        internal static SelectableKnot AddKnotToTheEnd(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentOut, bool updateSelection = true)
         {
-            return AddKnotInternal(splineInfo, worldPosition, normal, tangentOut, splineInfo.Spline.Count, splineInfo.Spline.Count - 1);
+            return AddKnotInternal(splineInfo, worldPosition, normal, tangentOut, splineInfo.Spline.Count, splineInfo.Spline.Count - 1, updateSelection);
         }
 
-        internal static SelectableKnot AddKnotToTheStart(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentIn)
+        internal static SelectableKnot AddKnotToTheStart(SplineInfo splineInfo, float3 worldPosition, float3 normal, float3 tangentIn, bool updateSelection = true)
         {
-            return AddKnotInternal(splineInfo, worldPosition, normal, -tangentIn, 0, 1);
+            return AddKnotInternal(splineInfo, worldPosition, normal, -tangentIn, 0, 1, updateSelection);
         }
 
         internal static void RemoveKnot(SelectableKnot knot)

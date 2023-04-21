@@ -140,6 +140,8 @@ namespace UnityEditor.Splines
                 m_Container.RemoveSplineAt(selectedIndices[i]);
 
             ClearSelection();
+            SplineSelection.ClearInspectorSelectedSplines();
+            
             SceneView.RepaintAll();
         }
     }
