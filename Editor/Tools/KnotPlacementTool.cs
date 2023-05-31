@@ -267,6 +267,8 @@ namespace UnityEditor.Splines
                 {
                     EditorSplineUtility.RecordObject(CurrentSplineInfo, "Removing Empty Spline");
                     CurrentSplineInfo.Container.RemoveSplineAt(CurrentSplineInfo.Index);
+                    //Force to record changes if part of a prefab instance 
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(CurrentSplineInfo.Object);
                 }
             }
         }
@@ -299,7 +301,7 @@ namespace UnityEditor.Splines
         public override void OnActivated()
         {
             base.OnActivated();
-            SplineToolContext.UseCustomSplineHandles(true);
+            SplineToolContext.useCustomSplineHandles = true;
             SplineSelection.Clear();
             SplineSelection.UpdateObjectSelection(targets);
             m_ActiveObjectIndex = 0;
@@ -308,7 +310,7 @@ namespace UnityEditor.Splines
         public override void OnWillBeDeactivated()
         {
             base.OnWillBeDeactivated();
-            SplineToolContext.UseCustomSplineHandles(false);
+            SplineToolContext.useCustomSplineHandles = false;
             EndDrawingOperation();
         }
 

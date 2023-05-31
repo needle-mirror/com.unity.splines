@@ -7,8 +7,15 @@ using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
 {
-    static class SplineSelection
+    /// <summary>
+    /// Provides methods to track the selection of spline elements, knots, and tangents.
+    ///  `SplineTools` and `SplineHandles` use `SplineSelection` to manage these elements.
+    /// </summary>
+    public static class SplineSelection
     {
+        /// <summary>
+        /// Action that is called when the element selection changes.
+        /// </summary>
         public static event Action changed;
 
         static readonly HashSet<Object> s_ObjectSet = new HashSet<Object>();
@@ -20,6 +27,10 @@ namespace UnityEditor.Splines
 
         // Tracks selected splines in the SplineReorderableList
         static List<SplineInfo> s_SelectedSplines = new ();
+        
+        /// <summary>
+        /// The number of elements in the current selection.
+        /// </summary>
         public static int Count => selection.Count;
         static HashSet<SelectableTangent> s_AdjacentTangentCache = new HashSet<SelectableTangent>();
 
@@ -50,6 +61,9 @@ namespace UnityEditor.Splines
             }
         }
 
+        /// <summary>
+        /// Clears the current selection.
+        /// </summary>
         public static void Clear()
         {
             if (selection.Count == 0)
@@ -66,8 +80,14 @@ namespace UnityEditor.Splines
                 NotifySelectionChanged();
         }
 
+        /// <summary>
+        /// Checks if the current selection contains at least one element from the given targeted splines.
+        /// </summary>
+        /// <param name="targets">The splines to consider when looking at selected elements.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
+        /// <returns>Returns true if the current selection contains at least an element of the desired type.</returns>
         public static bool HasAny<T>(IReadOnlyList<SplineInfo> targets)
-            where T : struct, ISplineElement
+            where T : struct, ISelectableElement
         {
             for (int i = 0; i < Count; ++i)
                 for (int j = 0; j < targets.Count; ++j)
@@ -77,17 +97,28 @@ namespace UnityEditor.Splines
             return false;
         }
 
-        public static ISplineElement GetActiveElement(IReadOnlyList<SplineInfo> targets)
+        /// <summary>
+        /// Gets the active element of the selection. The active element is generally the last one added to this selection.
+        /// </summary>
+        /// <param name="targets">The splines to consider when getting the active element.</param>
+        /// <returns>The <see cref="ISelectableElement"/> that represents the active knot or tangent. Returns null if no active element is found.</returns>
+        public static ISelectableElement GetActiveElement(IReadOnlyList<SplineInfo> targets)
         {
             for (int i = 0; i < Count; ++i)
                 for (int j = 0; j < targets.Count; ++j)
-                    if (TryGetElement(selection[i], targets[j], out ISplineElement result))
+                    if (TryGetElement(selection[i], targets[j], out ISelectableElement result))
                         return result;
             return null;
         }
 
+        /// <summary>
+        /// Gets all the elements of the current selection, filtered by target splines. Elements are added to the given collection.
+        /// </summary>
+        /// <param name="targets">The splines to consider when looking at selected elements.</param>
+        /// <param name="results">The collection to fill with spline elements from the selection.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
         public static void GetElements<T>(IReadOnlyList<SplineInfo> targets, ICollection<T> results)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             results.Clear();
             for (int i = 0; i < Count; ++i)
@@ -95,18 +126,24 @@ namespace UnityEditor.Splines
                     if (TryGetElement(selection[i], targets[j], out T result))
                         results.Add(result);
         }
-
+        
+        /// <summary>
+        /// Gets all the elements of the current selection, from a single spline target. Elements are added to the given collection.
+        /// </summary>
+        /// <param name="target">The spline to consider when looking at selected elements.</param>
+        /// <param name="results">The collection to fill with spline elements from the selection.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
         public static void GetElements<T>(SplineInfo target, ICollection<T> results)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             results.Clear();
             for (int i = 0; i < Count; ++i)
                 if (TryGetElement(selection[i], target, out T result))
                     results.Add(result);
         }
-
+        
         static bool TryGetElement<T>(SelectableSplineElement element, SplineInfo splineInfo, out T value)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             if (element.target == splineInfo.Container as Object)
             {
@@ -150,10 +187,19 @@ namespace UnityEditor.Splines
             return s_SelectedTargetsBuffer;
         }
 
+        /// <summary>
+        /// Used for selecting splines from the inspector, only internal from now.
+        /// </summary>
         internal static IEnumerable<SplineInfo> SelectedSplines => s_SelectedSplines;
 
+        /// <summary>
+        /// Checks if an element is currently the active one in the selection.
+        /// </summary>
+        /// <param name="element">The <see cref="ISelectableElement"/> to test.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
+        /// <returns>Returns true if the element is the active element, false if it is not.</returns>
         public static bool IsActive<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             if (selection.Count == 0)
                 return false;
@@ -162,7 +208,7 @@ namespace UnityEditor.Splines
         }
 
         static bool IsEqual<T>(T element, SelectableSplineElement selectionData)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             int tangentIndex = element is SelectableTangent tangent ? tangent.TangentIndex : -1;
             return element.SplineInfo.Object == selectionData.target
@@ -171,8 +217,13 @@ namespace UnityEditor.Splines
                    && tangentIndex == selectionData.tangentIndex;
         }
 
+        /// <summary>
+        /// Sets the active element of the selection.
+        /// </summary>
+        /// <param name="element">The <see cref="ISelectableElement"/> to set as the active element.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
         public static void SetActive<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             var index = IndexOf(element);
             if (index == 0)
@@ -205,8 +256,13 @@ namespace UnityEditor.Splines
             NotifySelectionChanged();
         }
 
+        /// <summary>
+        /// Sets the selection to the element.
+        /// </summary>
+        /// <param name="element">The <see cref="ISelectableElement"/> to set as the selection.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
         public static void Set<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             IncrementVersion();
 
@@ -222,9 +278,15 @@ namespace UnityEditor.Splines
             context.selection.AddRange(selection);
             NotifySelectionChanged();
         }
-
+        
+        /// <summary>
+        /// Adds an element to the current selection.
+        /// </summary>
+        /// <param name="element">The <see cref="ISelectableElement"/> to add to the selection.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
+        /// <returns>Returns true if the element was added to the selection, and false if the element is already in the selection.</returns>
         public static bool Add<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             if (Contains(element))
                 return false;
@@ -234,9 +296,14 @@ namespace UnityEditor.Splines
             NotifySelectionChanged();
             return true;
         }
-
+        
+        /// <summary>
+        /// Add a set of elements to the current selection.
+        /// </summary>
+        /// <param name="elements">The set of <see cref="ISelectableElement"/> to add to the selection.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
         public static void AddRange<T>(IEnumerable<T> elements)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             bool changed = false;
             foreach (var element in elements)
@@ -256,9 +323,15 @@ namespace UnityEditor.Splines
             if (changed)
                 NotifySelectionChanged();
         }
-
+        
+        /// <summary>
+        /// Remove an element from the current selection.
+        /// </summary>
+        /// <param name="element">The <see cref="ISelectableElement"/> to remove from the selection.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
+        /// <returns>Returns true if the element has been removed from the selection, false otherwise.</returns>
         public static bool Remove<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             var index = IndexOf(element);
             if (index >= 0)
@@ -272,8 +345,14 @@ namespace UnityEditor.Splines
             return false;
         }
 
+        /// <summary>
+        /// Remove a set of elements from the current selection.
+        /// </summary>
+        /// <param name="elements">The set of <see cref="ISelectableElement"/> to remove from the selection.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
+        /// <returns>Returns true if at least an element has been removed from the selection, false otherwise.</returns>
         public static bool RemoveRange<T>(IReadOnlyList<T> elements)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             bool changed = false;
             for (int i = 0; i < elements.Count; ++i)
@@ -297,8 +376,8 @@ namespace UnityEditor.Splines
             return changed;
         }
 
-        public static int IndexOf<T>(T element)
-            where T : ISplineElement
+        static int IndexOf<T>(T element)
+            where T : ISelectableElement
         {
             for (int i = 0; i < selection.Count; ++i)
                 if (IsEqual(element, selection[i]))
@@ -307,12 +386,19 @@ namespace UnityEditor.Splines
             return -1;
         }
 
+        /// <summary>
+        /// Checks if the selection contains a knot or a tangent.c'est 
+        /// </summary>
+        /// <param name="element">The element to verify.</param>
+        /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
+        /// <returns>Returns true if the element is contained in the current selection, false otherwise.</returns>
         public static bool Contains<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             return IndexOf(element) >= 0;
         }
 
+        // Used when the selection is changed in the tools.
         internal static void UpdateObjectSelection(IEnumerable<Object> targets)
         {
             s_ObjectSet.Clear();

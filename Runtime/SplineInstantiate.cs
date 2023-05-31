@@ -5,8 +5,6 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Serialization;
-using UnityEngine.Splines;
-using Random = UnityEngine.Random;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -481,6 +479,7 @@ namespace UnityEngine.Splines
 
         const string k_InstancesRootName = "root-"; 
         GameObject m_InstancesRoot;
+        internal GameObject InstancesRoot => m_InstancesRoot;
 
         Transform instancesRootTransform
         {
@@ -811,9 +810,8 @@ namespace UnityEngine.Splines
                     instanceCountModeStep = totalSplineLength / ((int)spacing - 1);
             }
 
-            //Needs to ensure the validity of the items to instantiate to be certain we don't have a parent of the hierarchy in these.
+            // Needs to ensure the validity of the items to instantiate to be certain we don't have a parent of the hierarchy in these.
             EnsureItemsValidity();
-            
             for (int splineIndex = 0; splineIndex < m_Container.Splines.Count; splineIndex++)
             {
                 var spline = m_Container.Splines[splineIndex];
@@ -955,9 +953,9 @@ namespace UnityEngine.Splines
                         // Correct forward and up vectors based on axis remapping parameters
                         var remappedForward = math.normalizesafe(GetAxis(m_Forward));
                         var remappedUp = math.normalizesafe(GetAxis(m_Up));
-                        var axisRemapRotation = Quaternion.Inverse(Quaternion.LookRotation(remappedForward, remappedUp));
+                        var axisRemapRotation = Quaternion.Inverse(quaternion.LookRotationSafe(remappedForward, remappedUp));
 
-                        instance.transform.rotation = Quaternion.LookRotation(forward, up) * axisRemapRotation;
+                        instance.transform.rotation = quaternion.LookRotationSafe(forward, up) * axisRemapRotation;
 
                         var customUp = up;
                         var customForward = forward;
@@ -1002,7 +1000,7 @@ namespace UnityEngine.Splines
                             var right = Vector3.Cross(customUp, customForward).normalized;
                             customForward = Quaternion.AngleAxis(offset.y, customUp) * Quaternion.AngleAxis(offset.x, right) * customForward;
                             customUp = Quaternion.AngleAxis(offset.x, right) * Quaternion.AngleAxis(offset.z, customForward) * customUp;
-                            instance.transform.rotation = Quaternion.LookRotation(customForward, customUp) * axisRemapRotation;
+                            instance.transform.rotation = quaternion.LookRotationSafe(customForward, customUp) * axisRemapRotation;
                         }
                     }
 
@@ -1037,7 +1035,12 @@ namespace UnityEngine.Splines
 #endif
                     m_Instances.Add(Instantiate(m_CurrentItem.Prefab, instancesRootTransform));
 
+#if UNITY_EDITOR
                 m_Instances[index].hideFlags |= HideFlags.HideAndDontSave;
+                // Retrieve current static flags to pass them along on created instances
+                var staticFlags = GameObjectUtility.GetStaticEditorFlags(gameObject);
+                GameObjectUtility.SetStaticEditorFlags(m_Instances[index], staticFlags);
+#endif
             }
 
             m_Instances[index].transform.localPosition = m_CurrentItem.Prefab.transform.localPosition;

@@ -5,6 +5,21 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2023-05-31
+
+### Added
+
+- Exposed public APIs for `SplineTool` and `SplineHandles`.
+- Added a method to *bake* SplineInstantiate objects in the scene so the users can modify the resulting GameObjects. 
+
+### Bug Fixes
+
+- [SPLB-165] Fixed a bug that prevented actions from being retained with prefab instances that contained splines when entering playmode.
+- [SPLB-162] Fixed a bug where the start offset in `SplineAnimate` did not work in Play mode. 
+- [SPLB-152] Fixed objects created from `SplineInstantiate` not inheriting static flags from parent `GameObject`.
+- [SPLB-160] Fixed potential 'look rotation vector is zero' in SplineInstantiate.
+- [SPLB-156] Fixed possible null reference exception when accessing curve length.
+
 ## [2.2.1] - 2023-04-21
 
 ### Added

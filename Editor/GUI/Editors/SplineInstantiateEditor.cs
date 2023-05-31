@@ -159,9 +159,11 @@ class SplineInstantiateEditor : SplineComponentEditor
     static readonly string k_Randomize = L10n.Tr("Randomize");
     static readonly string k_RandomizeTooltip = L10n.Tr("Compute a new randomization of the instances along the spline.");
     static readonly string k_Regenerate = L10n.Tr("Regenerate");
-    static readonly string k_RegenerateTooltip = L10n.Tr("Regenerate the instances along the spline (only available when the content is not automatically refreshed).");
+    static readonly string k_RegenerateTooltip = L10n.Tr("Regenerate the instances along the spline.");
     static readonly string k_Clear = L10n.Tr("Clear");
-    static readonly string k_ClearTooltip = L10n.Tr("Clear the instances along the spline (only available when the content is not automatically refreshed).");
+    static readonly string k_ClearTooltip = L10n.Tr("Clear the instances along the spline.");
+    static readonly string k_Bake = L10n.Tr("Bake Instances");
+    static readonly string k_BakeTooltip = L10n.Tr("Bake the instances in the SceneView for custom edition and destroy that SplineInstantiate component.");
 
     bool m_PositionFoldout;
     bool m_RotationFoldout;
@@ -177,6 +179,17 @@ class SplineInstantiateEditor : SplineComponentEditor
 
     protected void OnEnable()
     {
+        Spline.Changed += OnSplineChanged;
+        EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
+        SplineContainer.SplineAdded += OnContainerSplineSetModified;
+        SplineContainer.SplineRemoved += OnContainerSplineSetModified;
+    }
+
+    bool Initialize()
+    {
+        if (m_Components != null && m_Components.Length > 0) 
+            return true;
+        
         m_SplineContainer = serializedObject.FindProperty("m_Container");
 
         m_ItemsToInstantiate = serializedObject.FindProperty("m_ItemsToInstantiate");
@@ -193,18 +206,21 @@ class SplineInstantiateEditor : SplineComponentEditor
         m_ScaleOffset = serializedObject.FindProperty("m_ScaleOffset");
 
         m_AutoRefresh = serializedObject.FindProperty("m_AutoRefresh");
-        m_SpacingType = m_Spacing.vector2Value.x == m_Spacing.vector2Value.y ? SpawnType.Exact : SpawnType.Random;
+        
+        if (m_Spacing != null)
+            m_SpacingType = Mathf.Approximately(m_Spacing.vector2Value.x, m_Spacing.vector2Value.y) ? SpawnType.Exact : SpawnType.Random;
+        else
+            m_SpacingType = SpawnType.Exact;
 
         m_Components = targets.Select(x => x as SplineInstantiate).Where(y => y != null).ToArray();
 
-        Spline.Changed += OnSplineChanged;
-        EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
-        SplineContainer.SplineAdded += OnContainerSplineSetModified;
-        SplineContainer.SplineRemoved += OnContainerSplineSetModified;
+        return m_Components != null && m_Components.Length > 0;
     }
 
     void OnDisable()
     {
+        m_Components = null;
+        
         Spline.Changed -= OnSplineChanged;
         EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;
         SplineContainer.SplineAdded -= OnContainerSplineSetModified;
@@ -215,9 +231,11 @@ class SplineInstantiateEditor : SplineComponentEditor
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             return;
-
+        
         foreach (var instantiate in m_Components)
         {
+            if(instantiate == null)
+                continue;
             if (instantiate.Container != null && instantiate.Container.Splines.Contains(spline))
                 instantiate.SetSplineDirty(spline);
         }
@@ -242,6 +260,9 @@ class SplineInstantiateEditor : SplineComponentEditor
 
     public override void OnInspectorGUI()
     {
+        if(!Initialize())
+            return;
+        
         serializedObject.Update();
 
         var splineInstantiate = ((SplineInstantiate)target);
@@ -258,7 +279,6 @@ class SplineInstantiateEditor : SplineComponentEditor
 
         DoSetupSection();
         dirtyInstances |= DoInstantiateSection();
-
         updateInstances |= DisplayOffsets();
 
         EditorGUILayout.LabelField(k_Generation, EditorStyles.boldLabel);
@@ -277,10 +297,22 @@ class SplineInstantiateEditor : SplineComponentEditor
             updateInstances = true;
         }
 
-        if(GUILayout.Button(new GUIContent(k_Regenerate, k_RegenerateTooltip), GUILayout.MaxWidth(100f)))
-            updateInstances = true;
-        if(GUILayout.Button(new GUIContent(k_Clear, k_ClearTooltip), GUILayout.MaxWidth(100f)))
-            splineInstantiate.Clear();
+        if (splineInstantiate.instances.Count == 0)
+        {
+            if (GUILayout.Button(new GUIContent(k_Regenerate, k_RegenerateTooltip), GUILayout.MaxWidth(100f)))
+                updateInstances = true;
+        }
+        else
+        {
+            if (GUILayout.Button(new GUIContent(k_Clear, k_ClearTooltip), GUILayout.MaxWidth(100f)))
+                splineInstantiate.Clear();
+        }
+
+        GUI.enabled = splineInstantiate.instances.Count > 0;
+        if (GUILayout.Button(new GUIContent(k_Bake, k_BakeTooltip), GUILayout.MaxWidth(100f)))
+            BakeInstances(splineInstantiate);
+        GUI.enabled = true;
+
         EditorGUILayout.Space();
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.Separator();
@@ -553,5 +585,33 @@ class SplineInstantiateEditor : SplineComponentEditor
         updateNeeded |= DoOffsetProperties(m_ScaleOffset, new GUIContent(k_ScaleOffset, k_ScaleOffsetTooltip), m_ScaleFoldout, out m_ScaleFoldout);
 
         return updateNeeded;
+    }
+    
+    /// <summary>
+    /// Bake the instances into the scene and destroy this SplineInstantiate component.
+    /// Making changes to the spline after baking will not affect the instances anymore.
+    /// </summary>
+    void BakeInstances(SplineInstantiate splineInstantiate)
+    {
+        Undo.SetCurrentGroupName("Baking SplineInstantiate instances");
+        var group = Undo.GetCurrentGroup();
+        
+        splineInstantiate.UpdateInstances();
+        for (int i = 0; i < splineInstantiate.instances.Count; ++i)
+        {
+            var newInstance = Instantiate(splineInstantiate.instances[i], splineInstantiate.transform, true);
+            newInstance.name = "Instance-" + i;
+            newInstance.hideFlags = HideFlags.None;
+            
+            Undo.RegisterCreatedObjectUndo(newInstance, "Baking instance");
+        }
+        
+        if(splineInstantiate.InstancesRoot != null)
+            Undo.DestroyObjectImmediate(splineInstantiate.InstancesRoot);
+        
+        Undo.DestroyObjectImmediate(splineInstantiate);
+        
+        splineInstantiate.instances.Clear();
+        Undo.CollapseUndoOperations(group);
     }
 }

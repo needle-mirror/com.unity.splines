@@ -40,7 +40,7 @@ namespace UnityEditor.Splines
         internal static event Action<SelectableKnot> knotInserted;
         internal static event Action<SelectableKnot> knotRemoved;
 
-        static readonly List<ISplineElement> s_ElementBuffer = new List<ISplineElement>();
+        static readonly List<ISelectableElement> s_ElementBuffer = new List<ISelectableElement>();
 
         [UserSetting]
         internal static Pref<TangentMode> s_DefaultTangentMode = new("Splines.DefaultTangentMode", TangentMode.AutoSmooth);
@@ -213,7 +213,7 @@ namespace UnityEditor.Splines
         }
 
         internal static Bounds GetElementBounds<T>(IReadOnlyList<T> elements, bool useKnotPositionForTangents)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             if (elements == null)
                 throw new ArgumentNullException(nameof(elements));
@@ -241,7 +241,7 @@ namespace UnityEditor.Splines
         }
 
         internal static SelectableKnot GetKnot<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             return new SelectableKnot(element.SplineInfo, element.KnotIndex);
         }
@@ -252,7 +252,7 @@ namespace UnityEditor.Splines
         }
 
         internal static void RecordObjects<T>(IReadOnlyList<T> elements, string name)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             foreach (var spline in GetSplines(elements))
                 RecordObject(spline, name);
@@ -351,6 +351,8 @@ namespace UnityEditor.Splines
         {
             knot.SplineInfo.Spline.RemoveAt(knot.KnotIndex);
 
+            //Force to record changes if part of a prefab instance 
+            PrefabUtility.RecordPrefabInstancePropertyModifications(knot.SplineInfo.Object);
             knotRemoved?.Invoke(knot);
         }
 
@@ -587,8 +589,10 @@ namespace UnityEditor.Splines
         internal static void GetKnotLinks(SelectableKnot knot, List<SelectableKnot> knots)
         {
             var container = knot.SplineInfo.Container;
+            if (container == null)
+                return;
+            
             knots.Clear();
-
             if (container.KnotLinkCollection == null)
             {
                 knots.Add(knot);
@@ -629,6 +633,10 @@ namespace UnityEditor.Splines
                     container.SetLinkedKnotPosition(splineKnotIndex);
                 }
             }
+            
+            //Force to record changes if part of a prefab instance 
+            if(knots.Count > 0 && knots[0].IsValid())
+                PrefabUtility.RecordPrefabInstancePropertyModifications(knots[0].SplineInfo.Object);
         }
 
         internal static void UnlinkKnots(IReadOnlyList<SelectableKnot> knots)
@@ -641,6 +649,10 @@ namespace UnityEditor.Splines
                 RecordObject(knot.SplineInfo, "Unlink Knots");
                 container.KnotLinkCollection.Unlink(splineKnotIndex);
             }
+            
+            //Force to record changes if part of a prefab instance 
+            if(knots.Count > 0 && knots[0].IsValid())
+                PrefabUtility.RecordPrefabInstancePropertyModifications(knots[0].SplineInfo.Object);
         }
 
         internal static void LinkKnots(SelectableKnot a, SelectableKnot b)
@@ -652,6 +664,10 @@ namespace UnityEditor.Splines
                 return;
 
             containerA.KnotLinkCollection.Link(GetIndex(a), GetIndex(b));
+            
+            //Force to record changes if part of a prefab instance 
+            if(a.IsValid())
+                PrefabUtility.RecordPrefabInstancePropertyModifications(a.SplineInfo.Object);
         }
 
         internal static bool AreKnotLinked(SelectableKnot a, SelectableKnot b)
@@ -796,9 +812,14 @@ namespace UnityEditor.Splines
 
                 // If the knot was the first one of the spline nothing else needs to be done to split the knot
                 if (knot.KnotIndex == 0)
+                {
+                    //Force to record changes if part of a prefab instance 
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(knot.SplineInfo.Object);
                     return firstKnot;
+                }
 
                 // If the knot wasn't the first one we also need need to link both ends of the spline to keep the same spline we had before
+                // Link knots is recording the changes to prefab instances so we don't need to add a call to RecordPrefabInstancePropertyModifications 
                 LinkKnots(new List<SelectableKnot> {firstKnot, lastKnot});
             }
 
@@ -809,6 +830,8 @@ namespace UnityEditor.Splines
             if(TryDuplicateSpline(knot, new SelectableKnot(knot.SplineInfo, knot.SplineInfo.Spline.Count - 1), out int splineIndex))
             {
                 formerSpline.Resize(knot.KnotIndex + 1);
+                //Force to record changes if part of a prefab instance 
+                PrefabUtility.RecordPrefabInstancePropertyModifications(knot.SplineInfo.Object);
                 return new SelectableKnot(new SplineInfo(knot.SplineInfo.Container, knot.SplineInfo.Container.Splines.Count - 1), 0);
             }
 
@@ -922,6 +945,9 @@ namespace UnityEditor.Splines
                 }
                 LinkKnots(linkedKnots);
             }
+            
+            //Force to record changes if part of a prefab instance 
+            PrefabUtility.RecordPrefabInstancePropertyModifications(activeSplineInfo.Object);
 
             return new SelectableKnot(activeSplineInfo, isActiveKnotAtStart ? otherSplineCount - 1 : activeKnot.KnotIndex);
         }
@@ -997,7 +1023,7 @@ namespace UnityEditor.Splines
         }
 
         internal static HashSet<SplineInfo> GetSplines<T>(IReadOnlyList<T> elements)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             HashSet<SplineInfo> splines = new HashSet<SplineInfo>();
             for (int i = 0; i < elements.Count; ++i)
@@ -1011,7 +1037,7 @@ namespace UnityEditor.Splines
             out SelectableTangent currentIn,
             out SelectableTangent currentOut,
             out SelectableTangent nextIn)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             var knot = GetKnot(element);
             var spline = knot.SplineInfo.Spline;
@@ -1025,7 +1051,7 @@ namespace UnityEditor.Splines
         }
 
         internal static quaternion GetElementRotation<T>(T element)
-            where T : ISplineElement
+            where T : ISelectableElement
         {
             if (element is SelectableTangent editableTangent)
             {

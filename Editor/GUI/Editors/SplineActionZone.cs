@@ -19,7 +19,7 @@ namespace UnityEditor.Splines
         static readonly string k_ReverseFlowButtonTooltip = L10n.Tr("Reverse the direction of a spline.");
 
         static readonly List<SelectableKnot> m_KnotBuffer = new List<SelectableKnot>();
-        static readonly List<ISplineElement> m_ElementBuffer = new List<ISplineElement>();
+        static readonly List<ISelectableElement> m_ElementBuffer = new List<ISelectableElement>();
 
         IReadOnlyList<SplineInfo> m_SelectedSplines = new List<SplineInfo>();
 

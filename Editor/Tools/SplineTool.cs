@@ -17,9 +17,11 @@ using UnityEngine.UIElements;
 namespace UnityEditor.Splines
 {
     /// <summary>
-    /// Describes how the handles are oriented.
+    /// Describes how the handles are oriented. Besides the default tool handle rotation settings, Global and Local,
+    /// spline elements have the Parent and Element handle rotations. When elements are selected, a tool's handle
+    /// rotation setting affects the behavior of some transform tools, such as the Rotate and Scale tools.
     /// </summary>
-    enum HandleOrientation
+    public enum HandleOrientation
     {
         /// <summary>
         /// Tool handles are in the active object's rotation.
@@ -40,7 +42,7 @@ namespace UnityEditor.Splines
     }
 
 #if UNITY_2022_1_OR_NEWER
-    abstract class SplineToolSettings : UnityEditor.Editor, ICreateToolbar
+    public abstract class SplineToolSettings : UnityEditor.Editor, ICreateToolbar
     {
         public IEnumerable<string> toolbarElements
         {
@@ -66,9 +68,12 @@ namespace UnityEditor.Splines
     /// Inherit SplineTool to author tools that behave like native spline tools. This class implements some common
     /// functionality and shortcuts specific to spline authoring.
     /// </summary>
-    abstract class SplineTool : EditorTool
+    public abstract class SplineTool : EditorTool
     {
+        /// <summary>The current orientation of the handles for the tool in use.</summary>
         static UserSetting<HandleOrientation> m_HandleOrientation = new UserSetting<HandleOrientation>(PathSettings.instance, "SplineTool.HandleOrientation", HandleOrientation.Global, SettingsScope.User);
+        
+        /// <summary>The current orientation of the handles for the current spline tool.</summary>
         public static HandleOrientation handleOrientation
         {
             get => m_HandleOrientation;
@@ -92,9 +97,39 @@ namespace UnityEditor.Splines
         }
 
         internal static event Action handleOrientationChanged;
-
+        
+        /// <summary>
+        /// The current active SplineTool in use.
+        /// </summary>
         // Workaround for lack of access to ShortcutContext. Use this to pass shortcut actions to tool instances.
         protected static SplineTool activeTool { get; private set; }
+        
+        /// <summary>
+        /// The current position of the pivot regarding the selection.
+        /// </summary>
+        public static Vector3 pivotPosition => TransformOperation.pivotPosition;
+        
+        /// <summary>
+        /// The current rotation of the handle regarding the selection and the Handle Rotation configuration.
+        /// </summary>
+        public static Quaternion handleRotation => TransformOperation.handleRotation;
+
+        /// <summary>
+        /// Updates the current handle rotation. This is usually called internally by callbacks.
+        /// UpdateHandleRotation can be called to refresh the handle rotation after manipulating spline elements, for instance, such as rotating a knot.
+        /// </summary>
+        public static void UpdateHandleRotation() => TransformOperation.UpdateHandleRotation();
+        
+        /// <summary>
+        /// Updates current pivot position, usually called internally by callbacks.
+        /// It can be called to refresh the pivot position after manipulating spline elements, for instance, such as moving a knot.
+        /// </summary>
+        /// <param name="useKnotPositionForTangents">
+        /// Set to true to use the knots positions to compute the pivot instead of the tangents ones. This is necessary for
+        /// some tools where it is preferrable to represent the handle on the knots rather than on the tangents directly.
+        /// For instance, rotating a tangent is more intuitive when the handle is on the knot.
+        /// </param>
+        public static void UpdatePivotPosition(bool useKnotPositionForTangents = false) => TransformOperation.UpdatePivotPosition(useKnotPositionForTangents);
 
         /// <summary>
         /// Invoked after this EditorTool becomes the active tool.
@@ -122,12 +157,17 @@ namespace UnityEditor.Splines
             Tools.pivotRotationChanged -= OnPivotRotationChanged;
             Tools.pivotModeChanged -= OnPivotModeChanged;
             handleOrientationChanged -= OnHandleOrientationChanged;
+            
+            SplineToolContext.useCustomSplineHandles = false;
             activeTool = null;
         }
 
+        /// <summary>
+        /// Callback invoked when the handle rotation configuration changes.
+        /// </summary>
         protected virtual void OnHandleOrientationChanged()
         {
-            TransformOperation.UpdateHandleRotation();
+            UpdateHandleRotation();
         }
 
         static void OnPivotRotationChanged()
@@ -135,10 +175,13 @@ namespace UnityEditor.Splines
             handleOrientation = (HandleOrientation)Tools.pivotRotation;
         }
 
+        /// <summary>
+        /// Callback invoked when the pivot mode configuration changes.
+        /// </summary>
         protected virtual void OnPivotModeChanged()
         {
-            TransformOperation.UpdatePivotPosition();
-            TransformOperation.UpdateHandleRotation();
+            UpdatePivotPosition();
+            UpdateHandleRotation();
         }
 
         void AfterSplineWasModified(Spline spline) => UpdateSelection();
@@ -150,8 +193,8 @@ namespace UnityEditor.Splines
             UpdateSelection();
 
             TransformOperation.pivotFreeze = TransformOperation.PivotFreeze.None;
-            TransformOperation.UpdateHandleRotation();
-            TransformOperation.UpdatePivotPosition();
+            UpdateHandleRotation();
+            UpdatePivotPosition();
         }
 
         void UpdateSelection()
@@ -189,7 +232,7 @@ namespace UnityEditor.Splines
                             newMode = TangentMode.Mirrored;
 
                         knot.SetTangentMode(newMode, (BezierTangent)tangent.TangentIndex);
-                        TransformOperation.UpdateHandleRotation();
+                        UpdateHandleRotation();
                         // Ensures the tangent mode indicators refresh
                         SceneView.RepaintAll();
                     }

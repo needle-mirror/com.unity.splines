@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace UnityEditor.Splines
 {
     sealed class BezierTangentPropertyField<T> : DropdownField
-        where T : ISplineElement
+        where T : ISelectableElement
     {
         static readonly SplineGUIUtility.EqualityComparer<T> s_Comparer = (a, b) =>
             EditorSplineUtility.GetKnot(a).Mode == EditorSplineUtility.GetKnot(b).Mode;

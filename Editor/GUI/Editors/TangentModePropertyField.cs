@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace UnityEditor.Splines
 {
     sealed class TangentModePropertyField<T> : VisualElement
-        where T : ISplineElement
+        where T : ISelectableElement
     {
         const string k_ButtonStripUssClass = "button-strip";
         const string k_ButtonStripButtonUssClass = k_ButtonStripUssClass + "-button";

@@ -101,10 +101,13 @@ namespace UnityEditor.Splines
             if (!EditorApplication.isPlaying)
             {
                 if (m_SplineAnimate.Container != null && m_SplineAnimate.IsPlaying)
+                {
                     m_SplineAnimate.Update();
+                    RefreshProgressFields();
+                }
             }
-
-            RefreshProgressFields();
+            else
+                RefreshProgressFields();
         }
 
         void OnSplineChange(Spline spline, int knotIndex, SplineModification modificationType)
@@ -155,7 +158,12 @@ namespace UnityEditor.Splines
             m_ObjectUpField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectUpProperty, m_ObjectForwardProperty));
 
             var startOffsetField = m_Root.Q<PropertyField>("start-offset");
-            startOffsetField.RegisterValueChangeCallback((_) => { m_SplineAnimate.StartOffset = m_StartOffsetProperty.floatValue; });
+            startOffsetField.RegisterValueChangeCallback((_) =>
+            {
+                m_SplineAnimate.StartOffset = m_StartOffsetProperty.floatValue;
+                m_SplineAnimate.Restart(false);
+                OnElapsedTimeFieldChange(m_ElapsedTimeField.value);
+            });
 
             var playButton = m_Root.Q<Button>("play");
             playButton.clicked += OnPlayClicked;

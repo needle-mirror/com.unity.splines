@@ -12,7 +12,7 @@ namespace UnityEditor.Splines
         string GetLabelForTargets(); 
     }
 
-    abstract class ElementDrawer<T> : VisualElement, IElementDrawer where T : ISplineElement
+    abstract class ElementDrawer<T> : VisualElement, IElementDrawer where T : ISelectableElement
     {
         public List<T> targets { get; } = new List<T>();
         public T target => targets[0];

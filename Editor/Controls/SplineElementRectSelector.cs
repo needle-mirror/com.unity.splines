@@ -24,9 +24,9 @@ namespace UnityEditor.Splines
         Vector2 m_StartPos;
         Mode m_Mode;
         Mode m_InitialMode;
-        static readonly HashSet<ISplineElement> s_SplineElementsCompareSet = new HashSet<ISplineElement>();
-        static readonly List<ISplineElement> s_SplineElementsBuffer = new List<ISplineElement>();
-        static readonly HashSet<ISplineElement> s_PreRectSelectionElements = new HashSet<ISplineElement>();
+        static readonly HashSet<ISelectableElement> s_SplineElementsCompareSet = new HashSet<ISelectableElement>();
+        static readonly List<ISelectableElement> s_SplineElementsBuffer = new List<ISelectableElement>();
+        static readonly HashSet<ISelectableElement> s_PreRectSelectionElements = new HashSet<ISelectableElement>();
 
         public void OnGUI(IReadOnlyList<SplineInfo> splines)
         {
@@ -185,7 +185,7 @@ namespace UnityEditor.Splines
             return m_Mode != modeBefore;
         }
 
-        void GetElementSelection(Rect rect, SplineInfo splineInfo, int index, List<ISplineElement> results)
+        void GetElementSelection(Rect rect, SplineInfo splineInfo, int index, List<ISelectableElement> results)
         {
             var knot = splineInfo.Spline[index];
             var localToWorld = splineInfo.LocalToWorld;

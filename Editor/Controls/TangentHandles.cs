@@ -16,13 +16,29 @@ namespace UnityEditor.Splines
         const float k_TangentHandleWidth = 2f;
         const float k_TangentRotWidthDefault = 1.5f;
         const float k_TangentRotDiscWidth = 3f;
+        
+        internal static void Do(int controlId, SelectableTangent tangent, bool selected = false, bool hovered = false)
+        {
+            var owner = tangent.Owner;
+            Draw(
+                controlId,
+                tangent.Position,
+                EditorSplineUtility.GetElementRotation(math.length(tangent.LocalPosition) > 0 ? (ISelectableElement)tangent : tangent.Owner),
+                owner.Position,
+                selected,
+                false,
+                hovered,
+                false,
+                owner.Mode,
+                true);
+        }
 
-        public static void DrawInformativeTangent(SelectableTangent tangent, bool active = true)
+        internal static void DrawInformativeTangent(SelectableTangent tangent, bool active = true)
         {
             DrawInformativeTangent(tangent.Position, tangent.Owner.Position, active);
         }
 
-        public static void DrawInformativeTangent(Vector3 position, Vector3 knotPosition, bool active = true)
+        internal static void DrawInformativeTangent(Vector3 position, Vector3 knotPosition, bool active = true)
         {
             if (Event.current.type != EventType.Repaint)
                 return;
@@ -59,20 +75,20 @@ namespace UnityEditor.Splines
             }
         }
 
-        public static void Draw(Vector3 position, Vector3 knotPosition, float3 normal, bool active = true)
+        internal static void Draw(Vector3 position, Vector3 knotPosition, float3 normal, bool active = true)
         {
             var knotToTangentDirection = position - knotPosition;
             var rotation = quaternion.LookRotationSafe(knotToTangentDirection, normal);
             Draw(-1, position, rotation, knotPosition, false, false, false, TangentMode.Broken, active);
         }
 
-        public static void Draw(int controlId, SelectableTangent tangent, bool active = true)
+        internal static void Draw(int controlId, SelectableTangent tangent, bool active = true)
         {
             var owner = tangent.Owner;
             Draw(
                 controlId,
                 tangent.Position,
-                EditorSplineUtility.GetElementRotation(math.length(tangent.LocalPosition) > 0 ? (ISplineElement)tangent : tangent.Owner),
+                EditorSplineUtility.GetElementRotation(math.length(tangent.LocalPosition) > 0 ? (ISelectableElement)tangent : tangent.Owner),
                 owner.Position,
                 SplineSelection.Contains(tangent),
                 SplineSelection.Contains(tangent.OppositeTangent),
@@ -81,14 +97,18 @@ namespace UnityEditor.Splines
                 active);
         }
 
-        public static void Draw(int controlId, Vector3 position, Quaternion rotation, Vector3 knotPosition, bool selected, bool oppositeSelected, bool oppositeHovered, TangentMode mode, bool active)
+        static void Draw(int controlId, Vector3 position, Quaternion rotation, Vector3 knotPosition, bool selected, bool oppositeSelected, bool oppositeHovered, TangentMode mode, bool active)
         {
-            if (Event.current.type != EventType.Repaint)
+            var hovered = SplineHandleUtility.IsHoverAvailableForSplineElement() && SplineHandleUtility.IsElementHovered(controlId);
+            Draw(controlId, position, rotation, knotPosition, selected, oppositeSelected, hovered, oppositeHovered, mode, active);
+        }
+        
+        static void Draw(int controlId, Vector3 position, Quaternion rotation, Vector3 knotPosition, bool selected, bool oppositeSelected, bool hovered, bool oppositeHovered, TangentMode mode, bool active)
+        {
+            if (Event.current.GetTypeForControl(controlId) != EventType.Repaint)
                 return;
 
             var size = HandleUtility.GetHandleSize(position);
-            var hovered = SplineHandleUtility.IsHoverAvailableForSplineElement() && SplineHandleUtility.IsElementHovered(controlId);
-
 #if UNITY_2022_2_OR_NEWER
             var tangentColor = Handles.elementColor;
             if (hovered)

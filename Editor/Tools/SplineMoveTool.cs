@@ -7,26 +7,34 @@ namespace UnityEditor.Splines
     [CustomEditor(typeof(SplineMoveTool))]
     class SplineMoveToolSettings : SplineToolSettings { }
 
+    /// <summary>
+    /// Provides methods that move knots and tangents in the Scene view. This tool is only available when you use SplineToolContext.
+    /// `SplineMoveTool` works similarly to the Move tool for GameObjects, except that it has extra handle configurations according to the `handleOrientation` settings.
+    /// `SplineToolContext` manages the selection of knots and tangents. You can manipulate the selection of knots and tangents with `SplineMoveTool`. 
+    /// </summary>
 #if UNITY_2021_2_OR_NEWER
     [EditorTool("Spline Move Tool", typeof(ISplineContainer), typeof(SplineToolContext))]
 #else
     [EditorTool("Spline Move Tool", typeof(ISplineContainer))]
 #endif
-    sealed class SplineMoveTool : SplineTool
+    public sealed class SplineMoveTool : SplineTool
     {
+        /// <inheritdoc />
         public override bool gridSnapEnabled
         {
             get => handleOrientation == HandleOrientation.Global;
         }
-
+        
+        /// <inheritdoc />
         public override GUIContent toolbarIcon => PathIcons.splineMoveTool;
 
+        /// <inheritdoc />
         public override void OnToolGUI(EditorWindow window)
         {
             switch (Event.current.type)
             {
                 case EventType.Layout:
-                    TransformOperation.UpdatePivotPosition();
+                    UpdatePivotPosition();
                     break;
 
                 case EventType.MouseDrag:
@@ -42,8 +50,8 @@ namespace UnityEditor.Splines
 
                 case EventType.MouseUp:
                     TransformOperation.pivotFreeze = TransformOperation.PivotFreeze.None;
-                    TransformOperation.UpdatePivotPosition();
-                    TransformOperation.UpdateHandleRotation();
+                    UpdatePivotPosition();
+                    UpdateHandleRotation();
                     break;
             }
 
@@ -51,11 +59,11 @@ namespace UnityEditor.Splines
             {
                 EditorGUI.BeginChangeCheck();
 
-                var newPos = Handles.DoPositionHandle(TransformOperation.pivotPosition, TransformOperation.handleRotation);
+                var newPos = Handles.DoPositionHandle(pivotPosition, handleRotation);
                 if (EditorGUI.EndChangeCheck())
                 {
                     EditorSplineUtility.RecordSelection($"Move Spline Elements ({SplineSelection.Count})");
-                    TransformOperation.ApplyTranslation(newPos - TransformOperation.pivotPosition);
+                    TransformOperation.ApplyTranslation(newPos - pivotPosition);
 
                     if (Tools.pivotMode == PivotMode.Center)
                         TransformOperation.ForcePivotPosition(newPos);

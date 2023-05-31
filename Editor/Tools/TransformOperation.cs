@@ -24,7 +24,7 @@ namespace UnityEditor.Splines
             internal float3 inTangentDirection;
             internal float3 outTangentDirection;
 
-            internal static TransformData GetData(ISplineElement element)
+            internal static TransformData GetData(ISelectableElement element)
             {
                 var tData = new TransformData();
                 tData.position = new float3(element.Position);
@@ -65,15 +65,15 @@ namespace UnityEditor.Splines
             }
         }
 
-        static readonly List<ISplineElement> s_ElementSelection = new List<ISplineElement>(32);
+        static readonly List<ISelectableElement> s_ElementSelection = new List<ISelectableElement>(32);
 
-        public static IReadOnlyList<ISplineElement> elementSelection => s_ElementSelection;
+        public static IReadOnlyList<ISelectableElement> elementSelection => s_ElementSelection;
 
         static int s_ElementSelectionCount = 0;
 
         public static bool canManipulate => s_ElementSelectionCount > 0;
 
-        public static ISplineElement currentElementSelected
+        static ISelectableElement currentElementSelected
             => canManipulate ? s_ElementSelection[0] : null;
 
         static Vector3 s_PivotPosition;
@@ -355,7 +355,7 @@ namespace UnityEditor.Splines
         public static void ApplyScale(float3 scale)
         {
             s_RotatedKnotCache.Clear();
-            ISplineElement[] scaledElements = new ISplineElement[s_ElementSelectionCount];
+            ISelectableElement[] scaledElements = new ISelectableElement[s_ElementSelectionCount];
 
             for (int elementIndex = 0; elementIndex < s_ElementSelectionCount; elementIndex++)
             {

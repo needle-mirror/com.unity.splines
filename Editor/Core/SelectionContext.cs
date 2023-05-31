@@ -12,7 +12,7 @@ namespace UnityEditor.Splines
         public int knotIndex;
         public int tangentIndex;
 
-        public SelectableSplineElement(ISplineElement element)
+        public SelectableSplineElement(ISelectableElement element)
         {
             target = element.SplineInfo.Object;
             targetIndex = element.SplineInfo.Index;

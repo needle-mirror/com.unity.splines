@@ -9,7 +9,7 @@ using UnityEditor.UIElements;
 namespace UnityEditor.Splines
 {
     class Float3PropertyField<T> : Vector3Field
-        where T : ISplineElement
+        where T : ISelectableElement
     {
         static readonly List<float3> s_Float3Buffer = new List<float3>();
         static readonly SplineGUIUtility.EqualityComparer<float3> s_ComparerX = (a, b) => a.x.Equals(b.x);

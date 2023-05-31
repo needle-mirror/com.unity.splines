@@ -49,9 +49,13 @@ namespace UnityEditor.Splines
 
         bool m_WasActiveAfterDeserialize;
 
-        internal static void UseCustomSplineHandles(bool useCustomSplineHandle)
+        /// <summary>
+        /// Defines if the spline tool context draws the default handles for splines or if they are managed directly by the `SplineTool`.
+        /// Set to false for SplineToolContext to draw the default spline handles for segments, knots, and tangents which you can directly manipulate. Set to true to draw handles and manage direct manipulation with your tool. The default value is false. 
+        /// </summary>
+        public static bool useCustomSplineHandles
         {
-            s_UseCustomSplineHandles = useCustomSplineHandle;
+            set => s_UseCustomSplineHandles = value;
         }
 
         /// <summary>
@@ -88,7 +92,9 @@ namespace UnityEditor.Splines
             m_RectSelector.OnGUI(m_Splines);
 
             if(!s_UseCustomSplineHandles)
-                SplineHandles.DrawSplineHandles(m_Splines);
+                SplineHandles.DoHandles(m_Splines);
+
+            SplineHandleUtility.canDrawOnCurves = false;
 
             HandleCommands();
         }

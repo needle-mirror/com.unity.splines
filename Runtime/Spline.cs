@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Unity.Mathematics;
+using UnityEngine.Serialization;
 using UObject = UnityEngine.Object;
 
 namespace UnityEngine.Splines
@@ -23,7 +24,23 @@ namespace UnityEngine.Splines
         {
             public TangentMode Mode;
             public float Tension;
-            public DistanceToInterpolation[] DistanceToInterpolation = new DistanceToInterpolation[k_CurveDistanceLutResolution];
+
+            [SerializeField, FormerlySerializedAs("DistanceToInterpolation")]
+            DistanceToInterpolation[] m_DistanceToInterpolation = new DistanceToInterpolation[k_CurveDistanceLutResolution];
+
+            public DistanceToInterpolation[] DistanceToInterpolation
+            {
+                get
+                {
+                    if (m_DistanceToInterpolation == null || m_DistanceToInterpolation.Length != k_CurveDistanceLutResolution)
+                    {
+                        m_DistanceToInterpolation = new DistanceToInterpolation[k_CurveDistanceLutResolution];
+                        InvalidateCache();
+                    }
+
+                    return m_DistanceToInterpolation;
+                }
+            }
 
             public MetaData()
             {

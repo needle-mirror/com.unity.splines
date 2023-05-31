@@ -18,11 +18,43 @@ namespace UnityEditor.Splines
 
         static List<(SelectableKnot knot, bool selected, bool hovered, Color knotColor, Color discColor, bool linkedKnot)> s_Knots = new ();
 
-        public static void Draw(int controlId, SelectableKnot knot)
+        internal static void Do(int controlId, SelectableKnot knot, bool selected = false, bool hovered = false)
+        {
+            if (Event.current.GetTypeForControl(controlId) != EventType.Repaint)
+                return;
+            
+            //Hovered might not be available if a TRS tool is in use
+            hovered &= SplineHandleUtility.IsHoverAvailableForSplineElement();
+            
+#if UNITY_2022_2_OR_NEWER
+            var knotColor = Handles.elementColor;
+            var rotationDiscColor = Handles.elementPreselectionColor;
+            if (hovered)
+                knotColor = Handles.elementPreselectionColor;
+            else if (selected)
+                knotColor = Handles.elementSelectionColor;
+#else
+            var knotColor = SplineHandleUtility.knotColor;
+            var highlightColor = SplineHandleUtility.knotColor;
+            var rotationDiscColor = Handles.preselectionColor;
+            if (hovered)
+                knotColor = Handles.preselectionColor;
+            else if (selected)
+                knotColor = Handles.selectedColor;
+#endif
+
+            Draw(knot.Position, knot.Rotation, knotColor, selected, hovered, rotationDiscColor, k_KnotRotDiscWidthHover);    
+            DrawKnotIndices(knot);
+        }
+
+        internal static void Draw(int controlId, SelectableKnot knot)
         {
             if (Event.current.GetTypeForControl(controlId) != EventType.Repaint)
                 return;
 
+            if(!knot.IsValid())
+                return;
+            
             var selected = SplineSelection.Contains(knot);
             var knotHovered = SplineHandleUtility.IsElementHovered(controlId);
  
@@ -125,7 +157,7 @@ namespace UnityEditor.Splines
             }
 #endif
 
-            if (hovered || selected)
+            if (SplineHandleUtility.canDrawOnCurves && (hovered || selected))
             {
                 using (new Handles.DrawingScope(highlightColor))
                     CurveHandles.DoCurveHighlightCap(knot);
@@ -137,7 +169,7 @@ namespace UnityEditor.Splines
                 DrawKnotIndices(knot);
             }
         }
-
+        
         internal static void ClearVisibleKnots()
         {
             if (Event.current.type != EventType.Repaint)
@@ -226,7 +258,7 @@ namespace UnityEditor.Splines
 
         }
 
-        public static void DrawInformativeKnot(SelectableKnot knot, float sizeFactor = 0.5f)
+        internal static void DrawInformativeKnot(SelectableKnot knot, float sizeFactor = 0.5f)
         {
             if (Event.current.type != EventType.Repaint)
                 return;
@@ -247,7 +279,7 @@ namespace UnityEditor.Splines
             DrawInformativeKnotVisual(knot, SplineHandleUtility.lineColor, sizeFactor);
         }
 
-        public static void DrawInformativeKnotVisual(SelectableKnot knot, Color knotColor, float sizeFactor = 0.5f)
+        static void DrawInformativeKnotVisual(SelectableKnot knot, Color knotColor, float sizeFactor = 0.5f)
         {
             var position = knot.Position;
             var size = HandleUtility.GetHandleSize(position);
@@ -257,7 +289,7 @@ namespace UnityEditor.Splines
             }
         }
 
-        internal static void Draw(Vector3 position, Quaternion rotation, Color knotColor, bool selected, bool hovered, Color discColor, float rotationDiscWidth, bool linkedKnots = false)
+        static void Draw(Vector3 position, Quaternion rotation, Color knotColor, bool selected, bool hovered, Color discColor, float rotationDiscWidth, bool linkedKnots = false)
         {
             var size = HandleUtility.GetHandleSize(position);
 

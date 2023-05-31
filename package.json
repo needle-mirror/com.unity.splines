@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "unity": "2021.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -24,17 +24,17 @@
   "category": "Tool",
   "type": "tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.2.1"
+    "com.unity.splines.tests": "2.3.0"
   },
   "_upm": {
-    "changelog": "### Added\n\n- [SPLB-100] Added a **Resolution** setting for spline meshes in Splines preference.\n\n### Changed\n\n- [SPLB-100] Improved `SplineMeshHandles` rendering. \n\n### Fixed\n\n- Fixed a bug where spline selection would be incorrect after a spline was deleted. \n- [SPLB-146] Fixed a bug that prevented actions from being undone with prefab instances that contained splines .\n- [SPLB-148] Fixed a bug in the `LoftRoadBehaviour` component where Undo calls prevented the project from building.\n\n### Changed\n\n- Changed `Knot Placement` tool behaviour regarding selection. Element selection is now empty when you exit the tool."
+    "changelog": "### Added\n\n- Exposed public APIs for `SplineTool` and `SplineHandles`.\n- Added a method to *bake* SplineInstantiate objects in the scene so the users can modify the resulting GameObjects. \n\n### Bug Fixes\n\n- [SPLB-165] Fixed a bug that prevented actions from being retained with prefab instances that contained splines when entering playmode.\n- [SPLB-162] Fixed a bug where the start offset in `SplineAnimate` did not work in Play mode. \n- [SPLB-152] Fixed objects created from `SplineInstantiate` not inheriting static flags from parent `GameObject`.\n- [SPLB-160] Fixed potential 'look rotation vector is zero' in SplineInstantiate.\n- [SPLB-156] Fixed possible null reference exception when accessing curve length."
   },
   "upmCi": {
-    "footprint": "b3193b4ea98262d9f4da64557acb0cbcfc665995"
+    "footprint": "51e14af422d80cedc88c5618bdf686d3c2ea4c32"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "5c73c12610a5acba7e608a81ddabb4ffdfa730fc"
+    "revision": "e55ebd39cb1707c42b1744076028d133dd92e54e"
   }
 }

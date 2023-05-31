@@ -12,6 +12,7 @@ namespace UnityEngine.Splines
     /// A component to animate an object along a spline.
     /// </summary>
     [AddComponentMenu("Splines/Spline Animate")]
+    [ExecuteInEditMode]
     public class SplineAnimate : SplineComponent
     {
         /// <summary>
@@ -349,7 +350,14 @@ namespace UnityEngine.Splines
 
         void Start()
         {
+#if UNITY_EDITOR      
+            if(EditorApplication.isPlaying)
+#endif
             Restart(m_PlayOnAwake);
+#if UNITY_EDITOR
+            else // Place the animated object back at the animation start position.
+                Restart(false);
+#endif
         }
 
         void OnEnable()
@@ -369,7 +377,7 @@ namespace UnityEngine.Splines
             m_MaxSpeed = Mathf.Max(0f, m_MaxSpeed);
             RecalculateAnimationParameters();
         }
-
+        
         internal void RecalculateAnimationParameters()
         {
             RebuildSplinePath();
@@ -445,6 +453,7 @@ namespace UnityEngine.Splines
                     break;
             }
             UpdateTransform();
+            UpdateStartOffsetT();
 
             if (autoplay)
                 Play();
@@ -692,7 +701,7 @@ namespace UnityEngine.Splines
                 t = Mathf.Clamp01(normalizedTimeWithOffset);
             else
                 t = normalizedTimeWithOffset % 1f;
-
+            
             return t;
         }
 

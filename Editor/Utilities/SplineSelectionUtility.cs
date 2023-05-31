@@ -19,14 +19,14 @@ namespace UnityEditor.Splines
         }
 
         internal static void HandleSelection<T>(T element, bool addLinkedKnots = true)
-            where T : struct, ISplineElement
+            where T : struct, ISelectableElement
         {
             HandleSelection(element, EditorGUI.actionKey || Event.current.modifiers == EventModifiers.Shift,
                 Event.current.modifiers == EventModifiers.Shift, addLinkedKnots);
         }
 
         internal static void HandleSelection<T>(T element, bool appendElement, bool setActive, bool addLinkedKnots = true)
-            where T : struct, ISplineElement
+            where T : struct, ISelectableElement
         {
             if (appendElement)
             {
@@ -71,7 +71,7 @@ namespace UnityEditor.Splines
             }
             else
             {
-                List<ISplineElement> newSelection = new List<ISplineElement>();
+                List<ISelectableElement> newSelection = new List<ISelectableElement>();
                 if(element is SelectableKnot knot)
                 {
                     if(addLinkedKnots)
@@ -147,7 +147,7 @@ namespace UnityEditor.Splines
             return true;
         }
 
-        internal static bool IsSelectable(ISplineElement element)
+        internal static bool IsSelectable(ISelectableElement element)
         {
             if (element is SelectableTangent tangent)
                 return IsSelectable(tangent);
