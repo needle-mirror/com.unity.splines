@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Profiling;
+using UnityEngine.Rendering;
 using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
@@ -88,6 +90,7 @@ namespace UnityEditor.Splines
         /// <param name="splines">The set of splines to draw handles for.</param>
         public static void DoHandles(IReadOnlyList<SplineInfo> splines)
         {
+            Profiler.BeginSample("SplineHandles.DoHandles");
             using (new SplineHandleScope())
             {
                 // Drawing done in two separate passes to make sure the curves are drawn behind the spline elements.
@@ -97,6 +100,7 @@ namespace UnityEditor.Splines
 
                 DoKnotsAndTangentsHandles(splines);
             }
+            Profiler.EndSample();
         }
 
         internal static bool IsCurveId(int id)
@@ -111,6 +115,7 @@ namespace UnityEditor.Splines
         /// <param name="spline">The spline to create knot and tangent handles for.</param>
         public static void DoKnotsAndTangentsHandles(SplineInfo spline)
         {
+            SplineHandleUtility.UpdateElementColors();
             KnotHandles.ClearVisibleKnots();
             // Draw the spline elements.
             DrawSplineElements(spline);
@@ -125,6 +130,7 @@ namespace UnityEditor.Splines
         /// <param name="splines">The splines to create knot and tangent handles for.</param>
         public static void DoKnotsAndTangentsHandles(IReadOnlyList<SplineInfo> splines)
         {
+            SplineHandleUtility.UpdateElementColors();
             KnotHandles.ClearVisibleKnots();
             // Draw the spline elements.
             for (int i = 0; i < splines.Count; ++i)
@@ -132,7 +138,7 @@ namespace UnityEditor.Splines
             //Drawing knots on top of all other elements and above other splines
             KnotHandles.DrawVisibleKnots();
         }
-        
+
         /// <summary>
         /// Creates segment handles for a spline. Call `DoCurvesHandles` in a `SplineHandleScope`.
         /// This method is used internally by `DrawHandles`.
@@ -142,6 +148,7 @@ namespace UnityEditor.Splines
         {
             var spline = splineInfo.Spline;
             var localToWorld = splineInfo.LocalToWorld;
+
             // If the spline isn't closed, skip the last index of the spline
             int lastIndex = spline.Closed ? spline.Count - 1 : spline.Count - 2;
 
@@ -165,27 +172,40 @@ namespace UnityEditor.Splines
 
             var drawHandlesAsActive = !SplineSelection.HasActiveSplineSelection() || SplineSelection.Contains(splineInfo);
 
-            for (int curveIndex = 0; curveIndex < lastIndex + 1; ++curveIndex)
+            //Draw all the curves at once
+            SplineCacheUtility.GetCachedPositions(spline, out var positions);
+
+            using (new Handles.DrawingScope(SplineHandleUtility.lineColor, localToWorld))
             {
-                var curve = spline.GetCurve(curveIndex).Transform(localToWorld);
-                CurveHandles.DrawWithoutHighlight(
-                    s_ControlIDs[curveIndex],
-                    curve,
-                    splineInfo.Spline,
-                    curveIndex,
-                    new SelectableKnot(splineInfo, curveIndex),
-                    new SelectableKnot(splineInfo, SplineUtility.NextIndex(curveIndex, spline.Count, spline.Closed)),
-                    drawHandlesAsActive);
+                using (new ZTestScope(CompareFunction.Less))
+                    Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, 4f, positions);
             }
 
+            using (new Handles.DrawingScope(SplineHandleUtility.lineBehindColor, localToWorld))
+            {
+                using (new ZTestScope(CompareFunction.Greater))
+                    Handles.DrawAAPolyLine(SplineHandleUtility.denseLineAATex, 4f, positions);
+            }
+
+            if (drawHandlesAsActive)
+            {
+                for (int curveIndex = 0; curveIndex < lastIndex + 1; ++curveIndex)
+                {
+                    if (SplineHandleSettings.FlowDirectionEnabled && Event.current.type == EventType.Repaint)
+                    {
+                        var curve = spline.GetCurve(curveIndex).Transform(localToWorld);
+                        CurveHandles.DrawFlow(curve, spline, curveIndex);
+                    }
+                }
+            }
+            
             for (int curveIndex = 0; curveIndex < lastIndex + 1; ++curveIndex)
             {
-                var curve = spline.GetCurve(curveIndex).Transform(localToWorld);
                 CurveHandles.DrawWithHighlight(
                     s_ControlIDs[curveIndex],
-                    curve,
-                    splineInfo.Spline,
+                    spline,
                     curveIndex,
+                    localToWorld,
                     new SelectableKnot(splineInfo, curveIndex),
                     new SelectableKnot(splineInfo, SplineUtility.NextIndex(curveIndex, spline.Count, spline.Closed)),
                     drawHandlesAsActive);

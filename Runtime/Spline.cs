@@ -41,6 +41,21 @@ namespace UnityEngine.Splines
                     return m_DistanceToInterpolation;
                 }
             }
+            
+            Vector3[] m_UpVectors = new Vector3[k_CurveDistanceLutResolution];
+            public Vector3[] UpVectors
+            {
+                get
+                {
+                    if (m_UpVectors == null || m_UpVectors.Length != k_CurveDistanceLutResolution)
+                    {
+                        m_UpVectors = new Vector3[k_CurveDistanceLutResolution];
+                        InvalidateCache();
+                    }
+
+                    return m_UpVectors;
+                }
+            }
 
             public MetaData()
             {
@@ -52,13 +67,15 @@ namespace UnityEngine.Splines
             public MetaData(MetaData toCopy)
             {
                 Mode = toCopy.Mode;
-                Array.Copy(toCopy.DistanceToInterpolation, DistanceToInterpolation, DistanceToInterpolation.Length);
                 Tension = toCopy.Tension;
+                Array.Copy(toCopy.DistanceToInterpolation, DistanceToInterpolation, DistanceToInterpolation.Length);
+                Array.Copy(toCopy.UpVectors, UpVectors, UpVectors.Length);
             }
 
             public void InvalidateCache()
             {
                 DistanceToInterpolation[0] = Splines.DistanceToInterpolation.Invalid;
+                UpVectors[0] = Vector3.zero;
             }
         }
 
@@ -818,9 +835,10 @@ namespace UnityEngine.Splines
         public float GetCurveLength(int index)
         {
             EnsureMetaDataValid();
-            if(m_MetaData[index].DistanceToInterpolation[0].Distance < 0f)
-                CurveUtility.CalculateCurveLengths(GetCurve(index), m_MetaData[index].DistanceToInterpolation);
             var cumulativeCurveLengths = m_MetaData[index].DistanceToInterpolation;
+            if(cumulativeCurveLengths[0].Distance < 0f)
+                CurveUtility.CalculateCurveLengths(GetCurve(index), cumulativeCurveLengths);
+            
             return cumulativeCurveLengths.Length > 0 ? cumulativeCurveLengths[cumulativeCurveLengths.Length - 1].Distance : 0f;
         }
 
@@ -866,6 +884,43 @@ namespace UnityEngine.Splines
         public float GetCurveInterpolation(int curveIndex, float curveDistance)
             => CurveUtility.GetDistanceToInterpolation(GetCurveDistanceLut(curveIndex), curveDistance);
 
+        
+        void WarmUpCurveUps()
+        {
+            EnsureMetaDataValid();
+            for (int i = 0, c = Closed ? Count : Count - 1; i < c; ++i)
+                this.EvaluateUpVectorsForCurve(i, m_MetaData[i].UpVectors);
+        }
+        
+        /// <summary>
+        /// Return the up vector for a t ratio on the curve.
+        /// </summary>
+        /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>
+        /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
+        /// <returns>
+        /// Returns the up vector at the t ratio of the curve of index 'index'.
+        /// </returns>
+        public float3 GetCurveUpVector(int index, float t)
+        {
+            EnsureMetaDataValid();
+            var ups = m_MetaData[index].UpVectors;
+            
+            if (ups[0] == Vector3.zero)
+                this.EvaluateUpVectorsForCurve(index, ups);
+
+            var offset = 1f / (float)(ups.Length - 1);
+            var curveT = 0f;
+            for (int i = 0; i < ups.Length; i++)
+            {
+                if (t <= curveT + offset)
+                    return Vector3.Lerp(ups[i], ups[i + 1], (t - curveT) / offset);
+
+                curveT += offset;
+            }
+
+            return ups[ups.Length - 1];
+        }
+
         /// <summary>
         /// Ensure that all caches contain valid data. Call this to avoid unexpected performance costs when accessing
         /// spline data. Caches remain valid until any part of the spline state is modified.
@@ -873,6 +928,7 @@ namespace UnityEngine.Splines
         public void Warmup()
         {
             var _ = GetLength();
+            WarmUpCurveUps();
         }
 
         /// <summary>

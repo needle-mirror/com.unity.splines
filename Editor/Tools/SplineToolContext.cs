@@ -7,6 +7,11 @@ using UnityEngine;
 using UnityEngine.Splines;
 using UObject = UnityEngine.Object;
 
+#if UNITY_2023_2_OR_NEWER
+using UnityEngine.UIElements;
+using UnityEditor.Actions;
+#endif
+
 #if UNITY_2022_1_OR_NEWER
 using UnityEditor.Overlays;
 #endif
@@ -74,6 +79,65 @@ namespace UnityEditor.Splines
             return null;
         }
 
+#if UNITY_2023_2_OR_NEWER
+        /// <summary>
+        /// Populate the scene view context menu with Spline actions
+        /// </summary>
+        /// <param name="menu"></param>
+        public override void PopulateMenu(DropdownMenu menu)
+        {
+            List<SelectableKnot> knotBufferOnContextMenuOpen = new List<SelectableKnot>();
+
+            SplineSelection.GetElements<SelectableKnot>(m_Splines, knotBufferOnContextMenuOpen);
+
+            bool cutEnabled = false;
+            bool copyEnabled = SplineSelection.HasAny<SelectableKnot>(m_Splines);
+            bool pasteEnabled = CopyPaste.IsSplineCopyBuffer(GUIUtility.systemCopyBuffer);
+            bool duplicateEnabled = copyEnabled;
+            bool deleteEnabled = true;
+            ContextMenuUtility.AddClipboardEntriesTo(menu, cutEnabled, copyEnabled, pasteEnabled, duplicateEnabled, deleteEnabled);
+
+            menu.AppendSeparator();
+
+            menu.AppendAction("Link Knots", 
+                action => { 
+                    EditorSplineUtility.LinkKnots(knotBufferOnContextMenuOpen); 
+                }, 
+                action => SplineSelectionUtility.CanLinkKnots(knotBufferOnContextMenuOpen) 
+                ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled );
+
+            menu.AppendAction("Unlink Knots",
+                action => { 
+                    EditorSplineUtility.UnlinkKnots(knotBufferOnContextMenuOpen); 
+                },
+                action => SplineSelectionUtility.CanUnlinkKnots(knotBufferOnContextMenuOpen) 
+                ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+
+            menu.AppendAction("Split Knot",
+                action => {
+                    EditorSplineUtility.RecordSelection("Split knot");
+                    SplineSelection.Set(EditorSplineUtility.SplitKnot(knotBufferOnContextMenuOpen[0]));
+                },
+                action => SplineSelectionUtility.CanSplitSelection(knotBufferOnContextMenuOpen) 
+                ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+
+            menu.AppendAction("Join Knots",
+                action => {
+                    EditorSplineUtility.RecordSelection("Join knot");
+                    SplineSelection.Set(EditorSplineUtility.JoinKnots(knotBufferOnContextMenuOpen[0], knotBufferOnContextMenuOpen[1]));
+                },
+                action => SplineSelectionUtility.CanJoinSelection(knotBufferOnContextMenuOpen) 
+                ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+
+            menu.AppendAction("Reverse Spline Flow",
+                action => {
+                    EditorSplineUtility.RecordSelection("Reverse Selected Splines Flow");
+                    EditorSplineUtility.ReverseSplinesFlow(m_Splines);
+                },
+                action => SplineSelection.Count > 0 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+        }
+#endif
+
         /// <summary>
         /// Invoked for each window where this context is active. The spline context uses this method to implement
         /// common functionality for working with splines, ex gizmo drawing and selection.
@@ -90,7 +154,7 @@ namespace UnityEditor.Splines
                 SplineInspectorOverlay.SetSelectedSplines(m_Splines);
 
             m_RectSelector.OnGUI(m_Splines);
-
+            
             if(!s_UseCustomSplineHandles)
                 SplineHandles.DoHandles(m_Splines);
 
@@ -120,6 +184,8 @@ namespace UnityEditor.Splines
 
             Spline.afterSplineWasModified += OnSplineWasModified;
             Undo.undoRedoPerformed += UndoRedoPerformed;
+            
+            SplineCacheUtility.InitializeCache();
         }
 
         /// <summary>
@@ -129,6 +195,8 @@ namespace UnityEditor.Splines
         {
             Spline.afterSplineWasModified -= OnSplineWasModified;
             Undo.undoRedoPerformed -= UndoRedoPerformed;
+            
+            SplineCacheUtility.ClearCache();
         }
 
         void UpdateSelectionIfSplineRemoved(List<SplineInfo> previousSelection)

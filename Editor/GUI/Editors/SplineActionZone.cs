@@ -19,7 +19,6 @@ namespace UnityEditor.Splines
         static readonly string k_ReverseFlowButtonTooltip = L10n.Tr("Reverse the direction of a spline.");
 
         static readonly List<SelectableKnot> m_KnotBuffer = new List<SelectableKnot>();
-        static readonly List<ISelectableElement> m_ElementBuffer = new List<ISelectableElement>();
 
         IReadOnlyList<SplineInfo> m_SelectedSplines = new List<SplineInfo>();
 
@@ -31,6 +30,9 @@ namespace UnityEditor.Splines
 
         public SplineActionButtons()
         {
+#if !UNITY_2023_2_OR_NEWER
+            Add(new Separator());
+
             style.flexDirection = FlexDirection.Column;
 
             var firstRow = new VisualElement();
@@ -82,6 +84,7 @@ namespace UnityEditor.Splines
             m_ReverseFlowButton.style.flexGrow = 1;
             m_ReverseFlowButton.clicked += OnReverseFlowClicked;
             Add(m_ReverseFlowButton);
+#endif
         }
 
         void OnLinkClicked()
@@ -112,6 +115,7 @@ namespace UnityEditor.Splines
 
         public void RefreshSelection(IReadOnlyList<SplineInfo> selectedSplines)
         {
+#if !UNITY_2023_2_OR_NEWER
             SplineSelection.GetElements(selectedSplines, m_KnotBuffer);
 
             m_LinkButton.SetEnabled(SplineSelectionUtility.CanLinkKnots(m_KnotBuffer));
@@ -121,29 +125,13 @@ namespace UnityEditor.Splines
             m_JoinButton.SetEnabled(SplineSelectionUtility.CanJoinSelection(m_KnotBuffer));
 
             m_SelectedSplines = selectedSplines;
+#endif
         }
 
         void OnReverseFlowClicked()
         {
             EditorSplineUtility.RecordSelection("Reverse Selected Splines Flow");
-            SplineSelection.GetElements(m_SelectedSplines, m_ElementBuffer);
-            var splines = EditorSplineUtility.GetSplines(m_ElementBuffer);
-            foreach (var splineInfo in splines)
-                EditorSplineUtility.ReverseFlow(splineInfo);
-
-            for (int i = 0; i < m_ElementBuffer.Count; ++i)
-            {
-                var element = m_ElementBuffer[i];
-
-                if (element is SelectableKnot knot)
-                    m_ElementBuffer[i] = new SelectableKnot(knot.SplineInfo, knot.SplineInfo.Spline.Count - knot.KnotIndex - 1);
-                else if (element is SelectableTangent tangent)
-                    m_ElementBuffer[i] = new SelectableTangent(tangent.SplineInfo, tangent.SplineInfo.Spline.Count - tangent.KnotIndex - 1, (tangent.TangentIndex + 1) % 2);
-            }
-
-            SplineSelection.Clear();
-            SplineSelection.AddRange(m_ElementBuffer);
-            SplineSelection.SetActive(m_ElementBuffer[^ 1]);
+            EditorSplineUtility.ReverseSplinesFlow(m_SelectedSplines);
         }
     }
 }

@@ -183,6 +183,25 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
+        /// Return the up vector for a t ratio on the curve.
+        /// </summary>
+        /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>
+        /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
+        /// <remarks>
+        /// It is inefficient to call this method frequently, as it will calculate the up Vector of the curve every time
+        /// it is invoked. In cases where performance is critical, create a new <see cref="Spline"/> or
+        /// <see cref="NativeSpline"/> instead. Note that you may pass a <see cref="SplineSlice{T}"/> to constructors
+        /// for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
+        /// </remarks>
+        /// <returns>
+        /// Returns the up vector at the t ratio of the curve of index 'index'.
+        /// </returns>
+        public float3 GetCurveUpVector(int index, float t)
+        {
+            return SplineUtility.CalculateUpVector(this, index, t);
+        }
+        
+        /// <summary>
         /// Return the normalized interpolation (t) corresponding to a distance on a <see cref="BezierCurve"/>.
         /// </summary>
         /// <remarks>

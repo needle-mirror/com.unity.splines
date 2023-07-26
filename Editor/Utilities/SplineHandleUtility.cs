@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Unity.Collections;
 using UnityEditor.SettingsManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -74,6 +76,20 @@ namespace UnityEditor.Splines
 #endif
         internal static Color tangentColor => s_TangentColor;
 
+#if UNITY_2022_2_OR_NEWER
+        static Color s_DefaultElementColor = Handles.elementColor;
+        static Color s_DefaultElementPreselectionColor = Handles.elementPreselectionColor;
+        static Color s_DefaultElementSelectionColor = Handles.elementSelectionColor;
+#else
+        static Color s_DefaultElementColor = SplineHandleUtility.knotColor;
+        static Color s_DefaultElementPreselectionColor = Handles.preselectionColor;
+        static Color s_DefaultElementSelectionColor = Handles.selectedColor;
+#endif
+        
+        internal static Color elementColor = s_DefaultElementColor;
+        internal static Color elementPreselectionColor = s_DefaultElementPreselectionColor;
+        internal static Color elementSelectionColor = s_DefaultElementSelectionColor;
+        
         internal const float pickingDistance = 8f;
         internal const float handleWidth = 4f;
         internal const float aliasedLineSizeMultiplier = 0.5f;
@@ -111,7 +127,20 @@ namespace UnityEditor.Splines
             get => s_ElementIdRange.y;
             set => s_ElementIdRange.y = value;
         }
-        
+
+        internal static void UpdateElementColors()
+        {
+#if UNITY_2022_2_OR_NEWER
+            elementColor = Handles.elementColor;
+            elementPreselectionColor = Handles.elementPreselectionColor;
+            elementSelectionColor = Handles.elementSelectionColor;
+#else
+            elementColor = SplineHandleUtility.knotColor;
+            elementPreselectionColor = Handles.preselectionColor;
+            elementSelectionColor = Handles.selectedColor;
+#endif
+        }
+
         internal static bool ShouldShowTangent(SelectableTangent tangent)
         {
             if (!SplineSelectionUtility.IsSelectable(tangent) || Mathf.Approximately(math.length(tangent.LocalDirection), 0f))

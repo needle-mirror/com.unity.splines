@@ -5,6 +5,30 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+
+## [2.4.0] - 2023-07-26
+
+### Added
+
+- Exposed public APIs for `SplineUtility.ReverseFlow`, `SplineUtility.JoinSplinesOnKnots`, and  `SplineUtility.SplitSplineOnKnot`.
+
+### Changed
+
+- For Editor versions of 2023.2 or newer, added clipboard operations for Splines to the Scene view context menu.
+- Changed `Splines/Cycle Active Spline` shortcut to Shift-S to remove a conflict with Unity default shortcuts.
+- [SPLB-163] Improved performance of spline handles by caching spline data.
+- [SPLB-167] Changed the evaluation of up vectors to use a cache instead of re-evaluate the values on every single request.
+- In Editor versions of 2023.2 or newer, moved the following actions from the Element Inspector to the Scene view context menu: Link, Unlink, Split, Join, and Reverse Spline Flow. 
+
+### Bug Fixes
+
+- [SPLB-176] Fixed a regression where the up vector would not evaluate correctly for some curves.
+- Fixed the setter for SplineAnimate.Normalized time to handle ping-pong direction correctly when set.
+- Fixed a bug where setting the time value to 0 after reaching the end of the spline animation was not resetting the object position.
+- [SPLB-169] Fixed a bug where `CurveUtility.GetNearestPoint` would return incorrect values for the interpolation.
+
 ## [2.3.0] - 2023-05-31
 
 ### Added

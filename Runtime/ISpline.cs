@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Mathematics;
 
 namespace UnityEngine.Splines
 {
@@ -73,6 +74,18 @@ namespace UnityEngine.Splines
         /// Returns the length of the curve of index 'index' in the spline.
         /// </returns>
         public float GetCurveLength(int index);
+        
+        /// <summary>
+        /// Return the up vector for a t ratio on the curve. Contrary to <see cref="SplineUtility.EvaluateUpVector"/>,
+        /// this method is trying to used cached values when possible for better performance when accessing to
+        /// these values regularly.
+        /// </summary>
+        /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>
+        /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
+        /// <returns>
+        /// Returns the up vector at the t ratio of the curve of index 'index'.
+        /// </returns>
+        public float3 GetCurveUpVector(int index, float t);
 
         /// <summary>
         /// Return the interpolation ratio (0 to 1) corresponding to a distance on a <see cref="BezierCurve"/>. Distance

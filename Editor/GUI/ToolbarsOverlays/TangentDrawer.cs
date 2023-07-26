@@ -55,8 +55,6 @@ namespace UnityEditor.Splines
                 var tangent = target;
                 m_Direction.SetValueWithoutNotify(tangent.LocalPosition);
             });
-
-            Add(new Separator());
         }
 
         public override string GetLabelForTargets()

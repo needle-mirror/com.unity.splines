@@ -393,7 +393,26 @@ namespace UnityEditor.Splines
 
             spline[knotIndex] = bezierKnot;
         }
+        
+        /// <summary>
+        /// Returns the interpolation value that corresponds to the middle (distance wise) of the curve.
+        /// If spline and curveIndex are provided, the function leverages the spline's LUTs, otherwise the LUT is built on the fly.
+        /// </summary>
+        /// <param name="curve">The curve to evaluate.</param>
+        /// <param name="spline">The ISpline that curve belongs to. Not used if curve is not part of any spline.</param>
+        /// <param name="curveIndex">The index of the curve if it's part of the spine.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        internal static float GetCurveMiddleInterpolation<T>(BezierCurve curve, T spline, int curveIndex) where T: ISpline
+        {
+            var curveMidT = 0f;
+            if (curveIndex >= 0)
+                curveMidT = spline.GetCurveInterpolation(curveIndex, spline.GetCurveLength(curveIndex) * 0.5f);
+            else
+                curveMidT = CurveUtility.GetDistanceToInterpolation(curve, CurveUtility.ApproximateLength(curve) * 0.5f);
 
+            return curveMidT;
+        }
+        
         static BezierCurve GetPreviewCurveInternal(SplineInfo info, int from, float3 fromWorldTangent, float3 toWorldPoint, float3 toWorldTangent, TangentMode toMode, int previousIndex)
         {
             var spline = info.Spline;
@@ -678,16 +697,10 @@ namespace UnityEditor.Splines
             if (containerA != containerB)
                 return false;
 
-            if (!containerA.KnotLinkCollection.TryGetKnotLinks(GetIndex(a), out var linkedKnots))
-                return false;
-
-            var bIndex = GetIndex(b);
-
-            for (int i = 0; i < linkedKnots.Count; ++i)
-                if (linkedKnots[i] == bIndex)
-                    return true;
-
-            return false;
+            return containerA.AreKnotLinked(
+                new SplineKnotIndex(a.SplineInfo.Index, a.KnotIndex),
+                new SplineKnotIndex(b.SplineInfo.Index, b.KnotIndex));
+            
         }
 
         internal static bool TryGetNearestKnot(IReadOnlyList<SplineInfo> splines, out SelectableKnot knot, float maxDistance = SplineHandleUtility.pickingDistance)
@@ -761,265 +774,75 @@ namespace UnityEditor.Splines
             return knot.IsValid() && knot.KnotIndex == knot.SplineInfo.Spline.Count - 1;
         }
 
-        internal static bool TryDuplicateSpline(SelectableKnot fromKnot, SelectableKnot toKnot, out int newSplineIndex)
-        {
-            newSplineIndex = -1;
-            if(!(fromKnot.IsValid() && toKnot.IsValid()))
-                return false;
-
-            if(!fromKnot.SplineInfo.Equals(toKnot.SplineInfo))
-            {
-                Debug.LogError("Duplicate failed: The 2 knots must be on the same Spline.");
-                return false;
-            }
-
-            var container = fromKnot.SplineInfo.Container;
-            var duplicate = container.AddSpline();
-
-            //Copy knots to the new spline
-            int startIndex = Math.Min(fromKnot.KnotIndex, toKnot.KnotIndex);
-            int toIndex = Math.Max(fromKnot.KnotIndex, toKnot.KnotIndex);
-
-            var originalSpline = fromKnot.SplineInfo.Spline;
-            var originalSplineIndex = fromKnot.SplineInfo.Index;
-            newSplineIndex = container.Splines.Count - 1;
-            for (int i = startIndex; i <= toIndex; ++i)
-            {
-                duplicate.Add(originalSpline[i], originalSpline.GetTangentMode(i));
-
-                // If the old knot had any links we link both old and new knot.
-                // This will result in the new knot linking to what the old knot was linked to.
-                // The old knot being removed right after that takes care of cleaning the old knot from the link.
-                if (container.KnotLinkCollection.TryGetKnotLinks(new SplineKnotIndex(originalSplineIndex, i), out _))
-                    container.KnotLinkCollection.Link(new SplineKnotIndex(originalSplineIndex, i), new SplineKnotIndex(newSplineIndex, i - startIndex));
-            }
-            return true;
-        }
-
         internal static SelectableKnot SplitKnot(SelectableKnot knot)
         {
             if (!knot.IsValid())
                 throw new ArgumentException("Knot is invalid", nameof(knot));
 
-            var formerSpline = knot.SplineInfo.Spline;
+            var newKnot = knot.SplineInfo.Container.SplitSplineOnKnot(new SplineKnotIndex(knot.SplineInfo.Index, knot.KnotIndex));
 
-            if (formerSpline.Closed)
+            if (newKnot.IsValid())
             {
-                // Unclose and add a knot to the end with the same data
-                formerSpline.Closed = false;
-                var firstKnot = new SelectableKnot(knot.SplineInfo, 0);
-                var lastKnot = DuplicateKnot(firstKnot, knot.SplineInfo, formerSpline.Count);
-
-                // If the knot was the first one of the spline nothing else needs to be done to split the knot
-                if (knot.KnotIndex == 0)
-                {
-                    //Force to record changes if part of a prefab instance 
-                    PrefabUtility.RecordPrefabInstancePropertyModifications(knot.SplineInfo.Object);
-                    return firstKnot;
-                }
-
-                // If the knot wasn't the first one we also need need to link both ends of the spline to keep the same spline we had before
-                // Link knots is recording the changes to prefab instances so we don't need to add a call to RecordPrefabInstancePropertyModifications 
-                LinkKnots(new List<SelectableKnot> {firstKnot, lastKnot});
-            }
-
-            // If not closed, split does nothing one of the ends of the spline
-            else if (knot.KnotIndex == 0 || knot.KnotIndex == knot.SplineInfo.Spline.Count - 1)
-                return knot;
-
-            if(TryDuplicateSpline(knot, new SelectableKnot(knot.SplineInfo, knot.SplineInfo.Spline.Count - 1), out int splineIndex))
-            {
-                formerSpline.Resize(knot.KnotIndex + 1);
-                //Force to record changes if part of a prefab instance 
                 PrefabUtility.RecordPrefabInstancePropertyModifications(knot.SplineInfo.Object);
-                return new SelectableKnot(new SplineInfo(knot.SplineInfo.Container, knot.SplineInfo.Container.Splines.Count - 1), 0);
+                return new SelectableKnot(new SplineInfo(knot.SplineInfo.Container, newKnot.Spline), newKnot.Knot);
             }
-
             return new SelectableKnot();
-        }
-
-        internal static SelectableKnot DuplicateKnot(SelectableKnot original, SplineInfo targetSpline, int targetIndex)
-        {
-            targetSpline.Spline.Insert(targetIndex, original.GetBezierKnot(false));
-            targetSpline.Spline.SetTangentMode(targetIndex, original.Mode);
-            return new SelectableKnot(targetSpline, targetIndex);
         }
 
         internal static SelectableKnot JoinKnots(SelectableKnot knotA, SelectableKnot knotB)
         {
             if (!knotA.IsValid())
                 throw new ArgumentException("Knot is invalid", nameof(knotA));
-
+        
             if (!knotB.IsValid())
                 throw new ArgumentException("Knot is invalid", nameof(knotB));
-
+        
             //Check knots properties
             var isKnotAActive = !SplineSelection.IsActive(knotB);
-            var activeKnot = isKnotAActive ? knotA : knotB;
-            var otherKnot = isKnotAActive ? knotB : knotA;
+            var knotIndexA = new SplineKnotIndex(knotA.SplineInfo.Index, knotA.KnotIndex);
+            var knotIndexB = new SplineKnotIndex(knotB.SplineInfo.Index, knotB.KnotIndex);
+            var activeKnot = isKnotAActive ? knotIndexA : knotIndexB;
+            var otherKnot = isKnotAActive ? knotIndexB : knotIndexA;
 
-            var isActiveKnotAtStart = activeKnot.KnotIndex == 0;
-            var isOtherKnotAtStart = otherKnot.KnotIndex == 0;
-
-            //Reverse spline if needed, this is needed when the 2 knots are both starts or ends of their respective spline
-            if(isActiveKnotAtStart == isOtherKnotAtStart)
-                //We give more importance to the active knot, so we reverse the spline associated to otherKnot
-                ReverseFlow(otherKnot.SplineInfo);
-
-            //Save Links
-            var links = new List<List<SelectableKnot>>();
-
-            // Get all LinkedKnots on the splines
-            for(int i = 0; i < activeKnot.SplineInfo.Spline.Count; ++i)
-            {
-                links.Add(new List<SelectableKnot>());
-                GetKnotLinks(new SelectableKnot(activeKnot.SplineInfo, i), links[i]);
-            }
-            for(int i = 0; i < otherKnot.SplineInfo.Spline.Count; ++i)
-            {
-                var otherLinks = new List<SelectableKnot>();
-                links.Add(otherLinks);
-                GetKnotLinks(new SelectableKnot(otherKnot.SplineInfo, i), otherLinks);
-            }
-
-            //Unlink all knots in the spline
-            foreach(var linkedKnots in links)
-                UnlinkKnots(linkedKnots);
-
-            //Save relevant data before joining the splines
-            var activeSpline = activeKnot.SplineInfo.Spline;
-            var activeSplineIndex = activeKnot.SplineInfo.Index;
-            var activeSplineCount = activeSpline.Count;
-            var otherSpline = otherKnot.SplineInfo.Spline;
-            var otherSplineIndex = otherKnot.SplineInfo.Index;
-            var otherSplineCount = otherSpline.Count;
-            if(otherSplineCount > 1)
-            {
-                //Join Splines
-                if(isActiveKnotAtStart)
-                {
-                    //All position from the other spline must be added before the knot A
-                    //Don't copy the last knot of the other spline as this is the one to join
-                    for(int i = otherSplineCount - 2; i >= 0 ; i--)
-                        activeSpline.Insert(0,otherSpline[i], otherSpline.GetTangentMode(i));
-                }
-                else
-                {
-                    //All position from the other spline must be added after the knot A
-                    //Don't copy the first knot of the other spline as this is the one to join
-                    for(int i = 1; i < otherSplineCount; i++)
-                        activeSpline.Add(otherSpline[i], otherSpline.GetTangentMode(i));
-                }
-            }
-
-            otherKnot.SplineInfo.Container.RemoveSplineAt(otherSplineIndex);
-            var newActiveSplineIndex = otherSplineIndex > activeSplineIndex ? activeSplineIndex : activeKnot.SplineInfo.Index - 1;
-            var activeSplineInfo = new SplineInfo(activeKnot.SplineInfo.Container, newActiveSplineIndex);
-
-            //Restore links
-            foreach (var linkedKnots in links)
-            {
-                if(linkedKnots.Count == 1)
-                    continue;
-
-                for(int i = 0; i < linkedKnots.Count; ++i)
-                {
-                    var knot = linkedKnots[i];
-                    if(knot.SplineInfo.Index == activeSplineIndex || knot.SplineInfo.Index == otherSplineIndex)
-                    {
-                        var newIndex = knot.KnotIndex;
-
-                        if(knot.SplineInfo.Index == activeSplineIndex && isActiveKnotAtStart)
-                            newIndex += otherSplineCount - 1;
-
-                        if(knot.SplineInfo.Index == otherSplineIndex && !isActiveKnotAtStart)
-                            newIndex += activeSplineCount - 1;
-
-                        linkedKnots[i] = new SelectableKnot(activeSplineInfo, newIndex);
-                    }
-                    else
-                    {
-                        if(knot.SplineInfo.Index > otherSplineIndex)
-                            linkedKnots[i] = new SelectableKnot(new SplineInfo(knot.SplineInfo.Container, knot.SplineInfo.Index - 1),knot.KnotIndex);
-                    }
-                }
-                LinkKnots(linkedKnots);
-            }
+            var res = knotA.SplineInfo.Container.JoinSplinesOnKnots(activeKnot, otherKnot);
             
             //Force to record changes if part of a prefab instance 
+            var activeSplineInfo = isKnotAActive ? knotA.SplineInfo : knotB.SplineInfo; 
             PrefabUtility.RecordPrefabInstancePropertyModifications(activeSplineInfo.Object);
-
-            return new SelectableKnot(activeSplineInfo, isActiveKnotAtStart ? otherSplineCount - 1 : activeKnot.KnotIndex);
+        
+            return new SelectableKnot(new SplineInfo(knotA.SplineInfo.Container, res.Spline), res.Knot);
         }
 
-        internal static void ReverseFlow(SplineInfo splineInfo)
+        internal static void ReverseSplinesFlow(IReadOnlyList<SplineInfo> selectedSplines)
         {
-            var spline = splineInfo.Spline;
+            List<ISelectableElement> selectedElements = new List<ISelectableElement>();
 
-            var knots = splineInfo.Spline.ToArray();
-            var tangentModes = new TangentMode[spline.Count];
+            var formerActiveElement = SplineSelection.GetActiveElement(selectedSplines);
+            SplineSelection.GetElements(selectedSplines, selectedElements);
+            var splines = GetSplines(selectedElements);
+            foreach (var splineInfo in splines)
+                SplineUtility.ReverseFlow(splineInfo);
 
-            for (int i = 0; i < tangentModes.Length; ++i)
-                tangentModes[i] = spline.GetTangentMode(i);
-
-            var splineLinks = new List<List<SelectableKnot>>();
-
-            // GetAll LinkedKnots on the spline
-            for(int previousKnotIndex = 0; previousKnotIndex < spline.Count; ++previousKnotIndex)
+            int newActiveElementIndex = -1;
+            for (int i = 0; i < selectedElements.Count; ++i)
             {
-                splineLinks.Add(new List<SelectableKnot>());
-                GetKnotLinks(new SelectableKnot(splineInfo, previousKnotIndex), splineLinks[previousKnotIndex]);
+                var element = selectedElements[i];
+                if (element.Equals(formerActiveElement))
+                    newActiveElementIndex = i;
+                
+                if (element is SelectableKnot knot)
+                    selectedElements[i] = new SelectableKnot(knot.SplineInfo, knot.SplineInfo.Spline.Count - knot.KnotIndex - 1);
+                else if (element is SelectableTangent tangent)
+                    selectedElements[i] = new SelectableTangent(tangent.SplineInfo, tangent.SplineInfo.Spline.Count - tangent.KnotIndex - 1, (tangent.TangentIndex + 1) % 2);
             }
 
-            //Unlink all knots in the spline
-            foreach(var linkedKnots in splineLinks)
-                UnlinkKnots(linkedKnots);
-
-            // Reverse order and tangents
-            for (int previousKnotIndex = 0; previousKnotIndex < spline.Count; ++previousKnotIndex)
-            {
-                var knot = knots[previousKnotIndex];
-                var worldKnot = knot.Transform(splineInfo.LocalToWorld);
-                var tangentIn = worldKnot.TangentIn;
-                var tangentOut = worldKnot.TangentOut;
-
-                var reverseRotation = quaternion.AxisAngle(math.mul(knot.Rotation, math.up()), math.radians(180));
-                reverseRotation = math.normalizesafe(reverseRotation);
-
-                // Reverse the tangents to keep the same shape while reversing the order
-                knot.Rotation = math.mul(reverseRotation, knot.Rotation);
-                if(tangentModes[previousKnotIndex] is TangentMode.Broken)
-                {
-                    var localRot = quaternion.AxisAngle(math.up(), math.radians(180));
-                    knot.TangentIn = math.rotate(localRot, tangentOut);
-                    knot.TangentOut = math.rotate(localRot, tangentIn);
-                }
-                else if(tangentModes[previousKnotIndex] is TangentMode.Continuous)
-                {
-                    knot.TangentIn = -tangentOut;
-                    knot.TangentOut = -tangentIn;
-                }
-
-                var newKnotIndex = spline.Count - 1 - previousKnotIndex;
-                spline.SetTangentMode(newKnotIndex, tangentModes[previousKnotIndex]);
-                spline[newKnotIndex] = knot;
-            }
-
-            //Redo all links
-            foreach (var linkedKnots in splineLinks)
-            {
-                if(linkedKnots.Count == 1)
-                    continue;
-
-                for(int i = 0; i < linkedKnots.Count; ++i)
-                {
-                    var knot = linkedKnots[i];
-                    if(knot.SplineInfo.Equals(splineInfo))
-                        linkedKnots[i] = new SelectableKnot(splineInfo, spline.Count - 1 - knot.KnotIndex);
-                }
-                LinkKnots(linkedKnots);
-            }
-
+            SplineSelection.Clear();
+            SplineSelection.AddRange(selectedElements);
+            
+            if(newActiveElementIndex >= 0)
+                SplineSelection.SetActive(selectedElements[newActiveElementIndex]);
+            else
+                SplineSelection.SetActive(selectedElements[^1]);
         }
 
         internal static HashSet<SplineInfo> GetSplines<T>(IReadOnlyList<T> elements)

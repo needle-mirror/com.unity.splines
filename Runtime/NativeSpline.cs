@@ -27,7 +27,12 @@ namespace UnityEngine.Splines
         // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
         [ReadOnly]
         NativeArray<DistanceToInterpolation> m_SegmentLengthsLookupTable;
-
+        
+        // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
+        // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
+        [ReadOnly]
+        NativeArray<float3> m_UpVectorsLookupTable;
+        
         bool m_Closed;
         float m_Length;
         const int k_SegmentResolution = 30;
@@ -91,9 +96,25 @@ namespace UnityEngine.Splines
         /// <param name="spline">The <see cref="ISpline"/> object to convert to a <see cref="NativeSpline"/>.</param>
         /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
         public NativeSpline(ISpline spline, Allocator allocator = Allocator.Temp)
-            : this(spline, float4x4.identity, allocator)
+            : this(spline, float4x4.identity, false, allocator)
         {
         }
+
+        /// <summary>
+        /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
+        /// </summary>
+        /// <param name="spline">The <see cref="ISpline"/> object to convert to a <see cref="NativeSpline"/>.</param>
+        /// <param name="cacheUpVectors"> Whether to cache the values of the Up vectors along the entire spline to reduce
+        /// the time it takes to access those Up vectors. If you set this to true, the creation of native splines might
+        /// be less performant because all the Up vectors along the spline are computed. Consider how often you need to
+        /// access the values of Up vectors along the spline before you cache them. </param>
+        /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
+        public NativeSpline(ISpline spline, bool cacheUpVectors, Allocator allocator = Allocator.Temp)
+            : this(spline, float4x4.identity, cacheUpVectors, allocator)
+        {
+            
+        }
+
 
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
@@ -106,10 +127,31 @@ namespace UnityEngine.Splines
                 spline is IHasEmptyCurves disconnect ? disconnect.EmptyCurves : null,
                 spline.Closed,
                 transform,
+                false,
                 allocator)
         {
         }
 
+        /// <summary>
+        /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
+        /// </summary>
+        /// <param name="spline">The <see cref="ISpline"/> object to convert to a <see cref="NativeSpline"/>.</param>
+        /// <param name="transform">A transform matrix to be applied to the spline knots and tangents.</param>
+        /// <param name="cacheUpVectors"> Whether to cache the values of the Up vectors along the entire spline to reduce
+        /// the time it takes to access those Up vectors. If you set this to true, the creation of native splines might
+        /// be less performant because all the Up vectors along the spline are computed. Consider how often you need to
+        /// access the values of Up vectors along the spline before you cache them. </param>
+        /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
+        public NativeSpline(ISpline spline, float4x4 transform, bool cacheUpVectors, Allocator allocator = Allocator.Temp)
+            : this(spline,
+                spline is IHasEmptyCurves disconnect ? disconnect.EmptyCurves : null,
+                spline.Closed,
+                transform,
+                cacheUpVectors,
+                allocator)
+        {
+        }
+        
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
         /// </summary>
@@ -121,11 +163,30 @@ namespace UnityEngine.Splines
             IReadOnlyList<BezierKnot> knots,
             bool closed,
             float4x4 transform,
-            Allocator allocator = Allocator.Temp) : this(knots, null, closed, transform, allocator)
+            Allocator allocator = Allocator.Temp) : this(knots, null, closed, transform, false, allocator)
         {
         }
-
-
+        
+        /// <summary>
+        /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
+        /// </summary>
+        /// <param name="knots">A collection of sequential <see cref="BezierKnot"/> forming the spline path.</param>
+        /// <param name="closed">Whether the spline is open (has a start and end point) or closed (forms an unbroken loop).</param>
+        /// <param name="transform">Apply a transformation matrix to the control <see cref="Knots"/>.</param>
+        /// <param name="cacheUpVectors"> Whether to cache the values of the Up vectors along the entire spline to reduce
+        /// the time it takes to access those Up vectors. If you set this to true, the creation of native splines might
+        /// be less performant because all the Up vectors along the spline are computed. Consider how often you need to
+        /// access the values of Up vectors along the spline before you cache them. </param>
+        /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
+        public NativeSpline(
+            IReadOnlyList<BezierKnot> knots,
+            bool closed,
+            float4x4 transform,
+            bool cacheUpVectors,
+            Allocator allocator = Allocator.Temp) : this(knots, null, closed, transform, cacheUpVectors, allocator)
+        {
+        }
+        
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
         /// </summary>
@@ -136,19 +197,39 @@ namespace UnityEngine.Splines
         /// <param name="transform">Apply a transformation matrix to the control <see cref="Knots"/>.</param>
         /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
         public NativeSpline(IReadOnlyList<BezierKnot> knots, IReadOnlyList<int> splits, bool closed, float4x4 transform, Allocator allocator = Allocator.Temp)
+            : this(knots, splits, closed, transform, false, allocator)
+        { }
+        
+        /// <summary>
+        /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
+        /// </summary>
+        /// <param name="knots">A collection of sequential <see cref="BezierKnot"/> forming the spline path.</param>
+        /// <param name="splits">A collection of knot indices that should be considered degenerate curves for the
+        /// purpose of creating a non-interpolated gap between curves.</param>
+        /// <param name="closed">Whether the spline is open (has a start and end point) or closed (forms an unbroken loop).</param>
+        /// <param name="transform">Apply a transformation matrix to the control <see cref="Knots"/>.</param>
+        /// <param name="cacheUpVectors"> Whether to cache the values of the Up vectors along the entire spline to reduce
+        /// the time it takes to access those Up vectors. If you set this to true, the creation of native splines might
+        /// be less performant because all the Up vectors along the spline are computed. Consider how often you need to
+        /// access the values of Up vectors along the spline before you cache them. </param>
+        /// <param name="allocator">The memory allocation method to use when reserving space for native arrays.</param>
+        public NativeSpline(IReadOnlyList<BezierKnot> knots, IReadOnlyList<int> splits, bool closed, float4x4 transform, bool cacheUpVectors, Allocator allocator = Allocator.Temp)
         {
-            int kc = knots.Count;
+                        int kc = knots.Count;
             m_Knots = new NativeArray<BezierKnot>(kc, allocator);
             m_Curves = new NativeArray<BezierCurve>(kc, allocator);
             m_SegmentLengthsLookupTable = new NativeArray<DistanceToInterpolation>(kc * k_SegmentResolution, allocator);
             m_Closed = closed;
             m_Length = 0f;
 
+            //Costly to do this for temporary NativeSpline that does not require to access/compute up vectors
+            m_UpVectorsLookupTable = new NativeArray<float3>(cacheUpVectors ? kc * k_SegmentResolution : 0, allocator);
 
             // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
             // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
 
             DistanceToInterpolation[] distanceToTimes = new DistanceToInterpolation[k_SegmentResolution];
+            Vector3[] upVectors = cacheUpVectors ? new Vector3[k_SegmentResolution] : null;
 
             if (knots.Count > 0)
             {
@@ -161,20 +242,39 @@ namespace UnityEngine.Splines
                     if (splits != null && splits.Contains(i))
                     {
                         m_Curves[i] = new BezierCurve(new BezierKnot(cur.Position), new BezierKnot(cur.Position));
+                        var up = cacheUpVectors ? math.rotate(cur.Rotation, math.up()) : float3.zero;
                         for (int n = 0; n < k_SegmentResolution; ++n)
+                        {
+                            //Cache Distance in case of a split is empty
                             distanceToTimes[n] = new DistanceToInterpolation();
+                            //up Vectors in case of a split is the knot up vector
+                            if(cacheUpVectors)
+                                upVectors[n] = up;
+                        }
                     }
                     else
                     {
                         m_Curves[i] = new BezierCurve(cur, next);
                         CurveUtility.CalculateCurveLengths(m_Curves[i], distanceToTimes);
+
+                        if (cacheUpVectors)
+                        {
+                            var curveStartUp = math.rotate(cur.Rotation, math.up());
+                            var curveEndUp = math.rotate(next.Rotation, math.up());
+                            CurveUtility.EvaluateUpVectors(m_Curves[i], curveStartUp, curveEndUp, upVectors);
+                        }
                     }
 
                     if (m_Closed || i < kc - 1)
                         m_Length += distanceToTimes[k_SegmentResolution - 1].Distance;
 
-                    for (int distanceToTimeIndex = 0; distanceToTimeIndex < k_SegmentResolution; distanceToTimeIndex++)
-                        m_SegmentLengthsLookupTable[i * k_SegmentResolution + distanceToTimeIndex] = distanceToTimes[distanceToTimeIndex];
+                    for (int index = 0; index < k_SegmentResolution; index++)
+                    {
+                        m_SegmentLengthsLookupTable[i * k_SegmentResolution + index] = distanceToTimes[index];
+                        
+                        if(cacheUpVectors)
+                            m_UpVectorsLookupTable[i * k_SegmentResolution + index] = upVectors[index];
+                    }
 
                     cur = next;
                 }
@@ -198,7 +298,41 @@ namespace UnityEngine.Splines
         /// <returns>The length of the bezier curve at index.</returns>
         public float GetCurveLength(int curveIndex)
         {
-            return m_SegmentLengthsLookupTable[curveIndex * k_SegmentResolution + k_SegmentResolution - 1].Distance;
+            return m_SegmentLengthsLookupTable[curveIndex * k_SegmentResolution + k_SegmentResolution - 1].Distance;    
+        }
+        
+        /// <summary>
+        /// Return the up vector for a t ratio on the curve.
+        /// </summary>
+        /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>
+        /// <param name="t">A value between 0 and 1 representing the ratio along the spline.</param>
+        /// <returns>
+        /// Returns the up vector at the t ratio of the curve of index 'index'.
+        /// </returns>
+        public float3 GetCurveUpVector(int index, float t)
+        {
+            // Value  is not cached, compute the value directly on demand
+            if (m_UpVectorsLookupTable.Length == 0)
+                return this.CalculateUpVector(index, t);
+            
+            var curveIndex = index * k_SegmentResolution;
+            var offset = 1f / (float)(k_SegmentResolution - 1);
+            var curveT = 0f;
+            for (int i = 0; i < k_SegmentResolution; i++)
+            {
+                if (t <= curveT + offset)
+                {
+                    var value = math.lerp(m_UpVectorsLookupTable[curveIndex + i], 
+                                        m_UpVectorsLookupTable[curveIndex + i + 1], 
+                                        (t - curveT) / offset);
+                    
+                    return value;
+                }
+                curveT += offset;
+            }
+
+            //Otherwise, no value has been found, return the one at the end of the segment
+            return m_UpVectorsLookupTable[curveIndex + k_SegmentResolution - 1];
         }
 
         /// <summary>
@@ -209,6 +343,7 @@ namespace UnityEngine.Splines
             m_Knots.Dispose();
             m_Curves.Dispose();
             m_SegmentLengthsLookupTable.Dispose();
+            m_UpVectorsLookupTable.Dispose();
         }
 
         // Wrapper around NativeSlice<T> because the native type does not implement IReadOnlyList<T>.

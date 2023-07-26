@@ -58,8 +58,6 @@ namespace UnityEditor.Splines
             //Update opposite to take into account some tangent modes
             m_TangentIn.changed += () => m_TangentOut.Update(targets);
             m_TangentOut.changed += () => m_TangentIn.Update(targets);
-
-            Add(new Separator());
         }
 
         public override string GetLabelForTargets()

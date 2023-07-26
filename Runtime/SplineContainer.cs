@@ -348,13 +348,13 @@ namespace UnityEngine.Splines
         {
             if (spline == null)
                 return float3.zero;
-
+            
             if (IsScaled)
             {
-                using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix);
+                using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix, true);
                 return SplineUtility.EvaluateUpVector(nativeSpline, t);
             }
-
+            
             //Using TransformDirection as up direction is not sensible to scale.
             return transform.TransformDirection(SplineUtility.EvaluateUpVector(spline, t));
         }

@@ -222,6 +222,18 @@ namespace UnityEngine.Splines
             return (net + chord) / 2;
         }
 
+        internal static void EvaluateUpVectors(BezierCurve curve, float3 startUp, float3 endUp, Vector3[] upVectors)
+        {
+            upVectors[0] = startUp;
+            upVectors[upVectors.Length - 1] = endUp;
+
+            for(int i = 1; i < upVectors.Length - 1; i++)
+            {
+                var curveT = i / (float)(upVectors.Length - 1);
+                upVectors[i] = EvaluateUpVector(curve, curveT, upVectors[0], endUp);
+            }
+        }
+        
         internal static float3 EvaluateUpVector(BezierCurve curve, float t, float3 startUp, float3 endUp)
         {
             // Ensure we have workable tangents by linearizing ones that are of zero length
@@ -251,7 +263,8 @@ namespace UnityEngine.Splines
             for (int i = 1; i < k_NormalsPerCurve; ++i)
             {
                 prevFrame = frame;
-                frame = GetNextRotationMinimizingFrame(curve, prevFrame, currentT);
+                frame = GetNextRotationMinimizingFrame(curve, prevFrame, currentT);                
+                
                 normalBuffer[i] = frame.normal;
 
                 if (prevT <= t && currentT >= t)
@@ -286,6 +299,7 @@ namespace UnityEngine.Splines
 
             currentT = stepSize;
             prevT = 0f;
+            
             for (int i = 1; i < normalBuffer.Length; i++)
             {
                 var normal = normalBuffer[i];
@@ -314,7 +328,6 @@ namespace UnityEngine.Splines
         static FrenetFrame GetNextRotationMinimizingFrame(BezierCurve curve, FrenetFrame previousRMFrame, float nextRMFrameT)
         {
             FrenetFrame nextRMFrame;
-
             // Evaluate position and tangent for next RM frame
             nextRMFrame.origin = EvaluatePosition(curve, nextRMFrameT);
             nextRMFrame.tangent = EvaluateTangent(curve, nextRMFrameT);
@@ -438,7 +451,7 @@ namespace UnityEngine.Splines
                     position = linePoint;
                     bestDistSqr = distSqr;
                     bestLineParam = lineParam;
-                    interpolation = t;
+                    interpolation = (i - 1) / (resolution - 1f);
                 }
 
                 a = b;

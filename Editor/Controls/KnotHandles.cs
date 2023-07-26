@@ -26,22 +26,12 @@ namespace UnityEditor.Splines
             //Hovered might not be available if a TRS tool is in use
             hovered &= SplineHandleUtility.IsHoverAvailableForSplineElement();
             
-#if UNITY_2022_2_OR_NEWER
-            var knotColor = Handles.elementColor;
-            var rotationDiscColor = Handles.elementPreselectionColor;
+            var knotColor = SplineHandleUtility.elementColor;
+            var rotationDiscColor = SplineHandleUtility.elementPreselectionColor;
             if (hovered)
-                knotColor = Handles.elementPreselectionColor;
+                knotColor = SplineHandleUtility.elementPreselectionColor;
             else if (selected)
-                knotColor = Handles.elementSelectionColor;
-#else
-            var knotColor = SplineHandleUtility.knotColor;
-            var highlightColor = SplineHandleUtility.knotColor;
-            var rotationDiscColor = Handles.preselectionColor;
-            if (hovered)
-                knotColor = Handles.preselectionColor;
-            else if (selected)
-                knotColor = Handles.selectedColor;
-#endif
+                knotColor = SplineHandleUtility.elementSelectionColor;
 
             Draw(knot.Position, knot.Rotation, knotColor, selected, hovered, rotationDiscColor, k_KnotRotDiscWidthHover);    
             DrawKnotIndices(knot);
@@ -127,35 +117,19 @@ namespace UnityEditor.Splines
             //Hovered might not be available if a TRS tool is in use
             hovered &= SplineHandleUtility.IsHoverAvailableForSplineElement();
             
-#if UNITY_2022_2_OR_NEWER
-            var knotColor = Handles.elementColor;
-            var highlightColor = Handles.elementPreselectionColor;
-            var rotationDiscColor = Handles.elementPreselectionColor;
+            var knotColor = SplineHandleUtility.elementColor;
+            var highlightColor = SplineHandleUtility.elementPreselectionColor;
+            var rotationDiscColor = SplineHandleUtility.elementPreselectionColor;
             if (hovered)
             {
-                knotColor = Handles.elementPreselectionColor;
-                highlightColor = Handles.elementPreselectionColor;
+                knotColor = SplineHandleUtility.elementPreselectionColor;
+                highlightColor = SplineHandleUtility.elementPreselectionColor;
             }
             else if (selected)
             {
-                knotColor = Handles.elementSelectionColor;
-                highlightColor = Handles.elementSelectionColor;
+                knotColor = SplineHandleUtility.elementSelectionColor;
+                highlightColor = SplineHandleUtility.elementSelectionColor;
             }
-#else
-            var knotColor = SplineHandleUtility.knotColor;
-            var highlightColor = SplineHandleUtility.knotColor;
-            var rotationDiscColor = Handles.preselectionColor;
-            if (hovered)
-            {
-                knotColor = Handles.preselectionColor;
-                highlightColor = Handles.preselectionColor;
-            }
-            else if (selected)
-            {
-                knotColor = Handles.selectedColor;
-                highlightColor = Handles.selectedColor;
-            }
-#endif
 
             if (SplineHandleUtility.canDrawOnCurves && (hovered || selected))
             {

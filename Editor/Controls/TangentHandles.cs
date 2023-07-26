@@ -43,23 +43,13 @@ namespace UnityEditor.Splines
             if (Event.current.type != EventType.Repaint)
                 return;
 
-#if UNITY_2022_2_OR_NEWER
-            var tangentColor = Handles.elementColor;
-#else
-            var tangentColor = SplineHandleUtility.knotColor;
-#endif
+            var tangentColor = SplineHandleUtility.elementColor;
             if (!active)
                 tangentColor = Handles.secondaryColor;
 
-#if UNITY_2022_2_OR_NEWER
-            var tangentArmColor = tangentColor == Handles.elementColor
+            var tangentArmColor = tangentColor == SplineHandleUtility.elementColor
                 ? SplineHandleUtility.tangentColor
                 : tangentColor;
-#else
-            var tangentArmColor = tangentColor == SplineHandleUtility.knotColor
-                ? SplineHandleUtility.tangentColor
-                : tangentColor;
-#endif
 
             using (new ColorScope(tangentArmColor))
             {
@@ -84,11 +74,12 @@ namespace UnityEditor.Splines
 
         internal static void Draw(int controlId, SelectableTangent tangent, bool active = true)
         {
+            var (pos, rot) = SplineCacheUtility.GetTangentPositionAndRotation(tangent);
             var owner = tangent.Owner;
             Draw(
                 controlId,
-                tangent.Position,
-                EditorSplineUtility.GetElementRotation(math.length(tangent.LocalPosition) > 0 ? (ISelectableElement)tangent : tangent.Owner),
+                pos,
+                rot,
                 owner.Position,
                 SplineSelection.Contains(tangent),
                 SplineSelection.Contains(tangent.OppositeTangent),
@@ -109,45 +100,26 @@ namespace UnityEditor.Splines
                 return;
 
             var size = HandleUtility.GetHandleSize(position);
-#if UNITY_2022_2_OR_NEWER
-            var tangentColor = Handles.elementColor;
+            
+            var tangentColor = SplineHandleUtility.elementColor;
             if (hovered)
-                tangentColor = Handles.elementPreselectionColor;
+                tangentColor = SplineHandleUtility.elementPreselectionColor;
             else if (selected)
-                tangentColor = Handles.elementSelectionColor;
-#else
-            var tangentColor = SplineHandleUtility.knotColor;
-            if (hovered)
-                tangentColor = Handles.preselectionColor;
-            else if (selected)
-                tangentColor = Handles.selectedColor;
-#endif
+                tangentColor = SplineHandleUtility.elementSelectionColor;
+
             if (!active)
                 tangentColor = Handles.secondaryColor;
 
-#if UNITY_2022_2_OR_NEWER
-            var tangentArmColor = tangentColor == Handles.elementColor ?
+            var tangentArmColor = tangentColor == SplineHandleUtility.elementColor ?
                 SplineHandleUtility.tangentColor :
                 tangentColor;
-#else
-            var tangentArmColor = tangentColor == SplineHandleUtility.knotColor ?
-                SplineHandleUtility.tangentColor :
-                tangentColor;
-#endif
 
             if (mode == TangentMode.Mirrored)
             {
-#if UNITY_2022_2_OR_NEWER
                 if(oppositeHovered)
-                    tangentArmColor = Handles.elementPreselectionColor;
+                    tangentArmColor = SplineHandleUtility.elementPreselectionColor;
                 else if(tangentArmColor == SplineHandleUtility.tangentColor && oppositeSelected)
-                    tangentArmColor = Handles.elementSelectionColor;
-#else
-                if(oppositeHovered)
-                    tangentArmColor = Handles.preselectionColor;
-                else if(tangentArmColor == SplineHandleUtility.tangentColor && oppositeSelected)
-                    tangentArmColor = Handles.selectedColor;
-#endif
+                    tangentArmColor =SplineHandleUtility.elementSelectionColor;
             }
 
             var rotationDiscWidth = k_TangentRotWidthDefault;

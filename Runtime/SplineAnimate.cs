@@ -300,7 +300,14 @@ namespace UnityEngine.Splines
             set
             {
                 m_NormalizedTime = value;
-                m_ElapsedTime = m_Duration * m_NormalizedTime;
+                if (m_LoopMode == LoopMode.PingPong)
+                {
+                    var currentDirection = (int)(m_ElapsedTime / m_Duration);
+                    m_ElapsedTime = m_Duration * m_NormalizedTime + ((currentDirection % 2 == 1) ? m_Duration : 0f);
+                }
+                else
+                    m_ElapsedTime = m_Duration * m_NormalizedTime;
+                
                 UpdateTransform();
             }
         }
@@ -539,7 +546,8 @@ namespace UnityEngine.Splines
                 }
             }
 
-            m_NormalizedTime = Mathf.Floor(m_NormalizedTime) + t;
+            // forcing reset to 0 if the m_NormalizedTime reach the end of the spline previously (1).
+            m_NormalizedTime = t == 0 ? 0f : Mathf.Floor(m_NormalizedTime) + t;
             if (m_NormalizedTime >= 1f && m_LoopMode == LoopMode.Once)
                 m_Playing = false;
         }

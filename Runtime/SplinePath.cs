@@ -279,6 +279,37 @@ namespace UnityEngine.Splines
                 return CurveUtility.CalculateLength(GetCurve(index));
             return slice.GetCurveLength(knot.Knot);
         }
+        
+        /// <summary>
+        /// Return the up vector for a t ratio on the curve.
+        /// </summary>
+        /// <param name="index">The index of the curve for which the length needs to be retrieved.</param>
+        /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
+        /// <returns>
+        /// Returns the up vector at the t ratio of the curve of index 'index'.
+        /// </returns>
+        public float3 GetCurveUpVector(int index, float t)
+        {
+            if(IsDegenerate(index))
+                return 0f;
+            
+            var knot = GetBranchKnotIndex(index);
+            var slice = m_Splines[knot.Spline];
+            
+            // Closing curve
+            if (knot.Spline >= m_Splines.Length - 1 && knot.Knot >= slice.Count - 1)
+            {
+                BezierKnot a = this[knot], b = this.Next(index);
+                var curve = new BezierCurve(a, b);
+                
+                var curveStartUp = math.rotate(a.Rotation, math.up());
+                var curveEndUp = math.rotate(b.Rotation, math.up());
+                
+                return CurveUtility.EvaluateUpVector(curve, t, curveStartUp, curveEndUp);
+            }
+            
+            return slice.GetCurveUpVector(knot.Knot, t);
+        }
 
         /// <summary>
         /// Returns the interpolation ratio (0 to 1) that corresponds to a distance on a <see cref="BezierCurve"/>. The

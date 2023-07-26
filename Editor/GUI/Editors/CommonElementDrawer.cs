@@ -12,8 +12,6 @@ namespace UnityEditor.Splines
 
             Add(m_BezierMode = new BezierTangentPropertyField<ISelectableElement>());
             m_BezierMode.changed += () => { m_Mode.Update(targets); };
-
-            Add(new Separator());
         }
 
         public override void Update()

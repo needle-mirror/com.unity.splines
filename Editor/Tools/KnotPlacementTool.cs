@@ -352,7 +352,6 @@ namespace UnityEditor.Splines
 
                 var previewIndex = 0;
 
-
                 //Draw curves
                 foreach (var splineInfo in m_SplineBuffer)
                 {
@@ -374,15 +373,15 @@ namespace UnityEditor.Splines
                                         new BezierCurve(curveKnots[knotIndex], curveKnots[knotIndex + 1]);
                                     previewCurve = previewCurve.Transform(localToWorld);
                                     CurveHandles.Draw(previewCurve, isMainTarget);
-                                    if (isMainTarget)
-                                    {
-                                        CurveHandles.DrawFlow(
-                                            previewCurve,
-                                            null,
-                                            -1,
-                                            math.rotate(new SelectableKnot(splineInfo, i).Rotation, math.up()),
-                                            math.rotate(new SelectableKnot(splineInfo, SplineUtility.NextIndex(i, spline.Count, spline.Closed)).Rotation, math.up()));
-                                    }
+                                    // if (isMainTarget)
+                                    // {
+                                    //     CurveHandles.DrawFlow(
+                                    //         previewCurve,
+                                    //         null,
+                                    //         -1,
+                                    //         math.rotate(new SelectableKnot(splineInfo, i).Rotation, math.up()),
+                                    //         math.rotate(new SelectableKnot(splineInfo, SplineUtility.NextIndex(i, spline.Count, spline.Closed)).Rotation, math.up()));
+                                    // }
                                 }
 
                                 previewIndex++;
@@ -393,14 +392,7 @@ namespace UnityEditor.Splines
                         var curve = spline.GetCurve(i).Transform(localToWorld);
                         CurveHandles.Draw(curve, isMainTarget);
                         if (isMainTarget)
-                        {
-                            CurveHandles.DrawFlow(
-                                curve,
-                                splineInfo.Spline,
-                                i,
-                                math.rotate(new SelectableKnot(splineInfo, i).Rotation, math.up()),
-                                math.rotate(new SelectableKnot(splineInfo, SplineUtility.NextIndex(i, spline.Count, spline.Closed)).Rotation, math.up()));
-                        }
+                            CurveHandles.DrawFlow(curve, splineInfo.Spline, i);
                     }
                 }
 
@@ -791,8 +783,8 @@ namespace UnityEditor.Splines
             SceneView.RepaintAll();
         }
 
-        [Shortcut("Splines/Cycle Active Spline", typeof(SceneView), KeyCode.S)]
-        static void ShortcutCycleActiveSpline(ShortcutArguments args)
+        [Shortcut("Splines/Cycle Active Spline Container (Draw Spline Tool)", typeof(SceneView), KeyCode.S, ShortcutModifiers.Shift)]
+        static void ShortcutCycleActiveSplineContainer(ShortcutArguments args)
         {
             if (activeTool is KnotPlacementTool tool)
                 tool.CycleActiveTarget();

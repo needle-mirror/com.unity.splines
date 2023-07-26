@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Mathematics;
 
 namespace UnityEngine.Splines
@@ -108,7 +109,7 @@ namespace UnityEngine.Splines
 
             position = CurveUtility.EvaluatePosition(curve, curveT);
             tangent = CurveUtility.EvaluateTangent(curve, curveT);
-            upVector = spline.EvaluateUpVector(curveIndex, curveT);
+            upVector = spline.GetCurveUpVector(curveIndex, curveT);
 
             return true;
         }
@@ -233,12 +234,12 @@ namespace UnityEngine.Splines
             var curve = spline.GetCurve(SplineToCurveT(spline, t, out var curveT));
             return CurveUtility.EvaluateTangent(curve, curveT);
         }
-
+        
         /// <summary>
         /// Evaluate the normal (up) vector of a spline.
         /// </summary>
         /// <param name="spline">The <seealso cref="NativeSpline"/> to evaluate.</param>
-        /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
+        /// <param name="t">A value between 0 and 1 representing a ratio of the curve.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>An up vector</returns>
         public static float3 EvaluateUpVector<T>(this T spline, float t) where T : ISpline
@@ -247,10 +248,27 @@ namespace UnityEngine.Splines
                 return float3.zero;
 
             var curveIndex = SplineToCurveT(spline, t, out var curveT);
-            return spline.EvaluateUpVector(curveIndex, curveT);
+            return spline.GetCurveUpVector(curveIndex, curveT);
+        }
+        
+        /// <summary>
+        /// Calculate the normal (up) vector of a spline. This is a more accurate but more expensive operation
+        /// than <seealso cref="EvaluateUpVector{T}"/>.
+        /// </summary>
+        /// <param name="spline">The <seealso cref="NativeSpline"/> to evaluate.</param>
+        /// <param name="t">A value between 0 and 1 representing a ratio of the curve.</param>
+        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <returns>An up vector</returns>
+        public static float3 CalculateUpVector<T>(this T spline, float t) where T : ISpline
+        {
+            if (spline.Count < 1)
+                return float3.zero;
+        
+            var curveIndex = SplineToCurveT(spline, t, out var curveT);
+            return spline.CalculateUpVector(curveIndex, curveT);
         }
 
-        static float3 EvaluateUpVector<T>(this T spline, int curveIndex, float curveT) where T : ISpline
+        internal static float3 CalculateUpVector<T>(this T spline, int curveIndex, float curveT) where T : ISpline
         {
             if (spline.Count < 1)
                 return float3.zero;
@@ -268,7 +286,24 @@ namespace UnityEngine.Splines
             if (curveT == 1f)
                 return curveEndUp;
 
-            return CurveUtility.EvaluateUpVector(curve, curveT, curveStartUp, curveEndUp);
+            var up = CurveUtility.EvaluateUpVector(curve, curveT, curveStartUp, curveEndUp);
+                
+            return up;
+        }
+        
+        internal static void EvaluateUpVectorsForCurve<T>(this T spline, int curveIndex, Vector3[] upVectors) where T : ISpline
+        {
+            if (spline.Count < 1 || upVectors == null)
+                return;
+            
+            var curveStartRotation = spline[curveIndex].Rotation;
+            var curveStartUp = math.rotate(curveStartRotation, math.up());
+
+            var endKnotIndex = spline.NextIndex(curveIndex);
+            var curveEndRotation = spline[endKnotIndex].Rotation;
+            var curveEndUp = math.rotate(curveEndRotation, math.up());
+            
+            CurveUtility.EvaluateUpVectors(spline.GetCurve(curveIndex), curveStartUp, curveEndUp, upVectors);
         }
 
         /// <summary>
@@ -744,22 +779,17 @@ namespace UnityEngine.Splines
             var forwardSearch = relativeDistance >= 0;
             var residual = math.abs(relativeDistance);
             float linearDistance = 0;
-            float3 point = spline.EvaluatePosition(fromT);
+            float3 point = currentPos;
+
             while (residual > epsilon && (forwardSearch ? resultPointT < 1f : resultPointT > 0))
             {
                 currentLength += forwardSearch ? residual : -residual;
                 resultPointT = currentLength / length;
 
                 if (resultPointT > 1f) //forward search
-                {
                     resultPointT = 1f;
-                    point = spline.EvaluatePosition(1f);
-                }
                 else if (resultPointT < 0f) //backward search
-                {
                     resultPointT = 0f;
-                    point = spline.EvaluatePosition(0f);
-                }
 
                 point = spline.EvaluatePosition(resultPointT);
                 linearDistance = math.distance(currentPos, point);
@@ -1531,6 +1561,24 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
+        /// Checks if two knots from an <see cref="ISplineContainer"/> are linked together.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="knotA">The first knot to check.</param>
+        /// <param name="knotB">The second knot to check against.</param>
+        public static bool AreKnotLinked(this ISplineContainer container, SplineKnotIndex knotA, SplineKnotIndex knotB)
+        {
+            if (!container.KnotLinkCollection.TryGetKnotLinks(knotA, out var linkedKnots))
+                return false;
+
+            for (int i = 0; i < linkedKnots.Count; ++i)
+                if (linkedKnots[i] == knotB)
+                    return true;
+
+            return false;
+        }
+        
+        /// <summary>
         /// Copies knot links between two splines of the same <see cref="ISplineContainer"/>.
         /// </summary>
         /// <param name="container">The target SplineContainer.</param>
@@ -1590,6 +1638,367 @@ namespace UnityEngine.Splines
         internal static bool AreTangentsModifiable(TangentMode mode)
         {
             return mode == TangentMode.Broken || mode == TangentMode.Continuous || mode == TangentMode.Mirrored;
+        }
+
+        /// <summary>
+        /// Reverses the flow direction of a spline.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="splineIndex">The index of the spline to reverse.</param>
+        public static void ReverseFlow(this ISplineContainer container, int splineIndex)
+        {
+            ReverseFlow(new SplineInfo(container, splineIndex));
+        }
+
+        /// <summary>
+        /// Reverses the flow direction of a spline.
+        /// </summary>
+        /// <param name="splineInfo">The spline to reverse.</param>
+        public static void ReverseFlow(SplineInfo splineInfo)
+        {
+            var spline = splineInfo.Spline;
+
+            var knots = splineInfo.Spline.ToArray();
+            var tangentModes = new TangentMode[spline.Count];
+
+            for (int i = 0; i < tangentModes.Length; ++i)
+                tangentModes[i] = spline.GetTangentMode(i);
+
+            var splineLinks = new List<List<SplineKnotIndex>>();
+
+            // GetAll LinkedKnots on the spline
+            for(int previousKnotIndex = 0; previousKnotIndex < spline.Count; ++previousKnotIndex)
+            {
+                var knot = new SplineKnotIndex(splineInfo.Index, previousKnotIndex);
+                var collection = splineInfo.Container.KnotLinkCollection.GetKnotLinks(knot).ToList();
+                splineLinks.Add(collection);
+            }
+
+            //Unlink all knots in the spline
+            foreach(var linkedKnots in splineLinks)
+                splineInfo.Container.UnlinkKnots(linkedKnots);
+
+            // Reverse order and tangents
+            for (int previousKnotIndex = 0; previousKnotIndex < spline.Count; ++previousKnotIndex)
+            {
+                var knot = knots[previousKnotIndex];
+                var worldKnot = knot.Transform(splineInfo.LocalToWorld);
+                var tangentIn = worldKnot.TangentIn;
+                var tangentOut = worldKnot.TangentOut;
+
+                var reverseRotation = quaternion.AxisAngle(math.mul(knot.Rotation, math.up()), math.radians(180));
+                reverseRotation = math.normalizesafe(reverseRotation);
+
+                // Reverse the tangents to keep the same shape while reversing the order
+                knot.Rotation = math.mul(reverseRotation, knot.Rotation);
+                if(tangentModes[previousKnotIndex] is TangentMode.Broken)
+                {
+                    var localRot = quaternion.AxisAngle(math.up(), math.radians(180));
+                    knot.TangentIn = math.rotate(localRot, tangentOut);
+                    knot.TangentOut = math.rotate(localRot, tangentIn);
+                }
+                else if(tangentModes[previousKnotIndex] is TangentMode.Continuous)
+                {
+                    knot.TangentIn = -tangentOut;
+                    knot.TangentOut = -tangentIn;
+                }
+
+                var newKnotIndex = spline.Count - 1 - previousKnotIndex;
+                spline.SetTangentMode(newKnotIndex, tangentModes[previousKnotIndex]);
+                spline[newKnotIndex] = knot;
+            }
+
+            //Redo all links
+            foreach (var linkedKnots in splineLinks)
+            {
+                if(linkedKnots.Count == 1)
+                    continue;
+
+                var originalKnot = linkedKnots[0];
+                originalKnot = new SplineKnotIndex(originalKnot.Spline, 
+                    originalKnot.Spline.Equals(splineInfo.Index) ? spline.Count - 1 - originalKnot.Knot : originalKnot.Knot);
+                for(int i = 1; i < linkedKnots.Count; ++i)
+                {
+                    var knotInfo = linkedKnots[i];
+                    if (knotInfo.Spline.Equals(splineInfo.Index))
+                        linkedKnots[i] = new SplineKnotIndex(splineInfo.Index, spline.Count - 1 - knotInfo.Knot);
+                    
+                    splineInfo.Container.LinkKnots(originalKnot, linkedKnots[i]);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reverses the flow direction of a spline. Should only be used with Splines that aren't inside any container.
+        /// </summary>
+        /// <param name="spline">The spline to reverse.</param>
+        public static void ReverseFlow(Spline spline)
+        {
+            var knots = spline.ToArray();
+            var tangentModes = new TangentMode[spline.Count];
+
+            for (int i = 0; i < tangentModes.Length; ++i)
+                tangentModes[i] = spline.GetTangentMode(i);
+
+            // Reverse order and tangents
+            for (int previousKnotIndex = 0; previousKnotIndex < spline.Count; ++previousKnotIndex)
+            {
+                var knot = knots[previousKnotIndex];
+                var tangentIn = knot.TangentIn;
+                var tangentOut = knot.TangentOut;
+
+                var reverseRotation = quaternion.AxisAngle(math.mul(knot.Rotation, math.up()), math.radians(180));
+                reverseRotation = math.normalizesafe(reverseRotation);
+
+                // Reverse the tangents to keep the same shape while reversing the order
+                knot.Rotation = math.mul(reverseRotation, knot.Rotation);
+                if (tangentModes[previousKnotIndex] is TangentMode.Broken)
+                {
+                    var localRot = quaternion.AxisAngle(math.up(), math.radians(180));
+                    knot.TangentIn = math.rotate(localRot, tangentOut);
+                    knot.TangentOut = math.rotate(localRot, tangentIn);
+                }
+                else if (tangentModes[previousKnotIndex] is TangentMode.Continuous)
+                {
+                    knot.TangentIn = -tangentOut;
+                    knot.TangentOut = -tangentIn;
+                }
+
+                var newKnotIndex = spline.Count - 1 - previousKnotIndex;
+                spline.SetTangentMode(newKnotIndex, tangentModes[previousKnotIndex]);
+                spline[newKnotIndex] = knot;
+            }
+        }
+        
+        /// <summary>
+        /// Joins two splines together at the specified knots. The two splines must belong to the same container and
+        /// the knots must be at an extremity of their respective splines.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="mainKnot">The first spline extremity to join.</param>
+        /// <param name="otherKnot">The second spline extremity to join.</param>
+        /// <returns> The `SplineKnotIndex` of the junction knot.</returns>
+        /// <remarks>
+        /// In case a spline needs to be reversed to join the two extremities, the mainKnot defines which spline will be kept.
+        /// Hence, the second one will be the reversed one.
+        /// </remarks>
+        /// <exception cref="ArgumentException">
+        /// An exception is thrown on impossible join request (out of bounds
+        /// parameters, knots on the same spline, non-extremity knots)
+        /// </exception>
+        public static SplineKnotIndex JoinSplinesOnKnots(this ISplineContainer container, SplineKnotIndex mainKnot, SplineKnotIndex otherKnot)
+        {
+            if(mainKnot.Spline == otherKnot.Spline)
+                throw new ArgumentException("Trying to join Knots already belonging to the same spline.");
+            
+            if(mainKnot.Spline < 0 || mainKnot.Spline > container.Splines.Count)
+                throw new ArgumentException($"Spline index {mainKnot.Spline} does not exist for the current container.");
+            if(otherKnot.Spline < 0 || otherKnot.Spline > container.Splines.Count)
+                throw new ArgumentException($"Spline index {otherKnot.Spline} does not exist for the current container.");
+            
+            if(mainKnot.Knot < 0 || mainKnot.Knot > container.Splines[mainKnot.Spline].Count)
+                throw new ArgumentException($"Knot index {mainKnot.Knot} does not exist for the current container for Spline[{mainKnot.Spline}].");
+            if(otherKnot.Knot < 0 || otherKnot.Knot > container.Splines[otherKnot.Spline].Count)
+                throw new ArgumentException($"Knot index {otherKnot.Knot} does not exist for the current container for Spline[{otherKnot.Spline}].");
+            
+            if(mainKnot.Knot != 0 && mainKnot.Knot != container.Splines[mainKnot.Spline].Count - 1)
+                throw new ArgumentException($"Knot index {mainKnot.Knot} is not an extremity knot for the current container for Spline[{mainKnot.Spline}]." +
+                    "Only extremity knots can be joined.");
+            if(otherKnot.Knot != 0 && otherKnot.Knot != container.Splines[otherKnot.Spline].Count - 1)
+                throw new ArgumentException($"Knot index {otherKnot.Knot} is not an extremity knot for the current container for Spline[{otherKnot.Spline}]." +
+                    "Only extremity knots can be joined.");
+            
+            var isActiveKnotAtStart = mainKnot.Knot == 0;
+            var isOtherKnotAtStart = otherKnot.Knot == 0;
+
+            //Reverse spline if needed, this is needed when the 2 knots are both starts or ends of their respective spline
+            if(isActiveKnotAtStart == isOtherKnotAtStart)
+                //We give more importance to the main knot, so we reverse the spline associated to otherKnot
+                container.ReverseFlow(otherKnot.Spline);
+
+            //Save Links
+            var links = new List<List<SplineKnotIndex>>();
+
+            //Save relevant data before joining the splines
+            var activeSplineIndex = mainKnot.Spline;
+            var activeSpline = container.Splines[activeSplineIndex];
+            var activeSplineCount = activeSpline.Count;
+            var otherSplineIndex = otherKnot.Spline;
+            var otherSpline = container.Splines[otherSplineIndex];
+            var otherSplineCount = otherSpline.Count;
+            
+            // Get all LinkedKnots on the splines
+            for(int i = 0; i < activeSplineCount; ++i)
+            {
+                var knot = new SplineKnotIndex(mainKnot.Spline, i);
+                links.Add(container.KnotLinkCollection.GetKnotLinks(knot).ToList());
+            }
+            for(int i = 0; i < otherSplineCount; ++i)
+            {
+                var knot = new SplineKnotIndex(otherKnot.Spline, i);
+                links.Add(container.KnotLinkCollection.GetKnotLinks(knot).ToList());
+            }
+            
+            //Unlink all knots in the spline
+            foreach(var linkedKnots in links)
+                container.UnlinkKnots(linkedKnots);
+
+            if(otherSplineCount > 1)
+            {
+                //Join Splines
+                if(isActiveKnotAtStart)
+                {
+                    //All position from the other spline must be added before the knot A
+                    //Don't copy the last knot of the other spline as this is the one to join
+                    for(int i = otherSplineCount - 2; i >= 0 ; i--)
+                        activeSpline.Insert(0,otherSpline[i], otherSpline.GetTangentMode(i));
+                }
+                else
+                {
+                    //All position from the other spline must be added after the knot A
+                    //Don't copy the first knot of the other spline as this is the one to join
+                    for(int i = 1; i < otherSplineCount; i++)
+                        activeSpline.Add(otherSpline[i], otherSpline.GetTangentMode(i));
+                }
+            }
+
+            container.RemoveSplineAt(otherSplineIndex);
+            var newActiveSplineIndex = otherSplineIndex > activeSplineIndex ? activeSplineIndex : mainKnot.Spline - 1;
+            
+            //Restore links
+            foreach (var linkedKnots in links)
+            {
+                if(linkedKnots.Count == 1)
+                    continue;
+
+                for(int i = 0; i < linkedKnots.Count; ++i)
+                {
+                    var knotInfo = linkedKnots[i];
+                    if(knotInfo.Spline == activeSplineIndex || knotInfo.Spline == otherSplineIndex)
+                    {
+                        var newIndex = knotInfo.Knot;
+
+                        if(knotInfo.Spline == activeSplineIndex && isActiveKnotAtStart)
+                            newIndex += otherSplineCount - 1;
+
+                        if(knotInfo.Spline == otherSplineIndex && !isActiveKnotAtStart)
+                            newIndex += activeSplineCount - 1;
+
+                        linkedKnots[i] = new SplineKnotIndex(activeSplineIndex, newIndex);
+                    }
+                    else
+                    {
+                        if(knotInfo.Spline > otherSplineIndex)
+                            linkedKnots[i] = new SplineKnotIndex(knotInfo.Spline - 1,knotInfo.Knot);
+                    }
+                }
+                
+                var originalKnot = linkedKnots[0];
+                for(int i = 1; i < linkedKnots.Count; ++i)
+                    container.LinkKnots(originalKnot, linkedKnots[i]);
+            }
+            
+            return new SplineKnotIndex(newActiveSplineIndex, isActiveKnotAtStart ? otherSplineCount - 1 : mainKnot.Knot);
+        }
+        
+        internal static SplineKnotIndex DuplicateKnot(this ISplineContainer container, SplineKnotIndex originalKnot, int targetIndex)
+        {
+            var spline = container.Splines[originalKnot.Spline];
+            var knot = spline[originalKnot.Knot];
+            spline.Insert(targetIndex, knot);
+            spline.SetTangentMode(targetIndex, spline.GetTangentMode(originalKnot.Knot));
+            return new SplineKnotIndex(originalKnot.Spline, targetIndex);
+        }
+        
+        /// <summary>
+        /// Duplicate a spline between 2 knots of a source spline.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="fromKnot">The start knot to use to duplicate the spline.</param>
+        /// <param name="toKnot">The end knot to use to duplicate the spline.</param>
+        /// <param name="newSplineIndex">The index of the new created spline in the container.</param>
+        /// <exception cref="ArgumentException">Thrown when the provided knots aren't valid or aren't on the same spline.</exception>
+        public static void DuplicateSpline(
+            this ISplineContainer container, 
+            SplineKnotIndex fromKnot, 
+            SplineKnotIndex toKnot, 
+            out int newSplineIndex)
+        {
+            newSplineIndex = -1;
+
+            if (!(fromKnot.IsValid() && toKnot.IsValid()))
+                throw new ArgumentException("Duplicate failed: The 2 provided knots must be valid knots.");
+
+            if(fromKnot.Spline != toKnot.Spline)
+                throw new ArgumentException("Duplicate failed: The 2 provided knots must be on the same Spline.");
+
+            var duplicate = container.AddSpline();
+
+            //Copy knots to the new spline
+            int startIndex = Math.Min(fromKnot.Knot, toKnot.Knot);
+            int toIndex = Math.Max(fromKnot.Knot, toKnot.Knot);
+
+            var originalSplineIndex = fromKnot.Spline;
+            var originalSpline = container.Splines[originalSplineIndex];
+            newSplineIndex = container.Splines.Count - 1;
+            for (int i = startIndex; i <= toIndex; ++i)
+            {
+                duplicate.Add(originalSpline[i], originalSpline.GetTangentMode(i));
+
+                // If the old knot had any links we link both old and new knot.
+                // This will result in the new knot linking to what the old knot was linked to.
+                // The old knot being removed right after that takes care of cleaning the old knot from the link.
+                if (container.KnotLinkCollection.TryGetKnotLinks(new SplineKnotIndex(originalSplineIndex, i), out _))
+                    container.KnotLinkCollection.Link(new SplineKnotIndex(originalSplineIndex, i), new SplineKnotIndex(newSplineIndex, i - startIndex));
+            }
+        }
+
+        /// <summary>
+        /// Splits a spline in a SplineContainer into two splines at a specified knot.
+        /// </summary>
+        /// <param name="container">The target SplineContainer.</param>
+        /// <param name="knotInfo">The SplineKnotIndex of the spline to split. </param>
+        /// <returns>The `SplineKnotIndex` of the first knot of the spline that was created from the split.</returns>
+        /// <exception cref="IndexOutOfRangeException">
+        /// An exception is thrown when the knot belongs to a spline not contained by
+        /// the provided container or when the knot index is out of range.
+        /// </exception>
+        public static SplineKnotIndex SplitSplineOnKnot(this ISplineContainer container, SplineKnotIndex knotInfo)
+        {
+            if (knotInfo.Spline < 0 || knotInfo.Spline > container.Splines.Count)
+            {
+                throw new IndexOutOfRangeException($"Spline index {knotInfo.Spline} does not exist for the current container.");
+            }
+
+            if (knotInfo.Knot < 0 || knotInfo.Knot > container.Splines[knotInfo.Spline].Count)
+            {
+                throw new IndexOutOfRangeException($"Knot index {knotInfo.Knot} does not exist for the current container for Spline[{knotInfo.Spline}].");
+            }
+
+            var originalSpline = container.Splines[knotInfo.Spline];
+            if (originalSpline.Closed)
+            {
+                // Unclose and add a knot to the end with the same data
+                originalSpline.Closed = false;
+                var firstKnot = new SplineKnotIndex(knotInfo.Spline, 0);
+                var lastKnot = container.DuplicateKnot(firstKnot, originalSpline.Count);
+
+                // If the knot was the first one of the spline nothing else needs to be done to split the knot
+                if (knotInfo.Knot == 0)
+                    return firstKnot;
+
+                // If the knot wasn't the first one we also need need to link both ends of the spline to keep the same spline we had before
+                // Link knots is recording the changes to prefab instances so we don't need to add a call to RecordPrefabInstancePropertyModifications 
+                container.LinkKnots(firstKnot, lastKnot);
+            }
+            // If not closed, split does nothing on the extremity of the spline
+            else if (knotInfo.Knot == 0 || knotInfo.Knot == originalSpline.Count - 1)
+                return knotInfo;
+
+            container.DuplicateSpline(knotInfo, new SplineKnotIndex(knotInfo.Spline, originalSpline.Count - 1),
+                out int newSplineIndex);
+            originalSpline.Resize(knotInfo.Knot + 1);
+            return new SplineKnotIndex(newSplineIndex, 0);
         }
     }
 }
