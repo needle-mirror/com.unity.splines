@@ -100,6 +100,9 @@ namespace UnityEditor.Splines
             EditorGUI.BeginChangeCheck();
 
             EditorGUILayout.PropertyField(m_Container, new GUIContent(k_Spline, m_Container.tooltip));
+            if(m_Container.objectReferenceValue == null)
+                EditorGUILayout.HelpBox(k_Helpbox, MessageType.Warning);
+            
             EditorGUILayout.LabelField(k_Geometry, EditorStyles.boldLabel);
 
             if(m_AnyMissingMesh)

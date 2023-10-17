@@ -1,9 +1,5 @@
 fileFormatVersion: 2
-<<<<<<< HEAD:Editor/InternalBridge/AssemblyInfo.cs.meta
 guid: 2da6d0ba602194831a1a64e5bc72f6ad
-=======
-guid: d678438588162a94e8d14b40288240af
->>>>>>> master:Editor/Utilities/SplineHandleUtility.cs.meta
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2

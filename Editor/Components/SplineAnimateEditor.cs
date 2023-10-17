@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.Splines;
 using UnityEditor.UIElements;
@@ -19,10 +18,7 @@ namespace UnityEditor.Splines
         EnumField m_ObjectForwardField;
         EnumField m_ObjectUpField;
 
-        SerializedProperty m_TargetProperty;
         SerializedProperty m_MethodProperty;
-        SerializedProperty m_DurationProperty;
-        SerializedProperty m_SpeedProperty;
         SerializedProperty m_ObjectForwardProperty;
         SerializedProperty m_ObjectUpProperty;
         SerializedProperty m_StartOffsetProperty;
@@ -45,10 +41,7 @@ namespace UnityEditor.Splines
             m_SplineAnimate.Updated += OnSplineAnimateUpdated;
 
             try {
-                m_TargetProperty = serializedObject.FindProperty("m_Target");
                 m_MethodProperty = serializedObject.FindProperty("m_Method");
-                m_DurationProperty = serializedObject.FindProperty("m_Duration");
-                m_SpeedProperty = serializedObject.FindProperty("m_MaxSpeed");
                 m_ObjectForwardProperty = serializedObject.FindProperty("m_ObjectForwardAxis");
                 m_ObjectUpProperty = serializedObject.FindProperty("m_ObjectUpAxis");
                 m_StartOffsetProperty = serializedObject.FindProperty("m_StartOffset");
@@ -146,7 +139,7 @@ namespace UnityEditor.Splines
                 s_ThemeStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"Packages/com.unity.splines/Editor/Stylesheets/SplineAnimateInspector{(EditorGUIUtility.isProSkin ? "Dark" : "Light")}.uss");
 
             m_Root.styleSheets.Add(s_ThemeStyleSheet);
-
+            
             var methodField = m_Root.Q<PropertyField>("method");
             methodField.RegisterValueChangeCallback((_) => { RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex); });
             RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex);

@@ -150,16 +150,16 @@ namespace UnityEngine.Splines
         /// <summary>The main Spline to extrude.</summary>
         public Spline Spline
         {
-            get => m_Container.Spline;
+            get => m_Container?.Spline;
         }
 
         /// <summary>The Splines to extrude.</summary>
         public IReadOnlyList<Spline> Splines
         {
-            get => m_Container.Splines;
+            get => m_Container?.Splines;
         }
 
-        void Reset()
+        internal void Reset()
         {
             TryGetComponent(out m_Container);
 
@@ -272,7 +272,6 @@ namespace UnityEngine.Splines
 
             var path = UnityEditor.AssetDatabase.GenerateUniqueAssetPath($"{sceneDataDir}/SplineExtrude_{mesh.name}.asset");
             UnityEditor.AssetDatabase.CreateAsset(mesh, path);
-            mesh = UnityEditor.AssetDatabase.LoadAssetAtPath<Mesh>(path);
             UnityEditor.EditorGUIUtility.PingObject(mesh);
 #endif
             return mesh;

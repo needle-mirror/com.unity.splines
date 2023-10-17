@@ -461,7 +461,7 @@ namespace UnityEngine.Splines
         {
             var knot = m_Knots[index];
             var mode = GetTangentMode(index);
-
+            
             switch(mode)
             {
                 case TangentMode.Continuous:
@@ -656,9 +656,17 @@ namespace UnityEngine.Splines
             CacheKnotOperationCurves(index);
             m_Knots.Insert(index, knot);
             m_MetaData.Insert(index, new MetaData() { Mode = mode, Tension = tension });
-            ApplyTangentModeNoNotify(this.PreviousIndex(index));
+            
+            var previousIndex = this.PreviousIndex(index);
+            if(previousIndex != index)
+                ApplyTangentModeNoNotify(previousIndex);
+            
             ApplyTangentModeNoNotify(index);
-            ApplyTangentModeNoNotify(this.NextIndex(index));
+            
+            var nextIndex = this.NextIndex(index);
+            if(nextIndex != index)
+                ApplyTangentModeNoNotify(nextIndex);
+            
             SetDirty(SplineModification.KnotInserted, index);
         }
 

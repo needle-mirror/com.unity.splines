@@ -397,7 +397,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Coordinate space to use to offset rotations of the instances.
         /// </summary>
-        [Obsolete("Use RotationSpace instead.", false)] 
+        [Obsolete("Use RotationSpace instead.", false)]
         public OffsetSpace rotationSpace => RotationSpace;
         /// <summary>
         /// Coordinate space to use to offset rotations of the instances.
@@ -477,7 +477,7 @@ namespace UnityEngine.Splines
         [SerializeField, HideInInspector, FormerlySerializedAs("m_Instances")]
         List<GameObject> m_DeprecatedInstances = new List<GameObject>();
 
-        const string k_InstancesRootName = "root-"; 
+        const string k_InstancesRootName = "root-";
         GameObject m_InstancesRoot;
         internal GameObject InstancesRoot => m_InstancesRoot;
 
@@ -521,36 +521,38 @@ namespace UnityEngine.Splines
             }
         }
 
-        [HideInInspector]
         [SerializeField]
         int m_Seed = 0;
 
-        int seed
+        /// <summary>
+        /// Value used to initialize the pseudorandom number generator of the created instances.
+        /// </summary>
+        public int Seed
         {
             get => m_Seed;
             set
             {
                 m_Seed = value;
                 m_InstancesCacheDirty = true;
-                Random.InitState(m_Seed);
             }
         }
 
         List<float> m_TimesCache = new();
         List<float> m_LengthsCache = new();
-        
+
         void OnEnable()
         {
             if (m_Seed == 0)
                 m_Seed = GetInstanceID();
+
 #if UNITY_EDITOR
             Undo.undoRedoPerformed += UndoRedoPerformed;
 #endif
 
             //Bugfix for SPLB-107: Duplicating a SplineInstantiate is making children visible
-            //This ensure to delete the invalid children. 
+            //This ensure to delete the invalid children.
             CheckChildrenValidity();
-            
+
             Spline.Changed += OnSplineChanged;
             UpdateInstances();
         }
@@ -577,7 +579,7 @@ namespace UnityEngine.Splines
             m_SplineDirty = m_AutoRefresh;
 
             EnsureItemsValidity();
-            
+
             m_PositionOffset.CheckMinMaxValidity();
             m_RotationOffset.CheckMinMaxValidity();
             m_ScaleOffset.CheckMinMaxValidity();
@@ -611,7 +613,7 @@ namespace UnityEngine.Splines
         {
             // All the children have to be checked in case multiple SplineInstantiate components are used on the same GameObject.
             // We want to be able to have multiple components as it allows for example to instantiate grass and
-            // trees with different parameters on the same object. 
+            // trees with different parameters on the same object.
             var ids = GetComponents<SplineInstantiate>().Select(sInstantiate => sInstantiate.GetInstanceID()).ToList();
             var childCount = transform.childCount;
             for (int i = childCount - 1; i >= 0; --i)
@@ -628,7 +630,7 @@ namespace UnityEngine.Splines
                             break;
                         }
                     }
-                    
+
                     if (invalid)
 #if UNITY_EDITOR
                         DestroyImmediate(child);
@@ -638,7 +640,7 @@ namespace UnityEngine.Splines
                 }
             }
         }
-        
+
         void ValidateSpacing()
         {
             var xSpacing = Mathf.Max(0.1f, m_Spacing.x);
@@ -657,7 +659,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// This method prevents Up and Forward axis to be aligned.
         /// Up axis will always be kept as the prioritized one.
-        /// If Forward axis is in the same direction than the Up (or -Up) it'll be changed to the next axis.  
+        /// If Forward axis is in the same direction than the Up (or -Up) it'll be changed to the next axis.
         /// </summary>
         void ValidateAxis()
         {
@@ -749,7 +751,7 @@ namespace UnityEngine.Splines
         /// </summary>
         public void Randomize()
         {
-            seed = Random.Range(int.MinValue, int.MaxValue);
+            Seed = Random.Range(int.MinValue, int.MaxValue);
             m_SplineDirty = true;
         }
 
@@ -758,9 +760,9 @@ namespace UnityEngine.Splines
             if (m_SplineDirty)
                 UpdateInstances();
         }
-        
+
         /// <summary>
-        /// Create and update all instances along the spline based on the list of available prefabs/objects.  
+        /// Create and update all instances along the spline based on the list of available prefabs/objects.
         /// </summary>
         public void UpdateInstances()
         {
@@ -774,6 +776,7 @@ namespace UnityEngine.Splines
                 return;
 
             const float k_Epsilon = 0.001f;
+            var randomState = Random.state;
             Random.InitState(m_Seed);
             int index = 0;
             int indexOffset = 0;
@@ -791,7 +794,7 @@ namespace UnityEngine.Splines
             var spacing = Random.Range(m_Spacing.x, m_Spacing.y);
             var currentDist = 0f;
             var instanceCountModeStep = 0f;
-            
+
             if (m_Method == Method.InstanceCount)
             {
                 // Advance dist by half length if we only need to spawn one item - we want to spawn it mid total spline length
@@ -830,14 +833,14 @@ namespace UnityEngine.Splines
                     }
                     else
                         currentDist = 0f;
-                    
+
                     m_TimesCache.Clear();
-                    
+
                     while (currentDist <= (splineLength + k_Epsilon) && !terminateSpawning)
                     {
                         if (!SpawnPrefab(index))
                             break;
-                        
+
                         m_TimesCache.Add(currentDist / splineLength);
 
                         if (m_Method == Method.SpacingDistance)
@@ -850,7 +853,7 @@ namespace UnityEngine.Splines
                             if (spacing > 1)
                             {
                                 var previousDist = currentDist;
-                                
+
                                 currentDist += instanceCountModeStep;
 
                                 if (previousDist < splineLength && currentDist > (splineLength + k_Epsilon))
@@ -861,7 +864,7 @@ namespace UnityEngine.Splines
                             }
                             // If we're here, we're spawning 1 object or none, therefore add total length to currentDist
                             // so that we no longer enter the while loop as the object has been spawned already
-                            else 
+                            else
                                 currentDist += totalSplineLength;
                         }
                         else if (m_Method == Method.LinearDistance)
@@ -1009,16 +1012,17 @@ namespace UnityEngine.Splines
             }
 
             m_SplineDirty = false;
+            Random.state = randomState;
         }
 
         bool SpawnPrefab(int index)
         {
             var prefabIndex = m_ItemsToInstantiate.Count == 1 ? 0 : GetPrefabIndex();
             m_CurrentItem = m_ItemsToInstantiate[prefabIndex];
-            
+
             if (m_CurrentItem.Prefab == null)
                 return false;
-            
+
             if (index >= m_Instances.Count)
             {
 #if UNITY_EDITOR
@@ -1046,7 +1050,7 @@ namespace UnityEngine.Splines
             m_Instances[index].transform.localPosition = m_CurrentItem.Prefab.transform.localPosition;
             m_Instances[index].transform.localRotation = m_CurrentItem.Prefab.transform.localRotation;
             m_Instances[index].transform.localScale = m_CurrentItem.Prefab.transform.localScale;
-            
+
             return true;
         }
 

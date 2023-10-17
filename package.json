@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.4.0",
+  "version": "2.5.1",
   "unity": "2021.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -24,17 +24,17 @@
   "category": "Tool",
   "type": "tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.4.0"
+    "com.unity.splines.tests": "2.5.1"
   },
   "_upm": {
-    "changelog": "### Added\n\n- Exposed public APIs for `SplineUtility.ReverseFlow`, `SplineUtility.JoinSplinesOnKnots`, and  `SplineUtility.SplitSplineOnKnot`.\n\n### Changed\n\n- For Editor versions of 2023.2 or newer, added clipboard operations for Splines to the Scene view context menu.\n- Changed `Splines/Cycle Active Spline` shortcut to Shift-S to remove a conflict with Unity default shortcuts.\n- [SPLB-163] Improved performance of spline handles by caching spline data.\n- [SPLB-167] Changed the evaluation of up vectors to use a cache instead of re-evaluate the values on every single request.\n- In Editor versions of 2023.2 or newer, moved the following actions from the Element Inspector to the Scene view context menu: Link, Unlink, Split, Join, and Reverse Spline Flow. \n\n### Bug Fixes\n\n- [SPLB-176] Fixed a regression where the up vector would not evaluate correctly for some curves.\n- Fixed the setter for SplineAnimate.Normalized time to handle ping-pong direction correctly when set.\n- Fixed a bug where setting the time value to 0 after reaching the end of the spline animation was not resetting the object position.\n- [SPLB-169] Fixed a bug where `CurveUtility.GetNearestPoint` would return incorrect values for the interpolation."
+    "changelog": "### Bug Fixes\n\n- [SPLB-208] Fixed a bug where `SplineToolContext` would attempt to draw empty Splines and flood the console with errors."
   },
   "upmCi": {
-    "footprint": "c0055123e103fece5b108be6fe9089fc1ee257d1"
+    "footprint": "fdd7ea02938473a816827fb7e4b9daa3e1bdc7b1"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "e291427ec33c39e9e5e542db4f2d269e2d09e054"
+    "revision": "e2f60d779075e7e569018f76165a8c45e725599f"
   }
 }

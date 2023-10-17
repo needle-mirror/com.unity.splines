@@ -5,8 +5,33 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.5.1] - 2023-10-17
 
+### Bug Fixes
+
+- [SPLB-208] Fixed a bug where `SplineToolContext` would attempt to draw empty Splines and flood the console with errors.
+
+## [2.5.0] - 2023-10-16
+
+### Added
+
+- Exposed public API for `SplineInstantiate.Seed`.
+
+### Bug Fixes
+
+- [SPLB-201] Fixed error messages showing in edit mode with spline components.
+- [SPLB-203] Fixed a bug where baking `SplineInstantiate` instances broke prefab connections.
+- [SPLB-196] Fixed a bug where the `Random` state was not restored after an update of the instances in `SplineInstantiate`.
+- Fixed a bug where the `SplineCacheUtility` would send null reference exceptions.
+- [SPLB-183] Fixed a bug where duplicating the `SplineExtrude` component was not updating the mesh asset reference.
+- [SPLB-178] Fixed a bug where linking knots would not trigger a `Spline.changed` event. 
+- [SPLB-185] Fixed a bug where the Up vector evaluation would return NaN values when normals and curve tangents are parallel.
+
+### Changed
+
+- [SPLB-187] Fixed a bug where `Spline.EvaluatePosition` was allocating memory when called.
+- [SPLB-181] Fixed a bug where the Auto tangent mode computed incorrect knot rotations.
+- Changed the `SplineComponent` display name in the Inspector to `Spline Container` as a response to user feedback. 
 
 ## [2.4.0] - 2023-07-26
 

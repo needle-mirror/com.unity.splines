@@ -96,7 +96,9 @@ namespace UnityEditor.Splines
                 // Drawing done in two separate passes to make sure the curves are drawn behind the spline elements.
                 // Draw the curves.
                 for (int i = 0; i < splines.Count; ++i)
+                {
                     DoSegmentsHandles(splines[i]);
+                }
 
                 DoKnotsAndTangentsHandles(splines);
             }
@@ -147,6 +149,9 @@ namespace UnityEditor.Splines
         public static void DoSegmentsHandles(SplineInfo splineInfo)
         {
             var spline = splineInfo.Spline;
+            if (spline == null || spline.Count < 2)
+                return;
+
             var localToWorld = splineInfo.LocalToWorld;
 
             // If the spline isn't closed, skip the last index of the spline

@@ -275,7 +275,10 @@ namespace UnityEditor.Splines
             }
         }
 
-        void FrameSelected()
+        /// <summary>
+        /// This methods automatically frames the selected splines or spline elements in the scene view.
+        /// </summary>
+        public void FrameSelected()
         {
             Bounds selectionBounds;
             if (TransformOperation.canManipulate)

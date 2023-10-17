@@ -6,12 +6,12 @@ using Unity.Mathematics;
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// A component that holds a <see cref="Spline"/> object.
+    /// A component that holds a list of <see cref="Spline"/> objects.
     /// </summary>
 #if UNITY_2021_2_OR_NEWER
     [Icon(k_IconPath)]
 #endif
-    [AddComponentMenu("Splines/Spline")]
+    [AddComponentMenu("Splines/Spline Container")]
     [ExecuteInEditMode]
     public sealed class SplineContainer : MonoBehaviour, ISplineContainer, ISerializationCallbackReceiver
     {
@@ -210,7 +210,7 @@ namespace UnityEngine.Splines
         /// <param name="upVector">The output variable for the float3 up direction at t.</param>
         /// <returns>True if a valid set of output variables is computed and false otherwise.</returns>
         public bool Evaluate(int splineIndex, float t, out float3 position,  out float3 tangent,  out float3 upVector)
-            => Evaluate(Splines[splineIndex], t, out position, out tangent, out upVector);
+            => Evaluate(m_Splines[splineIndex], t, out position, out tangent, out upVector);
 
         /// <summary>
         /// Gets the interpolated position, direction, and upDirection at ratio t for a spline.  This method gets the three
@@ -264,7 +264,7 @@ namespace UnityEngine.Splines
         /// <param name="splineIndex">The index of the spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
         /// <returns>A world position along the spline.</returns>
-        public float3 EvaluatePosition(int splineIndex, float t) => EvaluatePosition(Splines[splineIndex], t);
+        public float3 EvaluatePosition(int splineIndex, float t) => EvaluatePosition(m_Splines[splineIndex], t);
 
         /// <summary>
         /// Evaluates the position of a point, t, on a given spline, in world space.
@@ -300,7 +300,7 @@ namespace UnityEngine.Splines
         /// <param name="splineIndex">The index of the spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed tangent vector.</returns>
-        public float3 EvaluateTangent(int splineIndex, float t) => EvaluateTangent(Splines[splineIndex], t);
+        public float3 EvaluateTangent(int splineIndex, float t) => EvaluateTangent(m_Splines[splineIndex], t);
 
         /// <summary>
         /// Evaluates the tangent vector of a point, t, on a given spline, in world space.
@@ -335,7 +335,7 @@ namespace UnityEngine.Splines
         /// <param name="splineIndex">The index of the Spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed up direction.</returns>
-        public float3 EvaluateUpVector(int splineIndex, float t) => EvaluateUpVector(Splines[splineIndex], t);
+        public float3 EvaluateUpVector(int splineIndex, float t) => EvaluateUpVector(m_Splines[splineIndex], t);
 
         /// <summary>
         /// Evaluates the up vector of a point, t, on a given spline, in world space.
@@ -373,7 +373,7 @@ namespace UnityEngine.Splines
         /// <param name="splineIndex">The index of the spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed acceleration vector.</returns>
-        public float3 EvaluateAcceleration(int splineIndex, float t) => EvaluateAcceleration(Splines[splineIndex], t);
+        public float3 EvaluateAcceleration(int splineIndex, float t) => EvaluateAcceleration(m_Splines[splineIndex], t);
 
         /// <summary>
         /// Evaluates the acceleration vector of a point, t, on a given Spline,  in world space.
@@ -409,7 +409,7 @@ namespace UnityEngine.Splines
         /// <returns>The length of `Splines[splineIndex]` in world space</returns>
         public float CalculateLength(int splineIndex)
         {
-            return SplineUtility.CalculateLength(Splines[splineIndex], transform.localToWorldMatrix);
+            return SplineUtility.CalculateLength(m_Splines[splineIndex], transform.localToWorldMatrix);
         }
 
         /// <summary>

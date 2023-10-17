@@ -740,10 +740,10 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="spline">The Spline on which to compute the point.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        /// <param name="fromT">The Spline interpolation ratio 't' (normalized) from which the next position need to be computed.</param>
+        /// <param name="fromT">The Spline interpolation ratio `t` (normalized) from which the next position need to be computed.</param>
         /// <param name="relativeDistance">
         /// The relative distance at which the new point should be placed. A negative value will compute a point at a
-        /// 'resultPointTime' previous to 'fromT' (backward search).
+        /// `resultPointTime` previous to `fromT` (backward search).
         /// </param>
         /// <param name="resultPointT">The normalized interpolation ratio of the resulting point.</param>
         /// <returns>The 3d point from the spline located at a linear distance from the point at t.</returns>
@@ -800,12 +800,12 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given a normalized interpolation ratio, calculate the associated interpolation value in another targetPathUnit regarding a specific spline.
+        /// Given a normalized interpolation ratio, calculate the associated interpolation value in another <see cref="PathIndexUnit"/> regarding a specific spline.
         /// </summary>
-        /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
+        /// <param name="spline">The Spline to use for the conversion.</param>
         /// <param name="t">Normalized interpolation ratio (0 to 1).</param>
-        /// <param name="targetPathUnit">The PathIndexUnit to which 't' should be converted.</param>
-        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <param name="targetPathUnit">The <see cref="PathIndexUnit"/> to which `t` should be converted.</param>
+        /// <typeparam name="T">A type implementing <see cref="ISpline"/>.</typeparam>
         /// <returns>The interpolation value converted to targetPathUnit.</returns>
         public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit targetPathUnit)
             where T : ISpline
@@ -817,26 +817,26 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Given an interpolation value using a certain PathIndexUnit type, calculate the associated interpolation value in another targetPathUnit regarding a specific spline.
+        /// Given an interpolation value using one of the various <see cref="PathIndexUnit"/> types, calculate the associated interpolation value in another <see cref="PathIndexUnit"/> regarding a specific spline.
         /// </summary>
-        /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
-        /// <param name="t">Interpolation in the original PathIndexUnit.</param>
-        /// <param name="fromPathUnit">The PathIndexUnit for the original interpolation value.</param>
-        /// <param name="targetPathUnit">The PathIndexUnit to which 't' should be converted.</param>
-        /// <typeparam name="T">A type implementing ISpline.</typeparam>
+        /// <param name="spline">The spline to use for the conversion.</param>
+        /// <param name="value">Interpolation value in the original <see cref="PathIndexUnit"/> `fromPathUnit`.</param>
+        /// <param name="fromPathUnit">The <see cref="PathIndexUnit"/> for the original interpolation value type.</param>
+        /// <param name="targetPathUnit">The <see cref="PathIndexUnit"/> to which `value` should be converted.</param>
+        /// <typeparam name="T">A type implementing <see cref="ISpline"/>.</typeparam>
         /// <returns>The interpolation value converted to targetPathUnit.</returns>
-        public static float ConvertIndexUnit<T>(this T spline, float t, PathIndexUnit fromPathUnit, PathIndexUnit targetPathUnit)
+        public static float ConvertIndexUnit<T>(this T spline, float value, PathIndexUnit fromPathUnit, PathIndexUnit targetPathUnit)
             where T : ISpline
         {
             if (fromPathUnit == targetPathUnit)
             {
                 if (targetPathUnit == PathIndexUnit.Normalized)
-                    t = WrapInterpolation(t, spline.Closed);
+                    value = WrapInterpolation(value, spline.Closed);
 
-                return t;
+                return value;
             }
 
-            return ConvertNormalizedIndexUnit(spline, GetNormalizedInterpolation(spline, t, fromPathUnit), targetPathUnit);
+            return ConvertNormalizedIndexUnit(spline, GetNormalizedInterpolation(spline, value, fromPathUnit), targetPathUnit);
         }
 
         static float ConvertNormalizedIndexUnit<T>(T spline, float t, PathIndexUnit targetPathUnit) where T : ISpline
@@ -868,8 +868,8 @@ namespace UnityEngine.Splines
         /// relative to a <see cref="Spline"/>.
         /// </summary>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
-        /// <param name="t">The 't' value to normalize in the original PathIndexUnit.</param>
-        /// <param name="originalPathUnit">The PathIndexUnit from the original 't'.</param>
+        /// <param name="t">The `t` value to normalize in the original PathIndexUnit.</param>
+        /// <param name="originalPathUnit">The PathIndexUnit from the original `t`.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>The normalized interpolation ratio (0 to 1).</returns>
         public static float GetNormalizedInterpolation<T>(T spline, float t, PathIndexUnit originalPathUnit) where T : ISpline
@@ -1068,11 +1068,11 @@ namespace UnityEngine.Splines
             if (math.lengthsq(tangent) == 0f)
                 tangent = math.rotate(Quaternion.FromToRotation(math.up(), normal), math.forward());
 
-            float3 up = Mathf.Approximately(math.abs(math.dot(tangent, normal)), 1f)
-                ? math.cross(tangent, math.right())
+            float3 up = Mathf.Approximately(math.abs(math.dot(math.normalizesafe(tangent), math.normalizesafe(normal))), 1f)
+                ? math.cross(math.normalizesafe(tangent), math.right())
                 : Vector3.ProjectOnPlane(normal, tangent).normalized;
 
-            return quaternion.LookRotationSafe(tangent, up);
+            return quaternion.LookRotationSafe(math.normalizesafe(tangent), up);
         }
 
         /// <summary>
@@ -1530,8 +1530,13 @@ namespace UnityEngine.Splines
                     return;
 
                 var knot = splines[i.Spline][i.Knot];
+                var originalPosition = knot.Position; 
                 knot.Position = position;
                 splines[i.Spline].SetKnotNoNotify(i.Knot, knot);
+
+                // If the knot has been moved, notifies a knotModified event
+                if (!Mathf.Approximately(Vector3.Distance(position, originalPosition), 0f))
+                    splines[i.Spline].SetDirty(SplineModification.KnotModified, i.Knot);
             }
         }
 
@@ -1545,7 +1550,16 @@ namespace UnityEngine.Splines
         /// <param name="knotB">The second knot to link.</param>
         public static void LinkKnots<T>(this T container, SplineKnotIndex knotA, SplineKnotIndex knotB) where T : ISplineContainer
         {
+            bool similarPositions = Mathf.Approximately(math.length(container.Splines[knotA.Spline][knotA.Knot].Position - container.Splines[knotB.Spline][knotB.Knot].Position), 0f);
+            var knotsToNotify = similarPositions ? null : container.KnotLinkCollection.GetKnotLinks(knotB);   
+            
             container.KnotLinkCollection.Link(knotA, knotB);
+
+            if (knotsToNotify != null)
+            {
+                foreach (var ski in knotsToNotify)
+                    container.Splines[ski.Spline].SetDirty(SplineModification.KnotModified, ski.Knot);
+            }
         }
 
         /// <summary>
@@ -1788,25 +1802,46 @@ namespace UnityEngine.Splines
         /// </exception>
         public static SplineKnotIndex JoinSplinesOnKnots(this ISplineContainer container, SplineKnotIndex mainKnot, SplineKnotIndex otherKnot)
         {
-            if(mainKnot.Spline == otherKnot.Spline)
-                throw new ArgumentException("Trying to join Knots already belonging to the same spline.");
-            
-            if(mainKnot.Spline < 0 || mainKnot.Spline > container.Splines.Count)
-                throw new ArgumentException($"Spline index {mainKnot.Spline} does not exist for the current container.");
+            if (mainKnot.Spline == otherKnot.Spline)
+            {
+                Debug.LogError("Trying to join Knots already belonging to the same spline.");
+                return new SplineKnotIndex();
+            }
+
+            if (mainKnot.Spline < 0 || mainKnot.Spline > container.Splines.Count)
+            {
+                Debug.LogError($"Spline index {mainKnot.Spline} does not exist for the current container.");
+                return new SplineKnotIndex();
+            }
             if(otherKnot.Spline < 0 || otherKnot.Spline > container.Splines.Count)
-                throw new ArgumentException($"Spline index {otherKnot.Spline} does not exist for the current container.");
+            {
+                Debug.LogError($"Spline index {otherKnot.Spline} does not exist for the current container.");
+                return new SplineKnotIndex();
+            }
             
             if(mainKnot.Knot < 0 || mainKnot.Knot > container.Splines[mainKnot.Spline].Count)
-                throw new ArgumentException($"Knot index {mainKnot.Knot} does not exist for the current container for Spline[{mainKnot.Spline}].");
+            {
+                Debug.LogError($"Knot index {mainKnot.Knot} does not exist for the current container for Spline[{mainKnot.Spline}].");
+                return new SplineKnotIndex();
+            }
             if(otherKnot.Knot < 0 || otherKnot.Knot > container.Splines[otherKnot.Spline].Count)
-                throw new ArgumentException($"Knot index {otherKnot.Knot} does not exist for the current container for Spline[{otherKnot.Spline}].");
+            {
+                Debug.LogError($"Knot index {otherKnot.Knot} does not exist for the current container for Spline[{otherKnot.Spline}].");
+                return new SplineKnotIndex();
+            }
             
             if(mainKnot.Knot != 0 && mainKnot.Knot != container.Splines[mainKnot.Spline].Count - 1)
-                throw new ArgumentException($"Knot index {mainKnot.Knot} is not an extremity knot for the current container for Spline[{mainKnot.Spline}]." +
+            {
+                Debug.LogError($"Knot index {mainKnot.Knot} is not an extremity knot for the current container for Spline[{mainKnot.Spline}]." +
                     "Only extremity knots can be joined.");
+                return new SplineKnotIndex();
+            }
             if(otherKnot.Knot != 0 && otherKnot.Knot != container.Splines[otherKnot.Spline].Count - 1)
-                throw new ArgumentException($"Knot index {otherKnot.Knot} is not an extremity knot for the current container for Spline[{otherKnot.Spline}]." +
+            {
+                Debug.LogError($"Knot index {otherKnot.Knot} is not an extremity knot for the current container for Spline[{otherKnot.Spline}]." +
                     "Only extremity knots can be joined.");
+                return new SplineKnotIndex();
+            }
             
             var isActiveKnotAtStart = mainKnot.Knot == 0;
             var isOtherKnotAtStart = otherKnot.Knot == 0;

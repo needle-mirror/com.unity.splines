@@ -195,7 +195,7 @@ namespace UnityEngine.Splines
             Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
             mesh.RecalculateBounds();
         }
-        
+
         /// <summary>
         /// Extrude a mesh along a list of splines in a tube-like shape.
         /// </summary>
@@ -213,6 +213,13 @@ namespace UnityEngine.Splines
         public static void Extrude<T>(IReadOnlyList<T> splines, Mesh mesh, float radius, int sides, float segmentsPerUnit, bool capped, float2 range) where T : ISpline
         {
             mesh.Clear();
+            if (splines == null)
+            {
+                if(Application.isPlaying)
+                    Debug.LogError("Trying to extrude a spline mesh with no valid splines.");
+                return;
+            }
+            
             var meshDataArray = Mesh.AllocateWritableMeshData(1);
             var data = meshDataArray[0];
             data.subMeshCount = 1;

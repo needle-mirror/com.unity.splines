@@ -75,9 +75,7 @@ namespace UnityEditor.Splines
             if (knotIndex == -1 || modificationType != SplineModification.KnotModified)
             {
                 s_CurvesBuffers?.Clear();
-                
-                if(s_SplineCacheTable.ContainsKey(spline))
-                    s_SplineCacheTable[spline] = null;
+                s_SplineCacheTable.Remove(spline);
             }
             else // If Knot modified by the tools
             {
@@ -109,7 +107,7 @@ namespace UnityEditor.Splines
                     s_CurvesBuffers.Remove(curve);
             }
 
-            if (s_SplineCacheTable == null || !s_SplineCacheTable.ContainsKey(spline))
+            if (s_SplineCacheTable == null || !s_SplineCacheTable.ContainsKey(spline) || s_SplineCacheTable[spline] == null)
                 return;
                 
             // Update position cache

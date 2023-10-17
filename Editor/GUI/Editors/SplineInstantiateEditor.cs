@@ -107,6 +107,7 @@ class SplineInstantiateEditor : SplineComponentEditor
     SerializedProperty m_ItemsToInstantiate;
     SerializedProperty m_InstantiateMethod;
 
+    SerializedProperty m_Seed;
     SerializedProperty m_Space;
     SerializedProperty m_UpAxis;
     SerializedProperty m_ForwardAxis;
@@ -122,8 +123,6 @@ class SplineInstantiateEditor : SplineComponentEditor
         L10n.Tr("Spacing (Spline)"),
         L10n.Tr("Spacing (Linear)")
     };
-
-    static readonly string k_Helpbox = L10n.Tr("Instantiated Objects need a SplineContainer target to be created.");
 
     //Setup Section
     static readonly string k_Setup = L10n.Tr("Instantiated Object Setup");
@@ -143,7 +142,6 @@ class SplineInstantiateEditor : SplineComponentEditor
     SpawnType m_SpacingType;
 
     //Offsets
-    static readonly string k_Offset = L10n.Tr("Offsets");
     static readonly string k_PositionOffset = L10n.Tr("Position Offset");
     static readonly string k_PositionOffsetTooltip = L10n.Tr("Whether or not to use a position offset.");
     static readonly string k_RotationOffset = L10n.Tr("Rotation Offset");
@@ -156,6 +154,9 @@ class SplineInstantiateEditor : SplineComponentEditor
     static readonly string k_AutoRefresh = L10n.Tr("Auto Refresh Generation");
     static readonly string k_AutoRefreshTooltip = L10n.Tr("Automatically refresh the instances when the spline or the values are changed.");
 
+    static readonly string k_Seed = L10n.Tr("Randomization Seed");
+    static readonly string k_SeedTooltip = L10n.Tr("Value used to initialize the pseudorandom number generator of the instances.");
+    
     static readonly string k_Randomize = L10n.Tr("Randomize");
     static readonly string k_RandomizeTooltip = L10n.Tr("Compute a new randomization of the instances along the spline.");
     static readonly string k_Regenerate = L10n.Tr("Regenerate");
@@ -204,6 +205,7 @@ class SplineInstantiateEditor : SplineComponentEditor
         m_PositionOffset = serializedObject.FindProperty("m_PositionOffset");
         m_RotationOffset = serializedObject.FindProperty("m_RotationOffset");
         m_ScaleOffset = serializedObject.FindProperty("m_ScaleOffset");
+        m_Seed = serializedObject.FindProperty("m_Seed");
 
         m_AutoRefresh = serializedObject.FindProperty("m_AutoRefresh");
         
@@ -276,13 +278,18 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorGUI.BeginChangeCheck();
         EditorGUILayout.PropertyField(m_ItemsToInstantiate);
         dirtyInstances = EditorGUI.EndChangeCheck();
-
+        
         DoSetupSection();
         dirtyInstances |= DoInstantiateSection();
         updateInstances |= DisplayOffsets();
 
         EditorGUILayout.LabelField(k_Generation, EditorStyles.boldLabel);
         EditorGUI.indentLevel++;
+        EditorGUI.BeginChangeCheck();
+        EditorGUILayout.PropertyField(m_Seed, new GUIContent(k_Seed, k_SeedTooltip));
+        var newSeed = EditorGUI.EndChangeCheck();
+        dirtyInstances |= newSeed;
+        updateInstances |= newSeed;
         EditorGUILayout.PropertyField(m_AutoRefresh, new GUIContent(k_AutoRefresh, k_AutoRefreshTooltip));
         EditorGUI.indentLevel--;
         serializedObject.ApplyModifiedProperties();
@@ -291,7 +298,7 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.Space();
         if (GUILayout.Button(new GUIContent(k_Randomize, k_RandomizeTooltip), GUILayout.MaxWidth(100f)))
-        {
+        {            
             Undo.RecordObjects(targets, "Changing SplineInstantiate seed");
             splineInstantiate.Randomize();
             updateInstances = true;
@@ -318,16 +325,13 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorGUILayout.Separator();
 
         if (dirtyInstances)
-        {
             splineInstantiate.SetDirty();
-            SceneView.RepaintAll();
-        }
 
         if (updateInstances)
-        {
             splineInstantiate.UpdateInstances();
+        
+        if (dirtyInstances || updateInstances)
             SceneView.RepaintAll();
-        }
     }
 
     void DoSetupSection()
@@ -599,19 +603,20 @@ class SplineInstantiateEditor : SplineComponentEditor
         splineInstantiate.UpdateInstances();
         for (int i = 0; i < splineInstantiate.instances.Count; ++i)
         {
-            var newInstance = Instantiate(splineInstantiate.instances[i], splineInstantiate.transform, true);
+            var newInstance = splineInstantiate.instances[i];
             newInstance.name = "Instance-" + i;
             newInstance.hideFlags = HideFlags.None;
+            newInstance.transform.SetParent(((SplineInstantiate)target).gameObject.transform, true);
             
             Undo.RegisterCreatedObjectUndo(newInstance, "Baking instance");
         }
         
+        splineInstantiate.instances.Clear();
         if(splineInstantiate.InstancesRoot != null)
             Undo.DestroyObjectImmediate(splineInstantiate.InstancesRoot);
         
         Undo.DestroyObjectImmediate(splineInstantiate);
         
-        splineInstantiate.instances.Clear();
         Undo.CollapseUndoOperations(group);
     }
 }

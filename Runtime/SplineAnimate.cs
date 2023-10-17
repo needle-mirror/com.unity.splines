@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine.Splines;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -409,7 +406,8 @@ namespace UnityEngine.Splines
         {
             if (m_Target == null || m_Target.Splines.Count == 0)
             {
-                Debug.LogError("SplineAnimate does not have a valid SplineContainer set.");
+                if(Application.isPlaying)
+                    Debug.LogError("SplineAnimate does not have a valid SplineContainer set.");
                 return true;
             }
 

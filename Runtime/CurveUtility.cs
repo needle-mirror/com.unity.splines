@@ -239,7 +239,7 @@ namespace UnityEngine.Splines
             // Ensure we have workable tangents by linearizing ones that are of zero length
             var linearTangentLen = math.length(SplineUtility.GetExplicitLinearTangent(curve.P0, curve.P3));
             var linearTangentOut = math.normalize(curve.P3 - curve.P0) * linearTangentLen;
-            if (Approximately(math.length(curve.P1 - curve.P0), 0f)) 
+            if (Approximately(math.length(curve.P1 - curve.P0), 0f))
                 curve.P1 = curve.P0 + linearTangentOut;
             if (Approximately(math.length(curve.P2 - curve.P3), 0f))
                 curve.P2 = curve.P3 - linearTangentOut;
@@ -252,6 +252,12 @@ namespace UnityEngine.Splines
             frame.tangent = curve.P1 - curve.P0;
             frame.normal = startUp;
             frame.binormal = math.normalize(math.cross(frame.tangent, frame.normal));
+            // SPLB-185 : If the tangent and normal are parallel, we can't construct a valid frame
+            // rather than returning a value based on startUp and endUp, we return a zero vector
+            // to indicate that this is not a valid up vector.
+            if(float.IsNaN(frame.binormal.x))
+                return float3.zero;
+            
             normalBuffer[0] = frame.normal;
             
             // Continue building remaining rotation minimizing frames
