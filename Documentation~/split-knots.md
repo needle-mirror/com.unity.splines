@@ -9,7 +9,8 @@ You can only split a knot that has two segments. Split knots each have one segme
 
 
 To split a knot:
-1. [!include[select-spline](.\snippets\select-spline.md)]
-1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
+1. [!include[select-spline](.\\snippets\\select-spline.md)]
+1. [!include[set-spline-context](.\\snippets\\set-spline-context.md)]
 1. Select a knot with two segments. 
-1. In the Element Inspector overlay, select **Split**.
+1. In the Scene view, right-click to open the context menu.
+1. In the Scene view context menu, select **Split Knot**.

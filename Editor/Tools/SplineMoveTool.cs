@@ -55,7 +55,7 @@ namespace UnityEditor.Splines
                     break;
             }
 
-            if (TransformOperation.canManipulate)
+            if (TransformOperation.canManipulate && !DirectManipulation.IsDragging)
             {
                 EditorGUI.BeginChangeCheck();
 

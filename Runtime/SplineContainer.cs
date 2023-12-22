@@ -56,17 +56,19 @@ namespace UnityEngine.Splines
         /// </remarks>
         public static event Action<SplineContainer, int, int> SplineReordered;
 
+        ReadOnlyCollection<Spline> m_ReadOnlySplines;
+
         /// <summary>
         /// The list of all splines attached to that container.
         /// </summary>
         public IReadOnlyList<Spline> Splines
         {
-            get => new ReadOnlyCollection<Spline>(m_Splines);
+            get => m_ReadOnlySplines ??= new ReadOnlyCollection<Spline>(m_Splines);
             set
             {
                 if (value == null)
                 {
-                    m_Splines = new Spline[0];
+                    m_Splines = Array.Empty<Spline>();
                     return;
                 }
 
@@ -93,6 +95,8 @@ namespace UnityEngine.Splines
                 m_Splines = new Spline[value.Count];
                 for (int i = 0; i < m_Splines.Length; ++i)
                     m_Splines[i] = value[i];
+
+                m_ReadOnlySplines = new ReadOnlyCollection<Spline>(m_Splines);
 
                 foreach (var removedIndex in m_RemovedSplinesIndices)
                     SplineRemoved?.Invoke(this, removedIndex);
@@ -348,13 +352,13 @@ namespace UnityEngine.Splines
         {
             if (spline == null)
                 return float3.zero;
-            
+
             if (IsScaled)
             {
                 using var nativeSpline = new NativeSpline(spline, transform.localToWorldMatrix, true);
                 return SplineUtility.EvaluateUpVector(nativeSpline, t);
             }
-            
+
             //Using TransformDirection as up direction is not sensible to scale.
             return transform.TransformDirection(SplineUtility.EvaluateUpVector(spline, t));
         }
@@ -428,7 +432,10 @@ namespace UnityEngine.Splines
             if (m_Spline != null && m_Spline.Count > 0)
             {
                 if (m_Splines == null || m_Splines.Length == 0 || m_Splines.Length == 1 && m_Splines[0].Count == 0)
+                {
                     m_Splines = new[] { m_Spline };
+                    m_ReadOnlySplines = new ReadOnlyCollection<Spline>(m_Splines);
+                }
 
                 m_Spline = new Spline(); //Clear spline
             }

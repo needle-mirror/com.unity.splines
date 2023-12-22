@@ -178,6 +178,18 @@ class SplineInstantiateEditor : SplineComponentEditor
 
     SplineInstantiate[] m_Components;
 
+    SplineInstantiate[] components
+    {
+        get
+        {
+            //in case of multiple selection where some objects do not have a SplineInstantiate component, m_Components might be null
+            if (m_Components == null)
+                m_Components = targets.Select(x => x as SplineInstantiate).Where(y => y != null).ToArray();
+            
+            return m_Components;
+        }
+    }
+
     protected void OnEnable()
     {
         Spline.Changed += OnSplineChanged;
@@ -190,7 +202,7 @@ class SplineInstantiateEditor : SplineComponentEditor
     {
         if (m_Components != null && m_Components.Length > 0) 
             return true;
-        
+     
         m_SplineContainer = serializedObject.FindProperty("m_Container");
 
         m_ItemsToInstantiate = serializedObject.FindProperty("m_ItemsToInstantiate");
@@ -234,7 +246,7 @@ class SplineInstantiateEditor : SplineComponentEditor
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             return;
         
-        foreach (var instantiate in m_Components)
+        foreach (var instantiate in components)
         {
             if(instantiate == null)
                 continue;
@@ -253,7 +265,7 @@ class SplineInstantiateEditor : SplineComponentEditor
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             return;
 
-        foreach (var instantiate in m_Components)
+        foreach (var instantiate in components)
         {
             if (instantiate.Container == container)
                 instantiate.UpdateInstances();

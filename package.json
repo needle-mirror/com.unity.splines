@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.5.1",
+  "version": "2.5.2",
   "unity": "2021.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -24,17 +24,17 @@
   "category": "Tool",
   "type": "tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.5.1"
+    "com.unity.splines.tests": "2.5.2"
   },
   "_upm": {
-    "changelog": "### Bug Fixes\n\n- [SPLB-208] Fixed a bug where `SplineToolContext` would attempt to draw empty Splines and flood the console with errors."
+    "changelog": "### Added\n\n- [SPLB-222] Added safety checks to spline changed events. \n\n### Changed\n\n- [SPLB-233] Removed transform handles while dragging a knot using direct manipulation.\n- [SPLB-234] Removed unnecessary spline metadata which was saved on disk.\n\n### Bug Fixes\n\n- [SPLB-230] Fixed a bug where modifying the tangent mode on the last knot would change the spline shape unpredictably.\n- [SPLB-225] Fixed a bug where closing a Spline with the `Draw Splines Tool` had inconsistent behaviour.\n- [SPLB-236] Fixed a bug where the spline instantiate inspector was throwing an exception when the selection contained objects without that component.\n- [SPLB-235] Fixed a bug where hovering a knot was create highlights when dragging tangents.\n- [SPLB-234] Fixed a bug where it was impossible to add a knot on the latest added knot.\n- [SPLB-214] Fixed an exception that would when adding a spline via the inspector if no other spline exists.\n- [SPLB-226] Fixed broken preview when adding knots to a closed spline"
   },
   "upmCi": {
-    "footprint": "fdd7ea02938473a816827fb7e4b9daa3e1bdc7b1"
+    "footprint": "5472d3222ddecc6ed093401833da98d49bd1a16f"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "e2f60d779075e7e569018f76165a8c45e725599f"
+    "revision": "80fae673490cb05db4e1532f2eeae338a9603846"
   }
 }

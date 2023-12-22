@@ -119,8 +119,11 @@ namespace UnityEditor.Splines
             {
                 var spline = m_Container.AddSpline();
                 var srcSplineIndex = m_Container.Splines.Count - 2;
-                spline.Copy(m_Container.Splines[srcSplineIndex]);
-                m_Container.CopyKnotLinks(srcSplineIndex, m_Container.Splines.Count - 1);
+                if (srcSplineIndex >= 0)
+                {
+                    spline.Copy(m_Container.Splines[srcSplineIndex]);
+                    m_Container.CopyKnotLinks(srcSplineIndex, m_Container.Splines.Count - 1);
+                }
                 added++;
             }
 

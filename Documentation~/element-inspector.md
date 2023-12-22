@@ -16,11 +16,7 @@ To access the Element Inspector overlay, select knots or tangents on splines in 
 | **Out**|  Set the magnitude and direction of the knot's **Out** tangent. The **Out** tangent defines the curvature of the segment that exits the knot. </br> </br> This property is visible only when you select knots. |
 | **Magnitude** | Set the magnitude of a tangent. </br> </br> A tangent's magnitude determines how much that tangent affects the curvature of its respective segment. A high magnitude value increases a tangent's influence on a segment's curvature and a low value decreases it. </br> </br> This property is visible only when you select tangents. |
 | **Direction** | Set the direction that a tangent points to from its knot. </br> </br> This property is visible only when you select tangents. |
-| **Link** | Set knots to the same position and link them. | 
-| **Unlink** | Unlink knots. |
-| **Split** | Divide a knot with two segments into two knots. |
-| **Join** | Connect the ends of two splines to each other.  |
-| **Reverse Spline Flow** | Reverse the direction of a spline. |
+
 
  
 ## Additional resources
@@ -29,4 +25,4 @@ To access the Element Inspector overlay, select knots or tangents on splines in 
 - [**Link and unlink knots**](link-unlink-knots.md)
 - [**Split knots**](split-knots.md)
 - [**Join knots**](join-knots.md)
-<!-- [**Set Spline Flow**](spline-flow.md) -->
+- [**Reverse the flow of a spline**](reverse-spline-flow.md)

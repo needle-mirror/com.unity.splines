@@ -7,7 +7,8 @@ When you join two knots, the new, joined knot takes the position of the active k
 If you join the knots of two splines that flow in different directions, the new spline takes the direction of the active knot. 
 
 To join two splines:
-1. [!include[select-spline](.\snippets\select-spline.md)]
-1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
+1. [!include[select-spline](.\\snippets\\select-spline.md)]
+1. [!include[set-spline-context](.\\snippets\\set-spline-context.md)]
 1. Select two knots that are from different splines and have only one segment each.  
-1. In the Element Inspector overlay, select **Join**. 
+1. In the Scene view, right-click to open the context menu.
+1. In the Scene view context menu, and select **Join Knots**. 

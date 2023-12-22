@@ -45,7 +45,7 @@ namespace UnityEditor.Splines
             if (Event.current.type == EventType.Layout)
                 UpdatePivotPosition(true);
 
-            if(TransformOperation.canManipulate)
+            if(TransformOperation.canManipulate && !DirectManipulation.IsDragging)
             {
                 EditorGUI.BeginChangeCheck();
                 var rotation = Handles.DoRotationHandle(m_CurrentRotation, m_RotationCenter);

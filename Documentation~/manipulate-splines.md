@@ -10,8 +10,8 @@ Activate the **Spline** tool context to use the Move, Rotate, and Scale tools on
 
 To select the knots or tangents of a spline in the Scene view:  
 
-1. [!include[select-spline](.\snippets\select-spline.md)]
-1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
+1. [!include[select-spline](.\\snippets\\select-spline.md)]
+1. [!include[set-spline-context](.\\snippets\\set-spline-context.md)]
 1. In the Scene view, select a knot or tangent. 
 1. To select multiple knots and tangents, do one of the following:
     * Click and drag to draw a box over multiple knots and tangents. 

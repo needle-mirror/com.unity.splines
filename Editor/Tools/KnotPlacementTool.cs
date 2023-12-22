@@ -115,11 +115,7 @@ namespace UnityEditor.Splines
                             var normal = math.mul(lastKnot.Rotation, math.up());
                             EditorSplineUtility.AddKnotToTheStart(CurrentSplineInfo, lastKnot.Position, normal,
                                 -lastKnot.TangentOut.Direction);
-
-                            //Adding the knot before the first element is shifting indexes using a callback
-                            //Using a delay called here to be certain that the indexes has been shift and that this new link won't be shifted
-                            EditorApplication.delayCall += () =>
-                                EditorSplineUtility.LinkKnots(new SelectableKnot(CurrentSplineInfo, 1),
+                            EditorSplineUtility.LinkKnots(new SelectableKnot(CurrentSplineInfo, 0),
                                     new SelectableKnot(CurrentSplineInfo, CurrentSplineInfo.Spline.Count - 1));
                             break;
                         }
@@ -143,10 +139,11 @@ namespace UnityEditor.Splines
                 EditorSplineUtility.RecordObject(CurrentSplineInfo, k_KnotPlacementUndoMessage);
 
                 var lastAddedKnot = GetLastAddedKnot();
-                if (knot.Equals(lastAddedKnot))
-                    return;
 
-                // If the user clicks on the first knot (or a knot linked to the first knot) of the spline close the spline
+                // The knot parameter of this method, in a practical context is the knot the user has clicked on. It is 
+                // NOT necessarily the closing knot of this spline.
+
+                // If the user clicks on the closing knot (or a knot linked to the closing knot) of the spline, close the spline.
                 var closeKnotIndex = m_Direction == DrawingDirection.End ? 0 : knot.SplineInfo.Spline.Count - 1;
                 if (knot.SplineInfo.Equals(CurrentSplineInfo)
                     && ( knot.KnotIndex == closeKnotIndex ||
@@ -155,28 +152,35 @@ namespace UnityEditor.Splines
                 {
                     knot.SplineInfo.Spline.Closed = true;
 
-                    //When using a Bezier Tangent, break the mode on the first knot to keep both tangents
-                    if (knot.Mode != EditorSplineUtility.DefaultTangentMode ||
-                        math.lengthsq(tangentOut) > float.Epsilon)
-                        knot.Mode = TangentMode.Broken;
+                    bool didDrawTangent = math.lengthsq(tangentOut) > float.Epsilon;
+                    
+                    // Closing a spline should only affect the closing knot (first or last knot),
+                    // not the clicked knot. If we drew a tangent or the closing knot is Auto tangent 
+                    // mode, we set closing knot tangent mode to Broken to retain the shape.
+                    var closingKnot = new SelectableKnot(CurrentSplineInfo, closeKnotIndex);
+                    if (didDrawTangent || closingKnot.Mode == TangentMode.AutoSmooth)
+                        closingKnot.Mode = TangentMode.Broken;
 
-                    SelectableTangent tangent;
-                    switch (m_Direction)
+                    if (didDrawTangent)
                     {
-                        case DrawingDirection.Start:
-                            tangent = new SelectableTangent(knot.SplineInfo, closeKnotIndex, BezierTangent.Out);
-                            break;
+                        SelectableTangent tangent;
+                        switch (m_Direction)
+                        {
+                            case DrawingDirection.Start:
+                                tangent = new SelectableTangent(knot.SplineInfo, closeKnotIndex, BezierTangent.Out);
+                                break;
 
-                        case DrawingDirection.End:
-                            tangent = new SelectableTangent(knot.SplineInfo, closeKnotIndex, BezierTangent.In);
-                            break;
+                            case DrawingDirection.End:
+                                tangent = new SelectableTangent(knot.SplineInfo, closeKnotIndex, BezierTangent.In);
+                                break;
 
-                        default:
-                            tangent = default;
-                            break;
+                            default:
+                                tangent = default;
+                                break;
+                        }
+
+                        tangent.Direction = -tangentOut;
                     }
-
-                    tangent.Direction = -tangentOut;
                 }
                 else
                 {
@@ -621,6 +625,7 @@ namespace UnityEditor.Splines
                             EditorSplineUtility.GetAffectedCurves(
                                 drawingOperation.CurrentSplineInfo,
                                 drawingOperation.CurrentSplineInfo.Transform.InverseTransformPoint(pos),
+                                drawingOperation.Direction == DrawingOperation.DrawingDirection.Start,
                                 lastKnot, previousKnotIndex, previewCurvesList);
                         }
                     }

@@ -50,7 +50,7 @@ namespace UnityEditor.Splines
                 UpdateHandleRotation();
             }
 
-            if(TransformOperation.canManipulate)
+            if(TransformOperation.canManipulate && !DirectManipulation.IsDragging)
             {
                 EditorGUI.BeginChangeCheck();
                 m_currentScale = Handles.DoScaleHandle(m_currentScale, pivotPosition, handleRotation, HandleUtility.GetHandleSize(pivotPosition));

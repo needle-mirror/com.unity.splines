@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Unity.Mathematics;
-using UnityEngine.Serialization;
 using UObject = UnityEngine.Object;
 
 namespace UnityEngine.Splines
@@ -25,7 +24,6 @@ namespace UnityEngine.Splines
             public TangentMode Mode;
             public float Tension;
 
-            [SerializeField, FormerlySerializedAs("DistanceToInterpolation")]
             DistanceToInterpolation[] m_DistanceToInterpolation = new DistanceToInterpolation[k_CurveDistanceLutResolution];
 
             public DistanceToInterpolation[] DistanceToInterpolation
@@ -308,7 +306,7 @@ namespace UnityEngine.Splines
                 data.OnSplineModified(new SplineModificationData(this, modificationEvent, knotIndex, m_LastKnotChangeCurveLengths.curve0, m_LastKnotChangeCurveLengths.curve1));
 
             Changed?.Invoke(this, knotIndex, modificationEvent);
-
+            
 #if UNITY_EDITOR
             if (m_QueueAfterSplineModifiedCallback)
                 return;
@@ -317,8 +315,8 @@ namespace UnityEngine.Splines
 
             UnityEditor.EditorApplication.delayCall += () =>
             {
-                afterSplineWasModified?.Invoke(this);
                 m_QueueAfterSplineModifiedCallback = false;
+                afterSplineWasModified?.Invoke(this);
             };
 #endif
         }
@@ -397,6 +395,13 @@ namespace UnityEngine.Splines
         {
             if (GetTangentMode(index) == mode)
                 return;
+
+            // In the case of an open spline, changing knot mode to a mirrored mode will change the shape of
+            // the spline as the considered tangent is the out tangent by default. To avoid this, we change
+            // the considered tangent to the in tangent when the knot is the last knot of an open spline.
+            if (index == Count - 1 && !Closed)
+                main = BezierTangent.In;
+
             SetTangentMode(new SplineRange(index, 1), mode, main);
         }
 

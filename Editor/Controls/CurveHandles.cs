@@ -73,8 +73,11 @@ namespace UnityEditor.Splines
 
                             if (!(SplineHandleUtility.lastHoveredElement is SelectableKnot knot) || !knot.Equals(hoveredKnot))
                             {
-                                SplineHandleUtility.SetLastHoveredElement(hoveredKnot, controlID);
-                                SceneView.RepaintAll();
+                                if (GUIUtility.hotControl == 0 && HandleUtility.nearestControl == controlID)
+                                {
+                                    SplineHandleUtility.SetLastHoveredElement(hoveredKnot, controlID);
+                                    SceneView.RepaintAll();
+                                }
                             }
                         }
                     }

@@ -11,10 +11,11 @@ If you reverse the flow of a spline, you create a spline that mirrors the origin
 
 To reverse the flow of a spline: 
 
-1. [!include[select-spline](.\snippets\select-spline.md)]
-1. [!include[set-spline-context](.\snippets\set-spline-context.md)]
+1. [!include[select-spline](.\\snippets\\select-spline.md)]
+1. [!include[set-spline-context](.\\snippets\\set-spline-context.md)]
 1. Select a knot on the spline. 
-1. In the Element Inspector overlay, select **Reverse Spline Flow**. 
+1. In the Scene view, right-click to open the context menu.
+1. In the Scene view context menu, select **Reverse Spline Flow**. 
 
 
 ## Additional resources

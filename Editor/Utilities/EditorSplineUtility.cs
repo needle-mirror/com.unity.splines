@@ -528,37 +528,36 @@ namespace UnityEditor.Splines
             previewKnots.Add(bKnot);
         }
 
-        internal static void GetAffectedCurves(SplineInfo splineInfo, Vector3 knotPosition, SelectableKnot lastKnot, int previousKnotIndex, List<(Spline s, int index, List<BezierKnot> knots)> affectedCurves)
+        internal static void GetAffectedCurves(SplineInfo splineInfo, Vector3 knotPosition, bool addingToStart, SelectableKnot lastKnot, int previousKnotIndex, List<(Spline s, int index, List<BezierKnot> knots)> affectedCurves)
         {
             var spline = splineInfo.Spline;
             if (spline != null)
             {
                 var lastKnotIndex = lastKnot.KnotIndex;
-                var inverted = previousKnotIndex > lastKnot.KnotIndex;
 
-                var affectedCurveIndex = affectedCurves.FindIndex(x => x.s == spline && x.index == (inverted ? lastKnotIndex :  previousKnotIndex));
+                var affectedCurveIndex = affectedCurves.FindIndex(x => x.s == spline && x.index == (addingToStart ? lastKnotIndex :  previousKnotIndex));
 
                 var lastTangentMode = spline.GetTangentMode(lastKnotIndex);
                 if(lastTangentMode == TangentMode.AutoSmooth)
                 {
                     var previousKnot = spline[previousKnotIndex];
-                    var autoSmoothKnot = inverted ?
+                    var autoSmoothKnot = addingToStart ?
                         SplineUtility.GetAutoSmoothKnot(lastKnot.LocalPosition, knotPosition, previousKnot.Position) :
                         SplineUtility.GetAutoSmoothKnot(lastKnot.LocalPosition, previousKnot.Position, knotPosition);
 
-                    if(affectedCurveIndex < 0)
+                    if (affectedCurveIndex < 0)
                     {
-                        if(inverted)
+                        if (addingToStart)
                             affectedCurves.Insert(0, (spline, lastKnot.KnotIndex, new List<BezierKnot>() { autoSmoothKnot, previousKnot }));
                         else
-                            affectedCurves.Add(( spline, previousKnotIndex, new List<BezierKnot>() { previousKnot, autoSmoothKnot } ));
+                            affectedCurves.Add((spline, previousKnotIndex, new List<BezierKnot>() { previousKnot, autoSmoothKnot }));
                     }
                     else
                     {
                         //The segment as already some changes due to some modifications on the previous knots in the previews
                         //So we only want to adapt the last knot in that case
                         var knots = affectedCurves[affectedCurveIndex].knots;
-                        knots[inverted ? 0 : 1] = autoSmoothKnot;
+                        knots[addingToStart ? 0 : 1] = autoSmoothKnot;
                     }
                 }
             }

@@ -5,6 +5,27 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.5.2] - 2023-12-22
+
+### Added
+
+- [SPLB-222] Added safety checks to spline changed events. 
+
+### Changed
+
+- [SPLB-233] Removed transform handles while dragging a knot using direct manipulation.
+- [SPLB-234] Removed unnecessary spline metadata which was saved on disk.
+
+### Bug Fixes
+
+- [SPLB-230] Fixed a bug where modifying the tangent mode on the last knot would change the spline shape unpredictably.
+- [SPLB-225] Fixed a bug where closing a Spline with the `Draw Splines Tool` had inconsistent behaviour.
+- [SPLB-236] Fixed a bug where the spline instantiate inspector was throwing an exception when the selection contained objects without that component.
+- [SPLB-235] Fixed a bug where hovering a knot was create highlights when dragging tangents.
+- [SPLB-234] Fixed a bug where it was impossible to add a knot on the latest added knot.
+- [SPLB-214] Fixed an exception that would when adding a spline via the inspector if no other spline exists.
+- [SPLB-226] Fixed broken preview when adding knots to a closed spline
+
 ## [2.5.1] - 2023-10-17
 
 ### Bug Fixes
