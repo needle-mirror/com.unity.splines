@@ -357,7 +357,7 @@ namespace UnityEngine.Splines
         /// In case the animation loops, this event is called at the end of each loop.</summary>
         public event Action Completed; 
 
-        void Start()
+        void Awake()
         {
 #if UNITY_EDITOR      
             if(EditorApplication.isPlaying)
@@ -406,16 +406,16 @@ namespace UnityEngine.Splines
                     break;
             }
         }
-
+     
+        internal static readonly string k_EmptyContainerError = "SplineAnimate does not have a valid SplineContainer set.";
         bool IsNullOrEmptyContainer()
         {
             if (m_Target == null || m_Target.Splines.Count == 0)
             {
                 if(Application.isPlaying)
-                    Debug.LogError("SplineAnimate does not have a valid SplineContainer set.", this);
+                    Debug.LogError(k_EmptyContainerError, this);
                 return true;
             }
-
             return false;
         }
 
@@ -441,7 +441,11 @@ namespace UnityEngine.Splines
         /// <param name="autoplay"> If true, the animation along the Spline will start over again. </param>
         public void Restart(bool autoplay)
         {
-            if (IsNullOrEmptyContainer())
+            // [SPLB-269]: Early exit if the container is null to remove log error when initializing the spline animate object from code
+            if (Container == null)
+                return;
+            
+            if(IsNullOrEmptyContainer())
                 return;
 
             m_Playing = false;

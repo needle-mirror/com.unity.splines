@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.Splines;
 using UnityEditor.UIElements;
@@ -11,12 +12,11 @@ namespace UnityEditor.Splines
     [CanEditMultipleObjects]
     class SplineAnimateEditor : UnityEditor.Editor
     {
-        VisualElement m_Root;
-        Button m_PlayButton;
-        Slider m_ProgressSlider;
-        FloatField m_ElapsedTimeField;
-        EnumField m_ObjectForwardField;
-        EnumField m_ObjectUpField;
+        List<VisualElement> m_Roots = new ();
+        List<Slider> m_ProgressSliders = new ();
+        List<FloatField> m_ElapsedTimeFields = new ();
+        List<EnumField> m_ObjectForwardFields = new ();
+        List<EnumField> m_ObjectUpFields = new ();
 
         SerializedProperty m_MethodProperty;
         SerializedProperty m_ObjectForwardProperty;
@@ -59,7 +59,13 @@ namespace UnityEditor.Splines
                 if (animate.Container != null)
                     animate.RecalculateAnimationParameters();
             }
-
+            
+            m_Roots.Clear();
+            m_ObjectForwardFields.Clear();
+            m_ObjectUpFields.Clear();
+            m_ProgressSliders.Clear();
+            m_ElapsedTimeFields.Clear();
+            
             EditorApplication.update += OnEditorUpdate;
             Spline.Changed += OnSplineChange;
             SplineContainer.SplineAdded += OnContainerSplineSetModified;
@@ -99,7 +105,7 @@ namespace UnityEditor.Splines
                     RefreshProgressFields();
                 }
             }
-            else
+            else if(m_SplineAnimate.IsPlaying)
                 RefreshProgressFields();
         }
 
@@ -129,77 +135,101 @@ namespace UnityEditor.Splines
 
         public override VisualElement CreateInspectorGUI()
         {
-            m_Root = new VisualElement();
+            var root = new VisualElement();
 
             if (s_TreeAsset == null)
                 s_TreeAsset = (VisualTreeAsset)AssetDatabase.LoadAssetAtPath(k_UxmlPath, typeof(VisualTreeAsset));
-            s_TreeAsset.CloneTree(m_Root);
+            s_TreeAsset.CloneTree(root);
 
             if (s_ThemeStyleSheet == null)
                 s_ThemeStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"Packages/com.unity.splines/Editor/Stylesheets/SplineAnimateInspector{(EditorGUIUtility.isProSkin ? "Dark" : "Light")}.uss");
 
-            m_Root.styleSheets.Add(s_ThemeStyleSheet);
+            root.styleSheets.Add(s_ThemeStyleSheet);
             
-            var methodField = m_Root.Q<PropertyField>("method");
+            var methodField = root.Q<PropertyField>("method");
             methodField.RegisterValueChangeCallback((_) => { RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex); });
             RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex);
 
-            m_ObjectForwardField = m_Root.Q<EnumField>("object-forward");
-            m_ObjectForwardField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectForwardProperty, m_ObjectUpProperty));
+            var objectForwardField = root.Q<EnumField>("object-forward");
+            objectForwardField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectForwardProperty, m_ObjectUpProperty));
 
-            m_ObjectUpField = m_Root.Q<EnumField>("object-up");
-            m_ObjectUpField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectUpProperty, m_ObjectForwardProperty));
+            var objectUpField = root.Q<EnumField>("object-up");
+            objectUpField.RegisterValueChangedCallback((evt) => OnObjectAxisFieldChange(evt, m_ObjectUpProperty, m_ObjectForwardProperty));
 
-            var startOffsetField = m_Root.Q<PropertyField>("start-offset");
-            startOffsetField.RegisterValueChangeCallback((_) =>
-            {
-                m_SplineAnimate.StartOffset = m_StartOffsetProperty.floatValue;
-                m_SplineAnimate.Restart(false);
-                OnElapsedTimeFieldChange(m_ElapsedTimeField.value);
-            });
-
-            var playButton = m_Root.Q<Button>("play");
+            var playButton = root.Q<Button>("play");
+            playButton.SetEnabled(!EditorApplication.isPlaying);
             playButton.clicked += OnPlayClicked;
 
-            var pauseButton = m_Root.Q<Button>("pause");
+            var pauseButton = root.Q<Button>("pause");
+            pauseButton.SetEnabled(!EditorApplication.isPlaying);
             pauseButton.clicked += OnPauseClicked;
 
-            var resetButton = m_Root.Q<Button>("reset");
+            var resetButton = root.Q<Button>("reset");
+            resetButton.SetEnabled(!EditorApplication.isPlaying);
             resetButton.clicked += OnResetClicked;
 
-            m_ProgressSlider = m_Root.Q<Slider>("normalized-progress");
-            m_ProgressSlider.RegisterValueChangedCallback((evt) => OnProgressSliderChange(evt.newValue));
+            var progressSlider = root.Q<Slider>("normalized-progress");
+            progressSlider.SetEnabled(!EditorApplication.isPlaying);
+            progressSlider.RegisterValueChangedCallback((evt) => OnProgressSliderChange(evt.newValue));
 
-            m_ElapsedTimeField = m_Root.Q<FloatField>("elapsed-time");
-            m_ElapsedTimeField.RegisterValueChangedCallback((evt) => OnElapsedTimeFieldChange(evt.newValue));
+            var elapsedTimeField = root.Q<FloatField>("elapsed-time");
+            elapsedTimeField.SetEnabled(!EditorApplication.isPlaying);
+            elapsedTimeField.RegisterValueChangedCallback((evt) => OnElapsedTimeFieldChange(evt.newValue));
 
-            return m_Root;
+            var startOffsetField = root.Q<PropertyField>("start-offset");
+            startOffsetField.RegisterValueChangeCallback((evt) =>
+            {
+                m_SplineAnimate.StartOffset = m_StartOffsetProperty.floatValue;
+                if (!EditorApplication.isPlayingOrWillChangePlaymode)
+                {
+                    m_SplineAnimate.Restart(false);
+                    OnElapsedTimeFieldChange(elapsedTimeField.value);
+                }   
+            });
+
+            m_Roots.Add(root);
+            m_ProgressSliders.Add(progressSlider);
+            m_ElapsedTimeFields.Add(elapsedTimeField);
+            
+            m_ObjectForwardFields.Add(objectForwardField);
+            m_ObjectUpFields.Add(objectUpField);
+            
+            return root;
         }
 
         void RefreshMethodParamFields(SplineAnimate.Method method)
         {
-            var durationField = m_Root.Q<PropertyField>("duration");
-            var maxSpeedField = m_Root.Q<PropertyField>("max-speed");
+            foreach (var root in m_Roots)
+            {
 
-            if (method == (int) SplineAnimate.Method.Time)
-            {
-                durationField.style.display = DisplayStyle.Flex;
-                maxSpeedField.style.display = DisplayStyle.None;
-            }
-            else
-            {
-                durationField.style.display = DisplayStyle.None;
-                maxSpeedField.style.display = DisplayStyle.Flex;
+                var durationField = root.Q<PropertyField>("duration");
+                var maxSpeedField = root.Q<PropertyField>("max-speed");
+
+                if (method == (int)SplineAnimate.Method.Time)
+                {
+                    durationField.style.display = DisplayStyle.Flex;
+                    maxSpeedField.style.display = DisplayStyle.None;
+                }
+                else
+                {
+                    durationField.style.display = DisplayStyle.None;
+                    maxSpeedField.style.display = DisplayStyle.Flex;
+                }
             }
         }
 
         void RefreshProgressFields()
         {
-            if (m_ProgressSlider == null || m_ElapsedTimeField == null)
-                return;
+            for (int i = 0; i < m_ProgressSliders.Count && i < m_ElapsedTimeFields.Count; ++i)
+            {
+                var progressSlider = m_ProgressSliders[i];
+                var elapsedTimeField = m_ElapsedTimeFields[i];
+                if (progressSlider == null || elapsedTimeField == null)
+                    continue;
 
-            m_ProgressSlider.SetValueWithoutNotify(m_SplineAnimate.GetLoopInterpolation(false));
-            m_ElapsedTimeField.SetValueWithoutNotify(m_SplineAnimate.ElapsedTime);
+                progressSlider.SetValueWithoutNotify(m_SplineAnimate.GetLoopInterpolation(false));
+                elapsedTimeField.SetValueWithoutNotify(m_SplineAnimate.ElapsedTime);
+            }
         }
 
         void OnProgressSliderChange(float progress)
@@ -223,6 +253,7 @@ namespace UnityEditor.Splines
             if (changeEvent.newValue == null)
                 return;
 
+            
             var newValue = (SplineAnimate.AlignAxis)changeEvent.newValue;
             var previousValue = (SplineAnimate.AlignAxis)changeEvent.previousValue;
 
@@ -238,6 +269,11 @@ namespace UnityEditor.Splines
                 axisProp.enumValueIndex = (int)previousValue;
                 serializedObject.ApplyModifiedPropertiesWithoutUndo();
             }
+
+            foreach (var objectForwardField in m_ObjectForwardFields)
+                objectForwardField.SetValueWithoutNotify((SplineComponent.AlignAxis)m_ObjectForwardProperty.enumValueIndex);
+            foreach (var objectUpField in m_ObjectUpFields)
+                objectUpField.SetValueWithoutNotify((SplineComponent.AlignAxis)m_ObjectUpProperty.enumValueIndex);
         }
 
         void OnPlayClicked()

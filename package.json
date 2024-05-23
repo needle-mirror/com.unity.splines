@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -24,17 +24,17 @@
   "category": "Tool",
   "type": "tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.6.0"
+    "com.unity.splines.tests": "2.6.1"
   },
   "_upm": {
-    "changelog": "### Added\n\n- Added new APIs that enable users to directly provide a collection of `float3` knot positions to a `Spline` constructor, or to the new `Add`, `AddRange`, `Insert`, and `InsertRange` methods, instead of using `BezierKnots`.\n- Added an event to the `SplineAnimate` component that is triggered when the animation or loop is completed.\n\n### Changed\n\n- Changed supported version in the documentation dropdown selector to 2022.3 and later. \n\n### Bug Fixes\n\n- [SPLB-246] Fixed performance and garbage collection (GC) memory allocation issues when evaluating splines using `SplineContainer` API.\n- [STO-3176] Fixed an issue where `FitSplineToPoints` utility would not fit splines correctly.\n- [SPLB-249] Fixed a bug where setting a spline game object position was overridden by the knot placement tool.\n- Fixed a bug where using the knot placement tool on scaled objects would not create the correct tangents.\n- Fixed a bug where changing the scale of a spline game object would not update the scene view handles.\n- [SPLB-239] Fixed a bug where reverting overrides of a spline prefab instance would not properly update its visuals.\n- [SPLB-238] Fixed a bug where `SplineAnimate` component would continuously output messages to the Console when in playmode and animated object was selected.\n- [SPLB-245] Fixed a bug where `SplineAnimate` component would rotate the animated object on playmode exit."
+    "changelog": "### Bug Fixes\n\n- [SPLB-275] Fixed a bug where the `SplineContainer` component would throw warning when entering playmode.\n- [SPLB-266] Fixed a bug where instantiating a `SplineExtrude` component at runtime would throw errors.\n- [SPLB-269] Fixed a bug where instantiating a `SplineAnimate` component at runtime would throw errors.\n- [SPLB-260] Fixed a bug where playing a `SplineAnimate` from a start method would not work.\n- [SPLB-267] Fixed a bug where undoing a spline insertion in a container would throw errors from the `SplineInstantiate` component.\n- [SPLB-261] Fixed a bug where the knot placement tool would not work when multiple scene views were opened.\n- [SPLB-253] Fixed a bug where using the knot placement tool in 2D mode would not work if the grids are turned off.\n- [SPLB-258] Fixed a bug where destroying a component would throw errors in the console."
   },
   "upmCi": {
-    "footprint": "196370dfa5851ee63bdaedfc0f098511a7c12301"
+    "footprint": "fe0610a735d8aeba073f1773c99e34e0da2328a1"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "65b428969b9590a4e35cee1c042a490669555e17"
+    "revision": "f77ddc46ebeef1a8dca1264827b93dbec50d3772"
   }
 }

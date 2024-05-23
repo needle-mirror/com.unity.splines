@@ -13,7 +13,7 @@ namespace UnityEngine.Splines
     [Icon(k_IconPath)]
 #endif
     [AddComponentMenu("Splines/Spline Container")]
-    [ExecuteInEditMode]
+    [ExecuteAlways]
     public sealed class SplineContainer : MonoBehaviour, ISplineContainer, ISerializationCallbackReceiver
     {
         const string k_IconPath = "Packages/com.unity.splines/Editor/Resources/Icons/SplineComponent.png";
@@ -75,9 +75,7 @@ namespace UnityEngine.Splines
                     return;
                 }
 
-                m_ReorderedSplinesIndices.Clear();
-                m_RemovedSplinesIndices.Clear();
-                m_AddedSplinesIndices.Clear();
+                ClearCaches();
                 DisposeNativeSplinesCache();
 
                 for (var i = 0; i < m_Splines.Length; i++)
@@ -169,6 +167,15 @@ namespace UnityEngine.Splines
                 spline.Warmup();
                 GetOrBakeNativeSpline(spline);
             }
+        }
+        
+        internal void ClearCaches()
+        {
+            m_ReorderedSplinesIndices.Clear();
+            m_RemovedSplinesIndices.Clear();
+            m_AddedSplinesIndices.Clear();
+            
+            m_ReadOnlySplines = null;
         }
         
         void DisposeNativeSplinesCache()

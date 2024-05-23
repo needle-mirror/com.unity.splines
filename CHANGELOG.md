@@ -5,7 +5,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [2.6.0] - 2023-04-15
+## [2.6.1] - 2024-05-23
+
+### Bug Fixes
+
+- [SPLB-275] Fixed a bug where the `SplineContainer` component would throw warning when entering playmode.
+- [SPLB-266] Fixed a bug where instantiating a `SplineExtrude` component at runtime would throw errors.
+- [SPLB-269] Fixed a bug where instantiating a `SplineAnimate` component at runtime would throw errors.
+- [SPLB-260] Fixed a bug where playing a `SplineAnimate` from a start method would not work.
+- [SPLB-267] Fixed a bug where undoing a spline insertion in a container would throw errors from the `SplineInstantiate` component.
+- [SPLB-261] Fixed a bug where the knot placement tool would not work when multiple scene views were opened.
+- [SPLB-253] Fixed a bug where using the knot placement tool in 2D mode would not work if the grids are turned off.
+- [SPLB-258] Fixed a bug where destroying a component would throw errors in the console.
+
+## [2.6.0] - 2024-04-15
 
 ### Added
 

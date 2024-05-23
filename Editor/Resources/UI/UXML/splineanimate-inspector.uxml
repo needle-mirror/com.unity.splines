@@ -22,6 +22,6 @@
     <ui:VisualElement class="field__indented" style="flex-direction: row; flex-shrink: 0; margin-top: 3px;">
         <ui:Slider picking-mode="Ignore" value="0" high-value="1" show-input-field="false" name="normalized-progress" style="margin-bottom: 0; margin-top: 2px; flex-grow: 1;" />
         <ui:Label text="Time:" display-tooltip-when-elided="true" style="-unity-text-align: middle-left; margin-left: 4px;" />
-        <uie:FloatField value="0" name="elapsed-time" style="-unity-text-align: upper-left; align-items: stretch; justify-content: flex-start; width: 40px;" />
+        <uie:FloatField name="elapsed-time" is-delayed="true" style="-unity-text-align: upper-left; align-items: stretch; justify-content: flex-start; width: 40px;" />
     </ui:VisualElement>
 </ui:UXML>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UnityEditor;
 
 namespace UnityEngine.Splines
 {
@@ -180,19 +181,42 @@ namespace UnityEngine.Splines
 
         void Start()
         {
-            if (m_Container == null || m_Container.Spline == null)
+#if UNITY_EDITOR
+            if (EditorApplication.isPlaying)
+#endif
             {
-                Debug.LogError("Spline Extrude does not have a valid SplineContainer set.", this);
-                return;
+                if(m_Container == null || m_Container.Spline == null || m_Container.Splines.Count == 0)
+                    return;
+                if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
+                    return;
             }
-
-            if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
-                Debug.LogError("SplineExtrude.createMeshInstance is disabled, but there is no valid mesh assigned. " +
-                    "Please create or assign a writable mesh asset.", this);
-
+            
             Rebuild();
         }
+        
+        internal static readonly string k_EmptyContainerError = "Spline Extrude does not have a valid SplineContainer set.";
+        bool IsNullOrEmptyContainer()
+        {
+            var isNull = m_Container == null || m_Container.Spline == null || m_Container.Splines.Count == 0; 
+            if (isNull)
+            {
+                if(Application.isPlaying)
+                    Debug.LogError(k_EmptyContainerError, this);
+            }
+            return isNull;
+        }
 
+        internal static readonly string k_EmptyMeshFilterError = "SplineExtrude.createMeshInstance is disabled," +
+                                                                         " but there is no valid mesh assigned. " +
+                                                                         "Please create or assign a writable mesh asset.";
+        bool IsNullOrEmptyMeshFilter()
+        {
+            var isNull = (m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null; 
+            if(isNull)
+                Debug.LogError(k_EmptyMeshFilterError, this);
+            return isNull;
+        }
+        
         void OnEnable()
         {
             Spline.Changed += OnSplineChanged;
@@ -220,7 +244,7 @@ namespace UnityEngine.Splines
         /// </summary>
         public void Rebuild()
         {
-            if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
+            if (IsNullOrEmptyContainer() || IsNullOrEmptyMeshFilter())
                 return;
             
             SplineMesh.Extrude(Splines, m_Mesh, m_Radius, m_Sides, m_SegmentsPerUnit, m_Capped, m_Range);
@@ -248,10 +272,14 @@ namespace UnityEngine.Splines
 #endif
         }
 
+#if UNITY_EDITOR
         void OnValidate()
         {
+            if(EditorApplication.isPlaying)
+                return;
             Rebuild();
         }
+#endif
 
         internal Mesh CreateMeshAsset()
         {

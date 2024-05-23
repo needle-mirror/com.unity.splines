@@ -53,6 +53,7 @@ namespace UnityEditor.Splines
                 var container = t as SplineContainer;
                 if (container != null)
                 {
+                    container.ClearCaches();
                     foreach (var spline in container.Splines)
                         spline.SetDirty(SplineModification.Default);
                 }

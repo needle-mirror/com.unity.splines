@@ -20,7 +20,7 @@ namespace UnityEditor.Splines
             Undo.undoRedoPerformed +=  ClearAllCache;
             PrefabStage.prefabStageClosing += _ => ClearAllCache();
             
-#if UNITY_2023_1_OR_NEWER
+#if UNITY_2022_3_OR_NEWER
             PrefabUtility.prefabInstanceReverting += _ => ClearAllCache();
 #else
             // PrefabUtility.prefabInstanceReverting is unfortunately not backported yet.
@@ -50,9 +50,10 @@ namespace UnityEditor.Splines
                     if (instanceID != 0)
                     {
                         var obj = EditorUtility.InstanceIDToObject(instanceID);
-                        var prefabStatus = PrefabUtility.GetPrefabInstanceStatus(obj);
+                        if(obj == null)
+                            continue;
 
-                        if (prefabStatus == PrefabInstanceStatus.Connected)
+                        if (PrefabUtility.GetPrefabInstanceStatus(obj) == PrefabInstanceStatus.Connected)
                         {
                             SplineContainer splineContainer = null;
                             GameObject splineGO = obj as GameObject;

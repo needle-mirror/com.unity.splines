@@ -247,7 +247,7 @@ namespace UnityEditor.Splines
 #endif
 
             //Backup if couldn't find a surface
-            var constraint = new Plane(Vector3.up, Vector3.zero); //This should be in the direction of the current grid
+            var constraint = new Plane(SceneView.lastActiveSceneView.in2DMode ? Vector3.back : Vector3.up, Vector3.zero); //This should be in the direction of the current grid
             if (constraint.Raycast(ray, out float distance))
             {
                 normal = constraint.normal;

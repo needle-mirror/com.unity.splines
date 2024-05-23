@@ -283,8 +283,6 @@ namespace UnityEditor.Splines
 
         public override GUIContent toolbarIcon => PathIcons.knotPlacementTool;
 
-        static bool IsMouseInWindow(EditorWindow window) => new Rect(Vector2.zero, window.position.size).Contains(Event.current.mousePosition);
-
         static PlacementData s_PlacementData;
 
         static SplineInfo s_ClosestSpline = default;
@@ -323,7 +321,7 @@ namespace UnityEditor.Splines
             var targets = GetSortedTargets(out var mainTarget);
             s_MainTarget = mainTarget as Component;
             var allSplines = EditorSplineUtility.GetSplinesFromTargetsInternal(targets);
-
+ 
             //If the spline being drawn on doesn't exist anymore, end the drawing operation
             if (m_CurrentDrawingOperation != null &&
                 ( !allSplines.Contains(m_CurrentDrawingOperation.CurrentSplineInfo) ||
@@ -538,8 +536,11 @@ namespace UnityEditor.Splines
         {
             var controlId = GUIUtility.GetControlID(FocusType.Passive);
             var evt = Event.current;
-
-            if (s_PlacementData != null && GUIUtility.hotControl != controlId)
+            
+            if (s_PlacementData != null 
+                && SceneView.currentDrawingSceneView != null
+                && EditorWindow.mouseOverWindow == SceneView.currentDrawingSceneView
+                && GUIUtility.hotControl != controlId)
                 s_PlacementData = null;
 
             switch (evt.GetTypeForControl(controlId))
@@ -554,7 +555,7 @@ namespace UnityEditor.Splines
                     var mousePosition = Event.current.mousePosition;
                     if (GUIUtility.hotControl == 0
                         && SceneView.currentDrawingSceneView != null
-                        && !IsMouseInWindow(SceneView.currentDrawingSceneView))
+                        && EditorWindow.mouseOverWindow != SceneView.currentDrawingSceneView)
                         break;
 
                     if (GUIUtility.hotControl == 0)
