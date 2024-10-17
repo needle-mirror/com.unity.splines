@@ -1482,10 +1482,11 @@ namespace UnityEngine.Splines
             var second = new BezierKnot(allPoints[rangeEnd], rightTangent * alpha2, rightTangent * -alpha2, quaternion.identity);
 
             var spline = new Spline();
-            spline.Closed = closed;
             // Use broken tangent modes for now as we'll pick the correct mode once the spline curvature is finalized.
             spline.Add(first, TangentMode.Broken);
             spline.Add(second, TangentMode.Broken);
+
+            spline.Closed = closed;
 
             return spline;
         }

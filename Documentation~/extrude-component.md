@@ -1,29 +1,58 @@
 # Spline Extrude component reference
 
-Extrude a mesh along a spline to create shapes such as wires, ropes, noodles, and tubes.  
+Use the Spline Extrude component to customize the geometry of the mesh you extrude on a spline. 
 
-The Spline Extrude component requires a GameObject to have a Mesh Filter and Mesh Renderer component. When you add a Spline Extrude component to a GameObject, a Mesh Filter and Mesh Renderer component are added to that GameObject. 
+**Note:** If you add Spline Extrude to a GameObject that already has a mesh, that mesh is replaced with a new one. 
 
-If you add Spline Extrude to a GameObject that already has a mesh, then Spline Extrude removes that mesh from the GameObject and creates a new mesh for the GameObject to use. 
+## Source Spline Container
 
-Use the Spline Extrude component to customize the geometry of the mesh you extrude on the spline. 
- 
+Select a GameObject that has an attached Spline component you want to extrude a mesh on.
+
+You can use a Spline as a source for the extruded mesh of one or more GameObjects. Edits you make to the source Spline then update those GameObjects. For example, if you want to create a street with a sidewalk, you can create a Spline for the street, and then use the street Spline as a source for a sidewalk GameObject. Any changes you make to the street layout update the sidewalk to match.
+
+## Shape Extrude
+
+| **Property** | | **Description** |
+| --- | --- | --- |
+| **Type** > **Circle**| | Create a shape with a round cross-section. |
+| | **Circle Settings** > **Sides**| Increase to create a smoother surface. The minimum value is `2`. |
+| **Type** > **Square** | | Create a shape with a square cross-section. |
+| **Type** >  **Road** | | Create a shape with a flat cross-section and a slight lip. |
+| **Type** > **Spline Profile** | | Use a different spline as a template for the current spline. |
+| | **Spline Profile Settings** > **Template** |  Select the spline container you want to use as a template. | 
+| | **Spline Profile Settings** > **Spline Index** | If the template container has more than one spline, select the spline you want.| 
+| | **Spline Profile Settings** > **Side Count** | Increase to create a smoother surface. The minimum value is `2`. | 
+| | **Spline Profile Settings** > **Axis** | Which of the template spline axes to follow when drawing this spline. | 
+
+
+## Geometry
+
+| **Property** | **Description** |
+| --- | --- |
+| **Auto Refresh Generation** | Allow the mesh to update at runtime if the spline changes. |
+| **Frequency** | How many times a second to refresh the mesh. |
+| **Radius** | Width of the extrusion, measured from the spline path. |
+| **Segments Per Unit** | Increase the value to create smoother curves. |
+| **Cap Ends** | Fill the ends of an open-ended mesh. |
+| **Flip Normals** | Reveal the inside of the 3D shape. |
+
+## Advanced
+
+| **Property** | **Description** |
+| --- | --- |
+| **Range** | To extrude only some of the spline, define a range. `0` is the first spline point, and `100` is the last one. |
+| **Percentage** | Another way to control the **Range**. |
+| **Update Colliders** | If the spline has a collider, update the collider to match the 3D shape as you change the extrusion properties. |
+
   
-| **Property**          | **Description**           |
-| :-------------------- | :------------------------ |
-| **Spline** | Select a GameObject that has an attached Spline component you want to extrude a mesh on. |
-| **Create Mesh Asset** | Create a new mesh asset to attach to this GameObject. </br> This property is visible only if you haven't selected a mesh for the GameObject the Spline Extrude is attached to. | 
-| **Radius**   |  Set the radius of the extruded mesh.   |
-| **Profile Edges**  | Set the number of sides that the radius of the mesh has. The minimum value is 3. | 
-| **Segments Per Unit**  | Set how many edge loops make up the length of one unit of the mesh. |
-| **Cap Ends** | Enable to fill each end of the mesh. If the spline the mesh is extruded on is closed, then this setting has no effect.   |
-| **Range** | Select the section of the spline to extrude the mesh on.    |
-| **Percentage** | Set a percentage of the spline to extrude the mesh on.   |
-| **Auto-Regen Geometry** | Enable to regenerate the extruded mesh when the target spline is modified at runtime or in the Editor. If you don't want the Spline Extrude component to regenerate the extruded mesh at runtime when the target spline is modified, disable **Auto-Regen Geometry**. |
-| **Rebuild Frequency**  | Set the maximum number of times per second that mesh regenerates. This property is visible only when you enable the **Auto-Regen Geometry** method.|
-| **Update Colliders** | Enable to automatically update any attached collider components when the mesh extrudes.   |
+## Mesh Filter and Mesh Renderer components
+
+When you add the Spline Extrude component to a GameObject, the Unity Editor adds two more components that all 3D GameObject need:
+
+* [Mesh Renderer Component](https://docs.unity3d.com/Manual/class-MeshRenderer.html) 
+* [Mesh Filter Component](https://docs.unity3d.com/Manual/class-MeshFilter.html)
 
 ## Additional resources
 
-* [Create a tube-shaped mesh along a spline](extrude-mesh.md)
+* [Create a 3D mesh along a spline](extrude-mesh.md)
 * [Use components](xref:UsingComponents)

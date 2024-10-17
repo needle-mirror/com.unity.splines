@@ -19,7 +19,6 @@ namespace UnityEditor.Splines
             "Broken Tangents:\nInTangent and OutTangent are dissociated.\n"
         );
 
-        DropdownField m_Dropdown;
         IReadOnlyList<T> m_Elements = new List<T>(0);
 
         public event Action changed;

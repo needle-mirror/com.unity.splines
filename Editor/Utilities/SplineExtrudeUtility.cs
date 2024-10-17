@@ -11,6 +11,7 @@ namespace UnityEditor.Splines
 #if UNITY_2022_2_OR_NEWER
             ClipboardUtility.duplicatedGameObjects += OnPasteOrDuplicated;
             ClipboardUtility.pastedGameObjects += OnPasteOrDuplicated;
+            ObjectChangeEvents.changesPublished += ObjectEventChangesPublished;
 #else
             ObjectChangeEvents.changesPublished += ObjectEventChangesPublished;
 #endif
@@ -22,16 +23,37 @@ namespace UnityEditor.Splines
             foreach (var duplicate in duplicates)
                 CheckForExtrudeMeshCreatedOrModified(duplicate);
         }
+
+        static void ObjectEventChangesPublished(ref ObjectChangeEventStream stream)
+        {
+            for (int i = 0; i < stream.length; ++i)
+            {
+                var type = stream.GetEventType(i);
+                if (type == ObjectChangeKind.ChangeGameObjectStructure)
+                {
+                    stream.GetChangeGameObjectStructureEvent(i, out var changeGameObjectStructure);
+                    if (EditorUtility.InstanceIDToObject(changeGameObjectStructure.instanceId) is GameObject go)
+                        CheckForSplineExtrudeAdded(go);
+                }
+            }
+        }
 #else
         static void ObjectEventChangesPublished(ref ObjectChangeEventStream stream)
         {
             for (int i = 0, c = stream.length; i < c; ++i)
             {
                 // SplineExtrude was created via duplicate, copy paste
-                if (stream.GetEventType(i) == ObjectChangeKind.CreateGameObjectHierarchy)
+                var type = stream.GetEventType(i);
+                if (type == ObjectChangeKind.CreateGameObjectHierarchy)
                 {
                     stream.GetCreateGameObjectHierarchyEvent(i, out CreateGameObjectHierarchyEventArgs data);
                     GameObjectCreatedOrStructureModified(data.instanceId);
+                }
+                else if (type == ObjectChangeKind.ChangeGameObjectStructure)
+                {
+                    stream.GetChangeGameObjectStructureEvent(i, out var changeGameObjectStructure);
+                    if (EditorUtility.InstanceIDToObject(changeGameObjectStructure.instanceId) is GameObject go)
+                        CheckForSplineExtrudeAdded(go);
                 }
             }
         }
@@ -42,7 +64,20 @@ namespace UnityEditor.Splines
                 CheckForExtrudeMeshCreatedOrModified(go);
         }
 #endif
-        
+
+        static void CheckForSplineExtrudeAdded(GameObject go)
+        {
+            if (go.TryGetComponent<SplineExtrude>(out var splineExtrude))
+                splineExtrude.SetSplineContainerOnGO();
+
+            var childCount = go.transform.childCount;
+            if (childCount > 0)
+            {
+                for (int childIndex = 0; childIndex < childCount; ++childIndex)
+                    CheckForSplineExtrudeAdded(go.transform.GetChild(childIndex).gameObject);
+            }
+        }
+
         static void CheckForExtrudeMeshCreatedOrModified(GameObject go)
         {
             //Check if the current GameObject has a SplineExtrude component

@@ -1,6 +1,8 @@
+using System;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Splines;
+using UnityEngine.Splines.ExtrusionShapes;
 
 namespace UnityEditor.Splines
 {
@@ -11,26 +13,29 @@ namespace UnityEditor.Splines
         SerializedProperty m_Container;
         SerializedProperty m_RebuildOnSplineChange;
         SerializedProperty m_RebuildFrequency;
-        SerializedProperty m_Sides;
         SerializedProperty m_SegmentsPerUnit;
         SerializedProperty m_Capped;
         SerializedProperty m_Radius;
         SerializedProperty m_Range;
+        SerializedProperty m_Shape;
         SerializedProperty m_UpdateColliders;
+        SerializedProperty m_FlipNormals;
 
-        static readonly GUIContent k_RangeContent = new GUIContent("Range", "The section of the Spline to extrude.");
-        static readonly GUIContent k_AdvancedContent = new GUIContent("Advanced", "Advanced Spline Extrude settings.");
-        static readonly GUIContent k_PercentageContent = new GUIContent("Percentage", "The section of the Spline to extrude in percentages.");
+        static readonly GUIContent k_RangeContent = new GUIContent(L10n.Tr("Range"), L10n.Tr("The section of the Spline to extrude."));
+        static readonly GUIContent k_AdvancedContent = new GUIContent(L10n.Tr("Advanced"), L10n.Tr("Advanced Spline Extrude settings."));
+        static readonly GUIContent k_PercentageContent = new GUIContent(L10n.Tr("Percentage"), L10n.Tr("The section of the Spline to extrude in percentages."));
+        static readonly GUIContent k_ShapeContent = new GUIContent(L10n.Tr("Shape Extrude"), L10n.Tr("Shape Extrude settings."));
+        static readonly GUIContent k_ShapeSettings = EditorGUIUtility.TrTextContent("Settings");
+        static readonly GUIContent k_GeometryContent = new GUIContent(L10n.Tr("Geometry"), L10n.Tr("Mesh Geometry settings."));
 
-        static readonly string k_Spline = "Spline";
-        static readonly string k_Geometry = L10n.Tr("Geometry");
-        static readonly string k_ProfileEdges = "Profile Edges";
-        static readonly string k_CapEnds = "Cap Ends";
-        static readonly string k_AutoRegenGeo = "Auto-Regen Geometry";
+        static readonly string k_SourceSplineContainer = L10n.Tr("Source Spline Container");
+        static readonly string k_CapEnds = L10n.Tr("Cap Ends");
+        static readonly string k_AutoRefreshGeneration = L10n.Tr("Auto Refresh Generation");
         static readonly string k_To = L10n.Tr("to");
         static readonly string k_From = L10n.Tr("from");
 
         SplineExtrude[] m_Components;
+
         bool m_AnyMissingMesh;
 
         protected void OnEnable()
@@ -38,17 +43,17 @@ namespace UnityEditor.Splines
             m_Container = serializedObject.FindProperty("m_Container");
             m_RebuildOnSplineChange = serializedObject.FindProperty("m_RebuildOnSplineChange");
             m_RebuildFrequency = serializedObject.FindProperty("m_RebuildFrequency");
-            m_Sides = serializedObject.FindProperty("m_Sides");
             m_SegmentsPerUnit = serializedObject.FindProperty("m_SegmentsPerUnit");
             m_Capped = serializedObject.FindProperty("m_Capped");
             m_Radius = serializedObject.FindProperty("m_Radius");
             m_Range = serializedObject.FindProperty("m_Range");
             m_UpdateColliders = serializedObject.FindProperty("m_UpdateColliders");
+            m_Shape = serializedObject.FindProperty("m_Shape");
+            m_FlipNormals = serializedObject.FindProperty("m_FlipNormals");
 
             m_Components = targets.Select(x => x as SplineExtrude).Where(y => y != null).ToArray();
             m_AnyMissingMesh = false;
 
-            Spline.Changed += OnSplineChanged;
             EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
             SplineContainer.SplineAdded += OnContainerSplineSetModified;
             SplineContainer.SplineRemoved += OnContainerSplineSetModified;
@@ -56,7 +61,6 @@ namespace UnityEditor.Splines
 
         void OnDisable()
         {
-            Spline.Changed -= OnSplineChanged;
             EditorSplineUtility.AfterSplineWasModified -= OnSplineModified;
             SplineContainer.SplineAdded -= OnContainerSplineSetModified;
             SplineContainer.SplineRemoved -= OnContainerSplineSetModified;
@@ -74,11 +78,6 @@ namespace UnityEditor.Splines
             }
         }
 
-        void OnSplineChanged(Spline spline, int knotIndex, SplineModification modificationType)
-        {
-            OnSplineModified(spline);
-        }
-
         void OnContainerSplineSetModified(SplineContainer container, int spline)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
@@ -91,50 +90,165 @@ namespace UnityEditor.Splines
             }
         }
 
+        void SetShapeType(ShapeType type)
+        {
+            foreach (var extrude in m_Components)
+            {
+                if (ShapeTypeUtility.GetShapeType(extrude.Shape) == type)
+                    continue;
+
+                Undo.RecordObject(extrude, "Set Extrude Shape");
+
+                extrude.Shape = ShapeTypeUtility.CreateShape(type);
+                m_Shape.isExpanded = true;
+            }
+        }
+
+        bool CanCapEnds()
+        {
+            foreach (var extrude in m_Components)
+            {
+                if (!extrude.CanCapEnds)
+                    return false;
+            }
+
+            return true;
+        }
+
+        void SetRebuildOnSplineChange(bool value)
+        {
+            foreach (var extrude in m_Components)
+            {
+                Undo.RecordObject(extrude, "Set Rebuild on Spline Change.");
+
+                extrude.RebuildOnSplineChange = value;
+            }
+        }
+
+        void CreateMeshAssets(SplineExtrude[] components)
+        {
+            foreach (var extrude in components)
+            {
+                if (!extrude.TryGetComponent<MeshFilter>(out var filter) || filter.sharedMesh == null)
+                    filter.sharedMesh = extrude.CreateMeshAsset();
+            }
+
+            m_AnyMissingMesh = false;
+        }
+
+        void Rebuild()
+        {
+            foreach (var extrude in m_Components)
+                extrude.Rebuild();
+        }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            
+
             m_AnyMissingMesh = m_Components.Any(x => x.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh == null);
 
             EditorGUI.BeginChangeCheck();
 
-            EditorGUILayout.PropertyField(m_Container, new GUIContent(k_Spline, m_Container.tooltip));
-            if(m_Container.objectReferenceValue == null)
-                EditorGUILayout.HelpBox(k_Helpbox, MessageType.Warning);
-            
-            EditorGUILayout.LabelField(k_Geometry, EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(m_Container, new GUIContent(k_SourceSplineContainer, m_Container.tooltip));
 
-            if(m_AnyMissingMesh)
+            if (m_Container.objectReferenceValue == null)
+                EditorGUILayout.HelpBox(k_Helpbox, MessageType.Warning);
+
+            // shape section
+            m_Shape.isExpanded = Foldout(m_Shape.isExpanded, k_ShapeContent);
+
+            if (m_Shape.isExpanded)
             {
-                GUILayout.BeginHorizontal();
-                EditorGUILayout.PrefixLabel(" ");
-                if(GUILayout.Button("Create Mesh Asset"))
-                    CreateMeshAssets(m_Components);
-                GUILayout.EndHorizontal();
+                EditorGUI.indentLevel++;
+
+                EditorGUI.showMixedValue = m_Shape.hasMultipleDifferentValues;
+                EditorGUI.BeginChangeCheck();
+                var shapeType = ShapeTypeUtility.GetShapeType(m_Shape.managedReferenceValue);
+                shapeType = (ShapeType)EditorGUILayout.EnumPopup(L10n.Tr("Type"), shapeType);
+                if (EditorGUI.EndChangeCheck())
+                    SetShapeType(shapeType);
+                EditorGUI.showMixedValue = false;
+
+                if (m_Shape.hasVisibleChildren)
+                    EditorGUILayout.PropertyField(m_Shape, k_ShapeSettings, true);
+
+                EditorGUI.indentLevel--;
             }
 
-            EditorGUI.indentLevel++;
+            // https://unityeditordesignsystem.unity.com/patterns/content-organization recommends 8px spacing for
+            // vertical groups. padding already adds 4 so just nudge that up for a total of 8
+            EditorGUILayout.Space(4);
 
-            EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(m_Radius);
-            if(EditorGUI.EndChangeCheck())
-                m_Radius.floatValue = Mathf.Clamp(m_Radius.floatValue, .00001f, 1000f);
+            // geometry section
+            m_Radius.isExpanded = Foldout(m_Radius.isExpanded, k_GeometryContent);
 
-            EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(m_Sides, new GUIContent(k_ProfileEdges, m_Sides.tooltip));
-            if(EditorGUI.EndChangeCheck())
-                m_Sides.intValue = Mathf.Clamp(m_Sides.intValue, 3, 2048);
+            if (m_Radius.isExpanded)
+            {
+                EditorGUI.indentLevel++;
 
-            EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(m_SegmentsPerUnit);
-            if(EditorGUI.EndChangeCheck())
-                m_SegmentsPerUnit.floatValue = Mathf.Clamp(m_SegmentsPerUnit.floatValue, .00001f, 4096f);
+                EditorGUILayout.BeginHorizontal();
 
-            EditorGUILayout.PropertyField(m_Capped, new GUIContent(k_CapEnds, m_Capped.tooltip));
-            EditorGUI.indentLevel--;
+                EditorGUI.BeginChangeCheck();
+                EditorGUILayout.PropertyField(m_RebuildOnSplineChange, new GUIContent(k_AutoRefreshGeneration, m_RebuildOnSplineChange.tooltip));
+                if (m_RebuildOnSplineChange.boolValue)
+                {
+                    EditorGUI.BeginDisabledGroup(!m_RebuildOnSplineChange.boolValue);
+                    using (new LabelWidthScope(80f))
+                        EditorGUILayout.PropertyField(m_RebuildFrequency, new GUIContent() { text = L10n.Tr("Frequency") });
+                    EditorGUI.EndDisabledGroup();
+                }
+                else
+                {
+                    if (GUILayout.Button(new GUIContent(L10n.Tr("Regenerate"))))
+                        Rebuild();
+                }
+
+                if (EditorGUI.EndChangeCheck() && !m_RebuildOnSplineChange.boolValue)
+                {
+                    // This is needed to set m_RebuildRequested to the appropriate value.
+                    SetRebuildOnSplineChange(m_RebuildOnSplineChange.boolValue);
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                if (m_AnyMissingMesh)
+                {
+                    GUILayout.BeginHorizontal();
+                    EditorGUILayout.PrefixLabel(" ");
+                    if (GUILayout.Button("Create Mesh Asset"))
+                        CreateMeshAssets(m_Components);
+                    GUILayout.EndHorizontal();
+                }
+
+                EditorGUI.BeginChangeCheck();
+                EditorGUILayout.PropertyField(m_Radius);
+                if (EditorGUI.EndChangeCheck())
+                    m_Radius.floatValue = Mathf.Clamp(m_Radius.floatValue, .00001f, 1000f);
+
+                EditorGUI.BeginChangeCheck();
+                EditorGUILayout.PropertyField(m_SegmentsPerUnit);
+                if (EditorGUI.EndChangeCheck())
+                    m_SegmentsPerUnit.floatValue = Mathf.Clamp(m_SegmentsPerUnit.floatValue, .00001f, 4096f);
+
+                var canCapEnds = CanCapEnds();
+                using (new EditorGUI.DisabledScope(!canCapEnds))
+                {
+                    EditorGUILayout.PropertyField(m_Capped, new GUIContent(k_CapEnds, m_Capped.tooltip));
+                    if (m_Capped.boolValue && !canCapEnds)
+                        m_Capped.boolValue = false;
+                }
+
+                EditorGUILayout.PropertyField(m_FlipNormals);
+
+                EditorGUI.indentLevel--;
+            }
+
+            // advanced section
+            EditorGUILayout.Space(4);
 
             m_Range.isExpanded = Foldout(m_Range.isExpanded, k_AdvancedContent);
+
             if (m_Range.isExpanded)
             {
                 EditorGUI.indentLevel++;
@@ -150,8 +264,8 @@ namespace UnityEditor.Splines
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.PrefixLabel(k_PercentageContent);
                 EditorGUI.indentLevel--;
-                EditorGUI.indentLevel--;
 
+                EditorGUI.indentLevel--;
                 EditorGUI.BeginChangeCheck();
                 var newRange = new Vector2(range.x, range.y);
                 using (new LabelWidthScope(30f))
@@ -167,19 +281,11 @@ namespace UnityEditor.Splines
                     m_Range.vector2Value = newRange;
                 }
 
-                EditorGUILayout.EndHorizontal();
-                EditorGUI.showMixedValue = false;
-
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(m_RebuildOnSplineChange, new GUIContent(k_AutoRegenGeo, m_RebuildOnSplineChange.tooltip));
-                if (m_RebuildOnSplineChange.boolValue)
-                {
-                    EditorGUI.indentLevel++;
-                    EditorGUI.BeginDisabledGroup(!m_RebuildOnSplineChange.boolValue);
-                    EditorGUILayout.PropertyField(m_RebuildFrequency);
-                    EditorGUI.EndDisabledGroup();
-                    EditorGUI.indentLevel--;
-                }
+
+                EditorGUILayout.EndHorizontal();
+
+                EditorGUI.showMixedValue = false;
 
                 EditorGUILayout.PropertyField(m_UpdateColliders);
 
@@ -188,20 +294,11 @@ namespace UnityEditor.Splines
 
             serializedObject.ApplyModifiedProperties();
 
-            if(EditorGUI.EndChangeCheck())
-                foreach(var extrude in m_Components)
-                    extrude.Rebuild();
-        }
-
-        void CreateMeshAssets(SplineExtrude[] components)
-        {
-            foreach (var extrude in components)
+            if (EditorGUI.EndChangeCheck())
             {
-                if (!extrude.TryGetComponent<MeshFilter>(out var filter) || filter.sharedMesh == null)
-                    filter.sharedMesh = extrude.CreateMeshAsset();
+                foreach (var extrude in m_Components)
+                    extrude.Rebuild();
             }
-
-            m_AnyMissingMesh = false;
         }
     }
 }

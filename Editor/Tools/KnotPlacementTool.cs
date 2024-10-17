@@ -36,8 +36,7 @@ namespace UnityEditor.Splines
         }
     }
 
-    [EditorTool("Draw Spline", typeof(ISplineContainer), typeof(SplineToolContext))]
-    sealed class KnotPlacementTool : SplineTool
+    abstract class KnotPlacementTool : SplineTool
     {   
         // 6f is the threshold used in RectSelection, but felt a little too sensitive when drawing a path.
         const float k_MinDragThreshold = 8f;
@@ -281,7 +280,7 @@ namespace UnityEditor.Splines
         public override bool gridSnapEnabled => true;
 #endif
 
-        public override GUIContent toolbarIcon => PathIcons.knotPlacementTool;
+        public override GUIContent toolbarIcon => PathIcons.editSplineTool;
 
         static PlacementData s_PlacementData;
 
@@ -293,6 +292,7 @@ namespace UnityEditor.Splines
         static readonly List<SelectableKnot> s_KnotsBuffer = new List<SelectableKnot>();
         DrawingOperation m_CurrentDrawingOperation;
         static Component s_MainTarget;
+
         //Needed for Tests
         internal static Component MainTarget
         {
@@ -302,10 +302,12 @@ namespace UnityEditor.Splines
 
         public override void OnActivated()
         {
+            EditorSplineGizmos.showSelectedGizmo = false;
+            s_MainTarget = null;
             base.OnActivated();
             SplineToolContext.useCustomSplineHandles = true;
             SplineSelection.Clear();
-            SplineSelection.UpdateObjectSelection(targets);
+            SplineSelection.UpdateObjectSelection(GetTargets());
             m_ActiveObjectIndex = 0;
         }
 
@@ -483,7 +485,7 @@ namespace UnityEditor.Splines
                 new DrawingOperation(knot.SplineInfo, DrawingOperation.DrawingDirection.End, true);
         }
 
-        void AddKnotOnSurface(float3 position, float3 normal, float3 tangentOut)
+        protected virtual void AddKnotOnSurface(float3 position, float3 normal, float3 tangentOut)
         {
             Undo.RecordObject(s_MainTarget, k_KnotPlacementUndoMessage);
 
@@ -494,7 +496,7 @@ namespace UnityEditor.Splines
             // Check component count to ensure that we only move the transform of a newly created
             // spline. I.e., we don't want to move a GameObject that has other components like
             // a MeshRenderer, for example.
-            if (( container.Splines.Count == 1 && container.Splines[0].Count == 0
+            if ((container.Splines.Count == 1 && container.Splines[0].Count == 0
                   || container.Splines.Count == 0 )
                 && s_MainTarget.GetComponents<Component>().Length == 2)
             {
@@ -520,10 +522,14 @@ namespace UnityEditor.Splines
             if (!Mathf.Approximately(math.length(tangentOut), 0))
                 TangentHandles.Draw(position + tangentOut, position, normal);
 
+
+            if (s_MainTarget != null)
+                tangentOut = s_MainTarget.transform.InverseTransformVector(tangentOut);
+
 #if UNITY_2022_2_OR_NEWER
-            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(s_MainTarget.transform.InverseTransformVector(tangentOut), normal), Handles.elementColor, false, false);
+            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(tangentOut, normal), Handles.elementColor, false, false);
 #else
-            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(s_MainTarget.transform.InverseTransformVector(tangentOut), normal), SplineHandleUtility.knotColor, false, false);
+            KnotHandles.Draw(position, SplineUtility.GetKnotRotation(tangentOut, normal), SplineHandleUtility.knotColor, false, false);
 #endif
         }
 
@@ -577,7 +583,7 @@ namespace UnityEditor.Splines
 
                     if (s_PlacementData != null)
                     {
-                        var scale = s_MainTarget.transform.lossyScale;
+                        var scale = s_MainTarget != null ? s_MainTarget.transform.lossyScale : Vector3.one;
                         var tan = new Vector3(s_PlacementData.TangentOut.x * scale.x,
                             s_PlacementData.TangentOut.y * scale.y,
                             s_PlacementData.TangentOut.z * scale.z);
@@ -650,7 +656,7 @@ namespace UnityEditor.Splines
                                 evt.mousePosition, 
                                 position, 
                                 normal, 
-                                s_MainTarget.transform.lossyScale);
+                                s_MainTarget != null ? s_MainTarget.transform.lossyScale : Vector3.one);
                         }
                     }
 
@@ -720,20 +726,20 @@ namespace UnityEditor.Splines
             var evt = Event.current;
             if (GUIUtility.hotControl == 0 && evt.type == EventType.KeyDown)
             {
-                if (evt.keyCode == KeyCode.Return)
+                if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.Escape)
                 {
                     //If we are currently drawing, end the drawing operation and start a new one. If we haven't started drawing, switch to move tool instead
                     if (m_CurrentDrawingOperation != null)
-                        EndDrawingOperation();
-                    else
+                    {
+                        ToolManager.SetActiveContext<SplineToolContext>();
                         ToolManager.SetActiveTool<SplineMoveTool>();
-                }
+                    }
+                    else
+                        ToolManager.RestorePreviousTool();
 
-#if !UNITY_2022_1_OR_NEWER
-                //For 2022.1 and after the ESC key is handled in the EditorToolManager
-                if (evt.keyCode == KeyCode.Escape)
-                    ToolManager.SetActiveTool<SplineMoveTool>();
-#endif
+                    evt.Use();
+
+                }
             }
         }
 
@@ -745,13 +751,13 @@ namespace UnityEditor.Splines
 
         int GetTargetIndex(SplineInfo info)
         {
-            return targets.ToList().IndexOf(info.Object);
+            return GetTargets().ToList().IndexOf(info.Object);
         }
 
-        IReadOnlyList<Object> GetSortedTargets(out Object mainTarget)
+        protected virtual IReadOnlyList<Object> GetSortedTargets(out Object mainTarget)
         {
             m_SortedTargets.Clear();
-            m_SortedTargets.AddRange(targets);
+            m_SortedTargets.AddRange(GetTargets());
 
             if (m_ActiveObjectIndex >= m_SortedTargets.Count)
                 m_ActiveObjectIndex = 0;
@@ -780,8 +786,13 @@ namespace UnityEditor.Splines
 
         void CycleActiveTarget()
         {
-            m_ActiveObjectIndex = ( m_ActiveObjectIndex + 1 ) % targets.Count();
+            m_ActiveObjectIndex = ( m_ActiveObjectIndex + 1 ) % GetTargets().Count();
             SceneView.RepaintAll();
+        }
+
+        protected virtual IEnumerable<Object> GetTargets()
+        {
+            return targets;
         }
 
         [Shortcut("Splines/Cycle Active Spline Container (Draw Spline Tool)", typeof(SceneView), KeyCode.S, ShortcutModifiers.Shift)]

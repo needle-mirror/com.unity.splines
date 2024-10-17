@@ -4,7 +4,8 @@ namespace UnityEditor.Splines
 {
     static class PathIcons
     {
-        public static GUIContent knotPlacementTool = EditorGUIUtility.TrIconContent(GetIcon("KnotPlacementTool"), "Draw Splines Tool");
+        public static GUIContent createSplineTool = EditorGUIUtility.TrIconContent(GetIcon("KnotPlacementTool"), "Create Spline");
+        public static GUIContent editSplineTool = EditorGUIUtility.TrIconContent(GetIcon("KnotPlacementTool"), "Edit Spline");
         public static GUIContent splineMoveTool = EditorGUIUtility.TrIconContent("MoveTool", "Spline Move Tool");
         public static GUIContent splineRotateTool = EditorGUIUtility.TrIconContent("RotateTool", "Spline Rotate Tool");
         public static GUIContent splineScaleTool = EditorGUIUtility.TrIconContent("ScaleTool", "Spline Scale Tool");

@@ -17,7 +17,7 @@
     * [Configure the movement of a GameObject](animate-movement.md)
     * [Spline Animate component reference](animate-component.md)  
 * [Extrude a mesh along a spline](extrude.md)
-    * [Create a tube-shaped mesh along a spline](extrude-mesh.md)
+    * [Create a 3D mesh along a spline](extrude-mesh.md)
     * [Spline Extrude component reference](extrude-component.md)
 * [Spline Element Inspector overlay reference](element-inspector.md)  
 * [Spline component reference](spline-component.md)

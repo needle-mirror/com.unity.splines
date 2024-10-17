@@ -54,9 +54,11 @@ namespace UnityEditor.Splines
 
         bool m_WasActiveAfterDeserialize;
 
+        static SplineToolContext s_Instance;
+
         /// <summary>
         /// Defines if the spline tool context draws the default handles for splines or if they are managed directly by the `SplineTool`.
-        /// Set to false for SplineToolContext to draw the default spline handles for segments, knots, and tangents which you can directly manipulate. Set to true to draw handles and manage direct manipulation with your tool. The default value is false. 
+        /// Set to false for SplineToolContext to draw the default spline handles for segments, knots, and tangents which you can directly manipulate. Set to true to draw handles and manage direct manipulation with your tool. The default value is false.
         /// </summary>
         public static bool useCustomSplineHandles
         {
@@ -99,18 +101,18 @@ namespace UnityEditor.Splines
 
             menu.AppendSeparator();
 
-            menu.AppendAction("Link Knots", 
-                action => { 
-                    EditorSplineUtility.LinkKnots(knotBufferOnContextMenuOpen); 
-                }, 
-                action => SplineSelectionUtility.CanLinkKnots(knotBufferOnContextMenuOpen) 
+            menu.AppendAction("Link Knots",
+                action => {
+                    EditorSplineUtility.LinkKnots(knotBufferOnContextMenuOpen);
+                },
+                action => SplineSelectionUtility.CanLinkKnots(knotBufferOnContextMenuOpen)
                 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled );
 
             menu.AppendAction("Unlink Knots",
-                action => { 
-                    EditorSplineUtility.UnlinkKnots(knotBufferOnContextMenuOpen); 
+                action => {
+                    EditorSplineUtility.UnlinkKnots(knotBufferOnContextMenuOpen);
                 },
-                action => SplineSelectionUtility.CanUnlinkKnots(knotBufferOnContextMenuOpen) 
+                action => SplineSelectionUtility.CanUnlinkKnots(knotBufferOnContextMenuOpen)
                 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
 
             menu.AppendAction("Split Knot",
@@ -118,7 +120,7 @@ namespace UnityEditor.Splines
                     EditorSplineUtility.RecordSelection("Split knot");
                     SplineSelection.Set(EditorSplineUtility.SplitKnot(knotBufferOnContextMenuOpen[0]));
                 },
-                action => SplineSelectionUtility.CanSplitSelection(knotBufferOnContextMenuOpen) 
+                action => SplineSelectionUtility.CanSplitSelection(knotBufferOnContextMenuOpen)
                 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
 
             menu.AppendAction("Join Knots",
@@ -126,7 +128,7 @@ namespace UnityEditor.Splines
                     EditorSplineUtility.RecordSelection("Join knot");
                     SplineSelection.Set(EditorSplineUtility.JoinKnots(knotBufferOnContextMenuOpen[0], knotBufferOnContextMenuOpen[1]));
                 },
-                action => SplineSelectionUtility.CanJoinSelection(knotBufferOnContextMenuOpen) 
+                action => SplineSelectionUtility.CanJoinSelection(knotBufferOnContextMenuOpen)
                 ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
 
             menu.AppendAction("Reverse Spline Flow",
@@ -143,7 +145,7 @@ namespace UnityEditor.Splines
         /// common functionality for working with splines, ex gizmo drawing and selection.
         /// </summary>
         /// <param name="window"></param>
-        public override void OnToolGUI(EditorWindow window) 
+        public override void OnToolGUI(EditorWindow window)
         {
             UpdateSelectionIfSplineRemoved(m_Splines);
 
@@ -165,7 +167,7 @@ namespace UnityEditor.Splines
                         sInfo.Transform.hasChanged = false;
                     }
                 }
-                
+
                 SplineHandles.DoHandles(m_Splines);
             }
 
@@ -195,8 +197,9 @@ namespace UnityEditor.Splines
 
             Spline.afterSplineWasModified += OnSplineWasModified;
             Undo.undoRedoPerformed += UndoRedoPerformed;
-            
+
             SplineCacheUtility.InitializeCache();
+            s_Instance = this;
         }
 
         /// <summary>
@@ -206,8 +209,9 @@ namespace UnityEditor.Splines
         {
             Spline.afterSplineWasModified -= OnSplineWasModified;
             Undo.undoRedoPerformed -= UndoRedoPerformed;
-            
+
             SplineCacheUtility.ClearCache();
+            s_Instance = null;
         }
 
         void UpdateSelectionIfSplineRemoved(List<SplineInfo> previousSelection)
@@ -241,6 +245,14 @@ namespace UnityEditor.Splines
         {
             SplineSelection.UpdateObjectSelection(targets);
             SceneView.RepaintAll();
+        }
+
+        internal static IEnumerable<UObject> GetTargets()
+        {
+            if (s_Instance)
+                return s_Instance.targets;
+
+            return null;
         }
 
         void DeleteSelected()
@@ -282,6 +294,9 @@ namespace UnityEditor.Splines
                     var spline = splinesToRemove[i];
                     SplineSelection.Remove(spline);
                     spline.Container.RemoveSplineAt(spline.Index);
+                    
+                    if (spline.Object != null)
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(spline.Object);
                 }
             }
         }

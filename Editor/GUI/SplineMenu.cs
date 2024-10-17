@@ -39,23 +39,7 @@ namespace UnityEditor.Splines
         [MenuItem(k_MenuPath + "/Draw Splines Tool...", false, k_MenuPriority + 0)]
         static void CreateNewSpline(MenuCommand menuCommand)
         {
-            var gameObject = CreateSplineGameObject(menuCommand);
-
-            gameObject.transform.localPosition = Vector3.zero;
-            gameObject.transform.localRotation = Quaternion.identity;
-
-            Selection.activeObject = gameObject;
-            // Ensuring trackers are rebuilt before changing to SplineContext
-            ActiveEditorTracker.sharedTracker.RebuildIfNecessary();
-            // Set hasChanged to false as we don't want to override a custom transform set by the user.
-            gameObject.transform.hasChanged = false;
-            EditorApplication.delayCall += SetKnotPlacementTool;
-        }
-
-        static void SetKnotPlacementTool()
-        {
-            ToolManager.SetActiveContext<SplineToolContext>();
-            ToolManager.SetActiveTool<KnotPlacementTool>();
+            ToolManager.SetActiveTool<CreateSplineTool>();
         }
 
         [MenuItem(k_MenuPath + "/Square", false, k_MenuPriority + 11)]

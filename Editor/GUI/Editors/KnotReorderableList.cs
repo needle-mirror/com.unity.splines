@@ -84,11 +84,22 @@ namespace UnityEditor.Splines
                 // make sure that this correctly handles the case where ISplineContainer does not serialize an array.
                 // in these cases we'll assert that there is only one spline. if that isn't the case we can't reasonably
                 // handle it so just screw it and give up; the UI can accomodate the case where no container is present.
-                if(SerializedPropertyUtility.TryGetSplineIndex(splineProperty, out m_ContainerIndex)
-                    || container.Splines.Count == 1)
+                if (SerializedPropertyUtility.TryGetSplineIndex(splineProperty, out m_ContainerIndex))
                 {
                     m_Container = container;
-                    m_Spline = m_Container.Splines[m_ContainerIndex];
+
+                    if (container.Splines.Count > 0)
+                    {
+                        if (m_Container.Splines.Count < m_ContainerIndex)
+                            m_ContainerIndex = m_Container.Splines.Count - 1;
+
+                        m_Spline = m_Container.Splines[m_ContainerIndex];
+                    }
+                }
+                else if (container.Splines.Count == 1)
+                {
+                    m_Container = container;
+                    m_Spline = m_Container.Splines[0];
                 }
             }
         }

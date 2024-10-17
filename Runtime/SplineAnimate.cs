@@ -1,4 +1,5 @@
 using System;
+using Unity.Mathematics;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -359,6 +360,7 @@ namespace UnityEngine.Splines
 
         void Awake()
         {
+            RecalculateAnimationParameters();
 #if UNITY_EDITOR      
             if(EditorApplication.isPlaying)
 #endif
@@ -646,8 +648,13 @@ namespace UnityEngine.Splines
                         Debug.Log($"{m_AlignmentMode} animation alignment mode is not supported!", this);
                         break;
                 }
-
-                rotation = Quaternion.LookRotation(forward, up) * axisRemapRotation;
+                
+                var valid = math.isfinite(forward) & math.isfinite(up);
+                
+                if (math.all(valid))
+                    rotation = Quaternion.LookRotation(forward, up) * axisRemapRotation;
+                else
+                    Debug.LogError("Trying to EvaluatePositionAndRotation with invalid parameters. Please check the SplineAnimate component.", this);
             }
             else
                 rotation = transform.rotation;

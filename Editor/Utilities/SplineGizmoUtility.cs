@@ -19,8 +19,6 @@ namespace UnityEditor.Splines
             s_GizmosLineColor.value = SettingsGUILayout.SettingsColorField("Splines Color", s_GizmosLineColor, searchContext);
         }
 
-        static Vector3[] s_Points;
-        static Vector3 s_CameraUp;
         static readonly Color s_OutlineColor = new Color(0f, 0f, 0f, .5f);
 
         /// <summary>

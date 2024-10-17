@@ -5,6 +5,23 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.7.1] - 2024-10-17
+
+### Added
+
+- [STO-3204] Added a **Create Spline** button to enter spline creation when you do not have the Spline tool context activated.
+- New `SplineExtrude` and `SplineMesh` option enables new extrusion profiles, including `Circle`, `Square`, `Road`, and `Spline`.
+- Added a section in the documentation for the `Source Spline Container` in the `SplineExtrude` component.
+
+### Bug Fixes
+
+- [SPLB-292] Removed the dependency on the UGUI package.
+- Removed the toggle to override the target spline in the `SplineExtrude` inspector.
+- [SPLB-288] Fixed a bug where a prefab `SplineContainer` would unexpectedly restore splines deleted before entering and exiting playmode.
+- [SPLB-284] Fixed a bug that prevented baking instances of multiple `SplineInstantiate` components when multi-selecting.
+- [SPLB-277] Fixed a bug where instantiating a prefab with `SplineAnimate` component would throw messages in the console.
+- [SPLB-279] Fixed a bug where closing a Spline would not update the auto-smooth knots at the extremities.
+
 ## [2.6.1] - 2024-05-23
 
 ### Bug Fixes

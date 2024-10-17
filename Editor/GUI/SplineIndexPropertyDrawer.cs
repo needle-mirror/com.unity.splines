@@ -10,6 +10,12 @@ namespace UnityEditor.Splines
     [CustomPropertyDrawer(typeof(SplineIndexAttribute))]
     public class SplineIndexPropertyDrawer : PropertyDrawer
     {
+        static readonly int[] k_MissingContainerValues = new int[] { 0 };
+        static readonly GUIContent[] k_MissingContainerContent = new GUIContent[] { new GUIContent("") };
+        
+        string GetWarningMessage(SplineIndexAttribute attrib) => 
+            $"SplineIndex property attribute does not reference a valid SplineContainer: \"{attrib.SplineContainerProperty}\"";
+        
         /// <summary>
         /// Returns the height of a SerializedProperty in pixels.
         /// </summary>
@@ -36,9 +42,10 @@ namespace UnityEditor.Splines
             var container = property.serializedObject.FindProperty(path);
 
             if (container == null || !(container.objectReferenceValue is ISplineContainer res))
-                EditorGUI.HelpBox(position,
-                    $"SplineIndex property attribute does not reference a valid SplineContainer: " +
-                    $"\"{attrib.SplineContainerProperty}\"", MessageType.Warning);
+            {
+                new EditorGUI.DisabledScope(true);
+                EditorGUI.IntPopup(position, label, 0, k_MissingContainerContent, k_MissingContainerValues);
+            }
             else
                 SplineGUI.SplineIndexField(position, property, label, res.Splines.Count);
         }

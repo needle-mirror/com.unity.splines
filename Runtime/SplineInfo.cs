@@ -29,7 +29,7 @@ namespace UnityEngine.Splines
         /// </summary>
         public ISplineContainer Container
         {
-            get => m_Container;
+            get => m_Container ?? m_Object as ISplineContainer;
             set => m_Container = value;
         }
 

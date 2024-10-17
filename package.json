@@ -1,13 +1,12 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.6.1",
+  "version": "2.7.1",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
     "com.unity.settings-manager": "1.0.3",
-    "com.unity.mathematics": "1.2.1",
-    "com.unity.ugui": "1.0.0"
+    "com.unity.mathematics": "1.2.1"
   },
   "samples": [
     {
@@ -24,17 +23,17 @@
   "category": "Tool",
   "type": "tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.6.1"
+    "com.unity.splines.tests": "2.7.1"
   },
   "_upm": {
-    "changelog": "### Bug Fixes\n\n- [SPLB-275] Fixed a bug where the `SplineContainer` component would throw warning when entering playmode.\n- [SPLB-266] Fixed a bug where instantiating a `SplineExtrude` component at runtime would throw errors.\n- [SPLB-269] Fixed a bug where instantiating a `SplineAnimate` component at runtime would throw errors.\n- [SPLB-260] Fixed a bug where playing a `SplineAnimate` from a start method would not work.\n- [SPLB-267] Fixed a bug where undoing a spline insertion in a container would throw errors from the `SplineInstantiate` component.\n- [SPLB-261] Fixed a bug where the knot placement tool would not work when multiple scene views were opened.\n- [SPLB-253] Fixed a bug where using the knot placement tool in 2D mode would not work if the grids are turned off.\n- [SPLB-258] Fixed a bug where destroying a component would throw errors in the console."
+    "changelog": "### Added\n\n- [STO-3204] Added a **Create Spline** button to enter spline creation when you do not have the Spline tool context activated.\n- New `SplineExtrude` and `SplineMesh` option enables new extrusion profiles, including `Circle`, `Square`, `Road`, and `Spline`.\n- Added a section in the documentation for the `Source Spline Container` in the `SplineExtrude` component.\n\n### Bug Fixes\n\n- [SPLB-292] Removed the dependency on the UGUI package.\n- Removed the toggle to override the target spline in the `SplineExtrude` inspector.\n- [SPLB-288] Fixed a bug where a prefab `SplineContainer` would unexpectedly restore splines deleted before entering and exiting playmode.\n- [SPLB-284] Fixed a bug that prevented baking instances of multiple `SplineInstantiate` components when multi-selecting.\n- [SPLB-277] Fixed a bug where instantiating a prefab with `SplineAnimate` component would throw messages in the console.\n- [SPLB-279] Fixed a bug where closing a Spline would not update the auto-smooth knots at the extremities."
   },
   "upmCi": {
-    "footprint": "fe0610a735d8aeba073f1773c99e34e0da2328a1"
+    "footprint": "d7976c7152bba887d1f967a0ec095b288b27e283"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "f77ddc46ebeef1a8dca1264827b93dbec50d3772"
+    "revision": "b2a7ab84a1f97725a4676a735031c2fed9fb0a1c"
   }
 }

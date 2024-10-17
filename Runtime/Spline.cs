@@ -370,7 +370,7 @@ namespace UnityEngine.Splines
         public TangentMode GetTangentMode(int index)
         {
             EnsureMetaDataValid();
-            return m_MetaData[index].Mode;
+            return m_MetaData.Count > 0 ? m_MetaData[index].Mode : k_DefaultTangentMode;
         }
 
         /// <summary>
@@ -614,8 +614,18 @@ namespace UnityEngine.Splines
                 if (m_Closed == value)
                     return;
                 m_Closed = value;
+                
+                CheckAutoSmoothExtremityKnots();
                 SetDirty(SplineModification.ClosedModified);
             }
+        }
+
+        internal void CheckAutoSmoothExtremityKnots()
+        {
+            if (GetTangentMode(0) == TangentMode.AutoSmooth)
+                ApplyTangentModeNoNotify(0);
+            if (Count > 2 && GetTangentMode(Count - 1) == TangentMode.AutoSmooth)
+                ApplyTangentModeNoNotify(Count - 1);
         }
 
         /// <summary>
@@ -875,7 +885,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Return the sum of all curve lengths, accounting for <see cref="Closed"/> state.
-        /// Note that this value is not accounting for transform hierarchy. If you require length in world space use
+        /// Note that this value is not accounting for transform hierarchy. If you require length in world space, use <see cref="SplineContainer.CalculateLength"/>.
         /// </summary>
         /// <remarks>
         /// This value is cached. It is recommended to call this once in a non-performance critical path to ensure that
@@ -1152,7 +1162,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Adds all knots from a given spline to this spline.
         /// </summary>
-        /// <param name="spline">The source spline of the knots to add.</param>
+        /// <param name="spline">The source spline of the knots to add.
         /// </param>
         public void Add(Spline spline)
         {

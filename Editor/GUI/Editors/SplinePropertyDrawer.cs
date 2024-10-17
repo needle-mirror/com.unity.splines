@@ -46,6 +46,7 @@ namespace UnityEditor.Splines
                 if (EditorGUI.EndChangeCheck() && SerializedPropertyUtility.TryGetSpline(property, out var spline))
                 {
                     property.serializedObject.ApplyModifiedProperties();
+                    spline.CheckAutoSmoothExtremityKnots();
                     spline.SetDirty(SplineModification.ClosedModified);
                     property.serializedObject.Update();
                 }

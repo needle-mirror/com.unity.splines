@@ -5,7 +5,7 @@ using UnityEditor;
 class SplineComponentEditor : Editor
 {
     static GUIStyle s_FoldoutStyle;
-    
+
     internal static readonly string k_Helpbox = L10n.Tr("Instantiated Objects need a SplineContainer target to be created.");
 
     protected bool Foldout(bool foldout, GUIContent content)

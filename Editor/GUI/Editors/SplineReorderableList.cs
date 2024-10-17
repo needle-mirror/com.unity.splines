@@ -96,7 +96,8 @@ namespace UnityEditor.Splines
             SceneView.RepaintAll();
         }
 
-        void OnAdd(ReorderableList _)
+        // Used in tests
+        internal void OnAdd(ReorderableList _)
         {
             if(m_Container == null)
              return;
@@ -132,15 +133,18 @@ namespace UnityEditor.Splines
             onSelectCallback(this);
         }
 
-        void OnRemove(ReorderableList _)
+        // Used in tests
+        internal void OnRemove(ReorderableList _)
         {
             if (m_Container == null)
                 return;
 
             Undo.RecordObject(serializedProperty.serializedObject.targetObject, "Removing Spline from SplineContainer");
-
-            for(int i = selectedIndices.Count - 1; i >= 0; i--)
+            
+            for (int i = selectedIndices.Count - 1; i >= 0; i--)
                 m_Container.RemoveSplineAt(selectedIndices[i]);
+            
+            PrefabUtility.RecordPrefabInstancePropertyModifications(serializedProperty.serializedObject.targetObject);
 
             ClearSelection();
             SplineSelection.ClearInspectorSelectedSplines();

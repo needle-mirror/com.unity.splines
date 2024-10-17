@@ -547,13 +547,13 @@ namespace UnityEngine.Splines
 
 #if UNITY_EDITOR
             Undo.undoRedoPerformed += UndoRedoPerformed;
-            
+
             // A problem can be raised when undoing Splines changes. Insuring the caches are clear at that moment.
             if (Undo.isProcessing)
             {
                 //Insure caches are clear after undo
                 m_Container?.ClearCaches();
-            } 
+            }
 #endif
 
             //Bugfix for SPLB-107: Duplicating a SplineInstantiate is making children visible
