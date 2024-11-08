@@ -156,7 +156,7 @@ namespace UnityEditor.Splines
                 EditorGUILayout.HelpBox(k_Helpbox, MessageType.Warning);
 
             // shape section
-            m_Shape.isExpanded = Foldout(m_Shape.isExpanded, k_ShapeContent);
+            m_Shape.isExpanded = Foldout(m_Shape.isExpanded, k_ShapeContent, true);
 
             if (m_Shape.isExpanded)
             {
@@ -181,7 +181,7 @@ namespace UnityEditor.Splines
             EditorGUILayout.Space(4);
 
             // geometry section
-            m_Radius.isExpanded = Foldout(m_Radius.isExpanded, k_GeometryContent);
+            m_Radius.isExpanded = Foldout(m_Radius.isExpanded, k_GeometryContent, true);
 
             if (m_Radius.isExpanded)
             {
@@ -247,7 +247,7 @@ namespace UnityEditor.Splines
             // advanced section
             EditorGUILayout.Space(4);
 
-            m_Range.isExpanded = Foldout(m_Range.isExpanded, k_AdvancedContent);
+            m_Range.isExpanded = Foldout(m_Range.isExpanded, k_AdvancedContent, true);
 
             if (m_Range.isExpanded)
             {

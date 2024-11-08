@@ -7,8 +7,10 @@ namespace UnityEngine.Splines
     /// SplineComputeBufferScope is a convenient way to extract from a spline the information necessary to evaluate
     /// spline values in a ComputeShader.
     /// To access Spline evaluation methods in a shader, include the "Splines.cginc" file:
-    /// <code>#include "Packages/com.unity.splines/Shader/Spline.cginc"</code>
     /// </summary>
+    /// <example>
+    /// <code>#include "Packages/com.unity.splines/Shader/Spline.cginc"</code>
+    /// </example>
     /// <typeparam name="T">The type of spline.</typeparam>
     public struct SplineComputeBufferScope<T> : IDisposable where T : ISpline
     {

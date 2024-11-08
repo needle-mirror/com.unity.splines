@@ -3,6 +3,10 @@ using UnityEngine.Splines;
 
 namespace UnityEditor.Splines
 {
+    /// <summary>
+    /// A utility class providing methods to handle and manage spline extrusion operations.
+    /// Initializes event listeners on load to monitor and respond to object changes, duplication, and paste operations specific to splines.
+    /// </summary>
     [InitializeOnLoad]
     public static class SplineExtrudeUtility
     {

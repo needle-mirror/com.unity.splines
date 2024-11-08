@@ -288,7 +288,8 @@ namespace UnityEditor.Splines
             var spline = splineInfo.Spline;
 
             if (spline.Closed && spline.Count >= 2)
-                throw new ArgumentException("Cannot add a point to the extremity of a closed spline", nameof(spline));
+                Debug.LogWarning("Cannot add a point to the extremity of a closed spline.");
+
 
             var localToWorld = splineInfo.LocalToWorld;
             var mode = GetModeFromPlacementTangent(tangentOut);
@@ -946,7 +947,7 @@ namespace UnityEditor.Splines
         /// </summary>
         /// <param name="type">The <see cref="EmbeddedSplineDataType"/>.</param>
         /// <param name="key">A string value used to identify and access a <see cref="SplineData{T}"/>.</param>
-        /// <param name="container"></param>
+        /// <param name="container">The <see cref="ISplineContainer"/> that contains the spline.</param>
         /// <param name="source">The index of the <see cref="Spline"/> in the <paramref name="container"/> to copy data from.</param>
         /// <param name="destination">The index of the <see cref="Spline"/> in the <paramref name="container"/> to copy data to.</param>
         /// <returns>True if data was copied, otherwise false.</returns>

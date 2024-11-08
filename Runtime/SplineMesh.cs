@@ -67,10 +67,10 @@ namespace UnityEngine.Splines
             set => m_FlipNormals = value;
         }
 
-        /// <param>
+        /// <summary>
         /// The section of the Spline to extrude. This value expects a normalized interpolation start and end.
         /// I.e., [0,1] is the entire Spline, whereas [.5, 1] is the last half of the Spline.
-        /// </param>
+        /// </summary>
         public float2 Range
         {
             get => m_Range;
@@ -340,6 +340,7 @@ namespace UnityEngine.Splines
         /// <param name="segments">How many sections compose the length of the mesh.</param>
         /// <param name="capped">Whether the start and end of the mesh is filled. This setting is ignored when spline is closed.</param>
         /// <param name="closed">Whether the extruded mesh is closed or open. This can be separate from the Spline.Closed value.</param>
+        /// <returns>Returns true if the computed vertex count exceeds 3 and the computed index count exceeds 5.</returns>
         // ReSharper disable once MemberCanBePrivate.Global
         public static bool GetVertexAndIndexCount(int sides, int segments, bool capped, bool closed, bool closeRing, out int vertexCount, out int indexCount)
         {

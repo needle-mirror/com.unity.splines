@@ -11,31 +11,10 @@ using Object = UnityEngine.Object;
 
 #if UNITY_2022_1_OR_NEWER
 using UnityEditor.Overlays;
-
-#else
-using System.Reflection;
-using UnityEditor.Toolbars;
-using UnityEngine.UIElements;
 #endif
 
 namespace UnityEditor.Splines
 {
-    [CustomEditor(typeof(KnotPlacementTool))]
-#if UNITY_2022_1_OR_NEWER
-    class KnotPlacementToolSettings : UnityEditor.Editor, ICreateToolbar
-    {
-        public IEnumerable<string> toolbarElements
-        {
-#else
-    class KnotPlacementToolSettings : CreateToolbarBase
-    {
-        protected override IEnumerable<string> toolbarElements
-        {
-#endif
-            get { yield return "Spline Tool Settings/Default Knot Type"; }
-        }
-    }
-
     abstract class KnotPlacementTool : SplineTool
     {   
         // 6f is the threshold used in RectSelection, but felt a little too sensitive when drawing a path.
@@ -279,8 +258,6 @@ namespace UnityEditor.Splines
 #if UNITY_2022_2_OR_NEWER
         public override bool gridSnapEnabled => true;
 #endif
-
-        public override GUIContent toolbarIcon => PathIcons.editSplineTool;
 
         static PlacementData s_PlacementData;
 
@@ -552,6 +529,8 @@ namespace UnityEditor.Splines
             switch (evt.GetTypeForControl(controlId))
             {
                 case EventType.Layout:
+                    // Not using SplineHandles.ViewToolActive() here as otherwise it breaks the handles rendering when
+                    // only pressing ALT and moving the mouse in the view.
                     if (!Tools.viewToolActive)
                         HandleUtility.AddDefaultControl(controlId);
                     break;
@@ -632,7 +611,7 @@ namespace UnityEditor.Splines
 
                 case EventType.MouseDown:
                 {
-                    if (evt.button != 0 || Tools.viewToolActive)
+                    if (evt.button != 0 || SplineHandles.ViewToolActive())
                         break;
 
                     if (HandleUtility.nearestControl == controlId)

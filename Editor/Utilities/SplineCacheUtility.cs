@@ -298,17 +298,17 @@ namespace UnityEditor.Splines
         {
             var t = EditorSplineUtility.GetCurveMiddleInterpolation(curve, spline, curveIndex);
             
-            var position = (Vector3)CurveUtility.EvaluatePosition(curve, t);
-            var tangent = ((Vector3)CurveUtility.EvaluateTangent(curve, t)).normalized;
+            var position = CurveUtility.EvaluatePosition(curve, t);
+            var tangent = math.normalizesafe(CurveUtility.EvaluateTangent(curve, t));
             var up = spline.GetCurveUpVector(curveIndex, t);
-            var rotation = Quaternion.LookRotation(tangent, up);
+            var rotation = quaternion.LookRotationSafe(tangent, up);
 
             var arrowMaxSpline = .05f * CurveUtility.ApproximateLength(curve);
             var size = HandleUtility.GetHandleSize(position) * .5f;
 
-            tangent = new Vector3(0, 0, .1f) * size;
-            var right = new Vector3(0.075f, 0, 0) * size;
-            var magnitude = tangent.magnitude;
+            tangent = new float3(0, 0, .1f) * size;
+            var right = new float3(0.075f, 0, 0) * size;
+            var magnitude = math.length(tangent);
 
             if(magnitude > arrowMaxSpline)
             {
@@ -320,7 +320,7 @@ namespace UnityEditor.Splines
             var a = tangent;
             var b = -tangent + right;
             var c = -tangent - right;
-            var positions = new[] { a, b, c};
+            var positions = new Vector3[] { a, b, c};
 
             return (positions, Matrix4x4.TRS(position, rotation, Vector3.one));
         }

@@ -223,7 +223,7 @@ namespace UnityEngine.Splines
         
         /// <summary>
         /// Calculate the approximate length of a <see cref="BezierCurve"/>. This is less accurate than
-        /// <seealso cref="CalculateLength"/>, but can be significantly faster. Use this when accuracy is
+        /// <see cref="CalculateLength"/>, but can be significantly faster. Use this when accuracy is
         /// not paramount and the curve control points are changing frequently.
         /// </summary>
         /// <param name="curve">The <see cref="BezierCurve"/> to calculate length.</param>

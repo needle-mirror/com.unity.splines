@@ -144,7 +144,7 @@ namespace UnityEditor.Splines
         /// Invoked for each window where this context is active. The spline context uses this method to implement
         /// common functionality for working with splines, ex gizmo drawing and selection.
         /// </summary>
-        /// <param name="window"></param>
+        /// <param name="window">The window that is displaying this active context.</param>
         public override void OnToolGUI(EditorWindow window)
         {
             UpdateSelectionIfSplineRemoved(m_Splines);

@@ -58,7 +58,7 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Create an <see cref="EmbeddedSplineDataFieldsAttribute"/> attribute.
         /// </summary>
-        /// <param name="fields">The fields to show in the Inspector. <see cref="EmbeddedSplineDataField"/></param>.
+        /// <param name="fields">The fields to show in the Inspector. <see cref="EmbeddedSplineDataField"/>.</param>
         public EmbeddedSplineDataFieldsAttribute(EmbeddedSplineDataField fields)
         {
             Fields = fields;

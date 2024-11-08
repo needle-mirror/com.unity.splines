@@ -547,13 +547,17 @@ namespace UnityEngine.Splines
 
 #if UNITY_EDITOR
             Undo.undoRedoPerformed += UndoRedoPerformed;
-
+#if UNITY_2022_3_OR_NEWER
             // A problem can be raised when undoing Splines changes. Insuring the caches are clear at that moment.
             if (Undo.isProcessing)
             {
                 //Insure caches are clear after undo
                 m_Container?.ClearCaches();
             }
+#else
+            m_Container?.ClearCaches();
+#endif
+
 #endif
 
             //Bugfix for SPLB-107: Duplicating a SplineInstantiate is making children visible
@@ -844,6 +848,7 @@ namespace UnityEngine.Splines
                         currentDist = 0f;
 
                     m_TimesCache.Clear();
+                    int timeIndex = 0;
 
                     while (currentDist <= (splineLength + k_Epsilon) && !terminateSpawning)
                     {
@@ -851,7 +856,7 @@ namespace UnityEngine.Splines
                             break;
 
                         m_TimesCache.Add(currentDist / splineLength);
-
+                        
                         if (m_Method == Method.SpacingDistance)
                         {
                             spacing = Random.Range(m_Spacing.x, m_Spacing.y);
@@ -913,11 +918,12 @@ namespace UnityEngine.Splines
                             else
                                 spacing = Random.Range(m_Spacing.x, m_Spacing.y);
 
-                            nativeSpline.GetPointAtLinearDistance(m_TimesCache[index], spacing, out var nextT);
+                            nativeSpline.GetPointAtLinearDistance(m_TimesCache[timeIndex], spacing, out var nextT);
                             currentDist = nextT >= 1f ? splineLength + 1f : nextT * splineLength;
                         }
 
                         index++;
+                        timeIndex++;
                     }
 
                     //removing extra unnecessary instances

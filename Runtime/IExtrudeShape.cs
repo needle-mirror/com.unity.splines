@@ -4,54 +4,57 @@ using Unity.Mathematics;
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// Implement this class to create a customized shape that can be extruded along a <see cref="Spline"/> using the
+    /// <para>Implement this class to create a customized shape that can be extruded along a <see cref="Spline"/> using the
     /// <see cref="SplineMesh"/> class.
     ///
     /// Some default shape implementations are available in the <see cref="ExtrusionShapes"/> namespace.
     ///
-    /// <see cref="SplineMesh"/> generates extruded mesh geometry in the following manner (pseudo-code):
+    /// <see cref="SplineMesh"/> generates extruded mesh geometry in the following manner (pseudo-code):</para>
     /// <code>
     /// extrudeShape.Setup(spline, numberOfSegments);
     /// for(int i = 0; i &lt; numberOfSegments; ++i)
     /// {
-    ///     float t = i/(numberOfSegments-1);
+    ///     float t = i / (numberOfSegments - 1);
     ///     extrudeShape.SetSegment(i, t, splinePositionAtT, splineTangentAtT, splineUpAtT);
     ///     for(int n = 0; n &lt; extrudeShape.SideCount; ++n)
-    ///         vertices.Add(extrudeShape.GetPosition(n/(extrudeShape.SideCount-1), n);
+    ///         vertices.Add(extrudeShape.GetPosition(n / (extrudeShape.SideCount - 1), n));
     /// }
     /// </code>
-    ///
-    /// This example IExtrudeShape implementation creates a tube.
-    /// <![CDATA[
-    ///     // While not strictly necessary, marking the class as Serializable means that
-    ///     // this can be edited in the Inspector.
-    ///     [Serializable]
-    ///     public class Circle : IExtrudeShape
-    ///     {
-    ///         [SerializeField, Min(2)]
-    ///         int m_Sides = 8;
-    ///
-    ///         float m_Rads;
-    ///
-    ///         // We only need to calculate the radians step once, so do it in the
-    ///         // Setup method.
-    ///         public void Setup(ISpline path, int segmentCount)
-    ///         {
-    ///             m_Rads = math.radians(360f / SideCount);
-    ///         }
-    ///
-    ///         public float2 GetPosition(float t, int index)
-    ///         {
-    ///             return new float2(math.cos(index * m_Rads), math.sin(index * m_Rads));
-    ///         }
-    ///
-    ///         public int SideCount
-    ///         {
-    ///             get => m_Sides;
-    ///             set => m_Sides = value;
-    ///         }
-    ///     } ]]>
+    /// <para>This example IExtrudeShape implementation creates a tube.</para>
     /// </summary>
+    /// <example>
+    /// ```lang-csharp
+    /// <![CDATA[
+    /// // While not strictly necessary, marking the class as Serializable means that
+    /// // this can be edited in the Inspector.
+    /// [Serializable]
+    /// public class Circle : IExtrudeShape
+    /// {
+    ///     [SerializeField, Min(2)]
+    ///     int m_Sides = 8;
+    ///
+    ///     float m_Rads;
+    ///
+    ///     // We only need to calculate the radians step once, so do it in the Setup method.
+    ///     public void Setup(ISpline path, int segmentCount)
+    ///     {
+    ///         m_Rads = math.radians(360f / SideCount);
+    ///     }
+    ///
+    ///     public float2 GetPosition(float t, int index)
+    ///     {
+    ///         return new float2(math.cos(index * m_Rads), math.sin(index * m_Rads));
+    ///     }
+    ///
+    ///     public int SideCount
+    ///     {
+    ///         get => m_Sides;
+    ///         set => m_Sides = value;
+    ///     }
+    /// }
+    /// ]]>
+    /// ```
+    /// </example>
     public interface IExtrudeShape
     {
         /// <summary>
@@ -69,9 +72,9 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="index">The segment index for the current vertex ring.</param>
         /// <param name="t">The normalized interpolation ratio corresponding to the segment index. Equivalent to index divided by segmentCount - 1.</param>
-        /// <param name="position">The position on the <see cref="Spline"/> path being extruded along at <paramref cref="t"/>.</param>
-        /// <param name="tangent">The tangent on the <see cref="Spline"/> path being extruded along at <paramref cref="t"/>.</param>
-        /// <param name="up">The up vector on the <see cref="Spline"/> path being extruded along at <paramref cref="t"/>.</param>
+        /// <param name="position">The position on the <see cref="Spline"/> path being extruded along at <paramref name="t"/>.</param>
+        /// <param name="tangent">The tangent on the <see cref="Spline"/> path being extruded along at <paramref name="t"/>.</param>
+        /// <param name="up">The up vector on the <see cref="Spline"/> path being extruded along at <paramref name="t"/>.</param>
         public void SetSegment(int index, float t, float3 position, float3 tangent, float3 up) {}
 
         /// <summary>
@@ -303,15 +306,15 @@ namespace UnityEngine.Splines.ExtrusionShapes
             set => m_SplineIndex = math.max(0, value);
         }
 
-        /// <value>
+        /// <summary>
         /// Returns the <see cref="Spline"/> referenced by the
         /// <see cref="SplineContainer"/> and <see cref="SplineIndex"/>.
-        /// </value>
+        /// </summary>
         public Spline Spline => m_Template != null
             ? m_Template[m_SplineIndex % m_Template.Splines.Count]
             : null;
 
-        /// <inheritdoc cref="IExtrudeShape.GetPosition"/>>
+        /// <inheritdoc cref="IExtrudeShape.GetPosition"/>
         public float2 GetPosition(float t, int index)
         {
             if (Spline == null)

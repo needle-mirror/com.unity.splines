@@ -254,9 +254,9 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Calculate the normal (up) vector of a spline. This is a more accurate but more expensive operation
-        /// than <seealso cref="EvaluateUpVector{T}"/>.
+        /// than <see cref="EvaluateUpVector{T}"/>.
         /// </summary>
-        /// <param name="spline">The <seealso cref="NativeSpline"/> to evaluate.</param>
+        /// <param name="spline">The <see cref="NativeSpline"/> to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a ratio of the curve.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>An up vector</returns>
@@ -440,7 +440,7 @@ namespace UnityEngine.Splines
         /// <param name="spline">The target spline.</param>
         /// <param name="curve">A curve index and normalized interpolation. The curve index is represented by the
         /// integer part of the float, and interpolation is the fractional part. This is the format used by
-        /// <seealso cref="PathIndexUnit.Knot"/>.
+        /// <see cref="PathIndexUnit.Knot"/>.
         /// </param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
         /// <returns>An interpolation value relative to normalized Spline length (0 to 1).</returns>
@@ -470,10 +470,10 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Calculate the length of a spline when transformed by a matrix.
         /// </summary>
-        /// <param name="spline"></param>
+        /// <param name="spline">The spline whose length is to be calculated.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        /// <param name="transform"></param>
-        /// <returns></returns>
+        /// <param name="transform">The transformation matrix to apply to the spline.</param>
+        /// <returns>The length of the transformed spline.</returns>
         public static float CalculateLength<T>(this T spline, float4x4 transform) where T : ISpline
         {
             using var nativeSpline = new NativeSpline(spline, transform);
@@ -484,7 +484,7 @@ namespace UnityEngine.Splines
         /// Calculates the number of curves in a spline.
         /// </summary>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        /// <param name="spline"></param>
+        /// <param name="spline">The spline for which to calculate the number of curves.</param>
         /// <returns>The number of curves in a spline.</returns>
         public static int GetCurveCount<T>(this T spline) where T : ISpline
         {
@@ -664,8 +664,8 @@ namespace UnityEngine.Splines
         /// <param name="t">The normalized time value to the nearest point.</param>
         /// <param name="resolution">Affects how many segments to split a spline into when calculating the nearest point.
         /// Higher values mean smaller and more segments, which increases accuracy at the cost of processing time.
-        /// The minimum resolution is defined by <seealso cref="PickResolutionMin"/>, and the maximum is defined by
-        /// <seealso cref="PickResolutionMax"/>.
+        /// The minimum resolution is defined by <see cref="PickResolutionMin"/>, and the maximum is defined by
+        /// <see cref="PickResolutionMax"/>.
         /// In most cases, the default resolution is appropriate. Use with <paramref name="iterations"/> to fine tune
         /// point accuracy.
         /// </param>
@@ -710,8 +710,8 @@ namespace UnityEngine.Splines
         /// <param name="t">The normalized interpolation ratio corresponding to the nearest point.</param>
         /// <param name="resolution">Affects how many segments to split a spline into when calculating the nearest point.
         /// Higher values mean smaller and more segments, which increases accuracy at the cost of processing time.
-        /// The minimum resolution is defined by <seealso cref="PickResolutionMin"/>, and the maximum is defined by
-        /// <seealso cref="PickResolutionMax"/>.
+        /// The minimum resolution is defined by <see cref="PickResolutionMin"/>, and the maximum is defined by
+        /// <see cref="PickResolutionMax"/>.
         /// In most cases, the default resolution is appropriate. Use with <paramref name="iterations"/> to fine tune
         /// point accuracy.
         /// </param>
@@ -1700,6 +1700,7 @@ namespace UnityEngine.Splines
         /// <param name="container">The target SplineContainer.</param>
         /// <param name="knotA">The first knot to check.</param>
         /// <param name="knotB">The second knot to check against.</param>
+        /// <returns>Returns <c>true</c> if <paramref name="knotA"/> and <paramref name="knotB"/> are linked; otherwise, <c>false</c>.</returns>
         public static bool AreKnotLinked(this ISplineContainer container, SplineKnotIndex knotA, SplineKnotIndex knotB)
         {
             if (!container.KnotLinkCollection.TryGetKnotLinks(knotA, out var linkedKnots))

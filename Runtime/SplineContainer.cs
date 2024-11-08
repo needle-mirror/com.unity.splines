@@ -479,6 +479,12 @@ namespace UnityEngine.Splines
 #pragma warning restore 612, 618
         }
 
+        struct SplineToNative
+        {
+            public ISpline spline;
+            public NativeSpline nativeSpline;
+        }
+        static List<SplineToNative> m_AllocPreventionHelperBuffer = new (capacity:32);
         NativeSpline GetOrBakeNativeSpline<T>(T spline) where T : ISpline
         {
             // Build native spline if we don't have one cached for this spline
@@ -491,10 +497,28 @@ namespace UnityEngine.Splines
             // or if the cached spline was baked using different transform
             else if (!MathUtility.All(m_NativeSplinesCacheTransform, transform.localToWorldMatrix))
             {
+                // Since we have one m_NativeSplinesCacheTransform for all cached splines we need to rebake all
                 m_NativeSplinesCacheTransform = transform.localToWorldMatrix;
-                cachedNativeSpline.Dispose();
-                cachedNativeSpline = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
-                m_NativeSplinesCache[spline] = cachedNativeSpline;
+
+                m_AllocPreventionHelperBuffer.Clear();
+                foreach (ISpline iSpline in m_NativeSplinesCache.Keys)
+                {
+                    var oldCache = m_NativeSplinesCache[iSpline];
+                    var newCache = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
+                    
+                    if (iSpline == (ISpline)spline)
+                        cachedNativeSpline = newCache;
+                    
+                    oldCache.Dispose();
+                    // Doing this dance as dictionaries can't be modified mid-iteration
+                    m_AllocPreventionHelperBuffer.Add(new SplineToNative() { spline = iSpline, nativeSpline = newCache });
+                }
+
+                for (int i = 0; i < m_AllocPreventionHelperBuffer.Count; ++i)
+                {
+                    var dataToSet = m_AllocPreventionHelperBuffer[i];
+                    m_NativeSplinesCache[dataToSet.spline] = dataToSet.nativeSpline;
+                }
             }
 
             return cachedNativeSpline;

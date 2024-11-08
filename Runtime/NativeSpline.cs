@@ -40,17 +40,17 @@ namespace UnityEngine.Splines
         /// <summary>
         /// A NativeArray of <see cref="BezierKnot"/> that form this Spline.
         /// </summary>
-        /// <returns>
+        /// <value>
         /// Returns a reference to the knots array.
-        /// </returns>
+        /// </value>
         public NativeArray<BezierKnot> Knots => m_Knots;
 
         /// <summary>
         /// A NativeArray of <see cref="BezierCurve"/> that form this Spline.
         /// </summary>
-        /// <returns>
+        /// <value>
         /// Returns a reference to the curves array.
-        /// </returns>
+        /// </value>
         public NativeArray<BezierCurve> Curves => m_Curves;
 
         /// <summary>

@@ -104,12 +104,14 @@ namespace UnityEngine.Splines
         /// Get or set the <see cref="Spline"/> knot index at an index <paramref name="index"/>.
         /// This indexer allows you to write a for loop to iterate through a range without needing to know in which
         /// direction the range is iterating.
+        /// </summary>
+        /// <example>
         /// <code>
         /// // Create a new range into an existing Spline starting at knot 5, and interpolating the span of 3 knots.
         /// // range[0,1,2] will map to { 6, 5, 4 } respectively.
         /// var range = new SplineRange(6, 3, SplineDirection.Backward);
         /// </code>
-        /// </summary>
+        /// </example>
         /// <param name="index">The zero-based index of the element to get or set.</param>
         public int this[int index] => Direction == SliceDirection.Backward ? m_Start - index : m_Start + index;
 
@@ -138,7 +140,8 @@ namespace UnityEngine.Splines
             /// <summary>
             /// Advances the enumerator to the next element of the collection.
             /// </summary>
-            /// <returns></returns>
+            /// <returns>Returns <c>true</c> if the enumerator was successfully advanced to the next element;
+            /// <c>false</c> if the enumerator has passed the end of the collection.</returns>
             public bool MoveNext() => ++m_Index < m_Count;
 
             /// <summary>

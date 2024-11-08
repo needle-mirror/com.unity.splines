@@ -82,7 +82,7 @@ namespace UnityEditor.Splines
             if (m_Container == null)
                 return;
 
-            Undo.RecordObject(serializedProperty.serializedObject.targetObject, "Reordering Spline in SplineContainer");
+            Undo.RegisterCompleteObjectUndo(serializedProperty.serializedObject.targetObject, "Reordering Spline in SplineContainer");
             m_Container.ReorderSpline(srcIndex, dstIndex);
             serializedProperty.serializedObject.ApplyModifiedProperties();
             serializedProperty.serializedObject.Update();
@@ -102,7 +102,7 @@ namespace UnityEditor.Splines
             if(m_Container == null)
              return;
 
-            Undo.RecordObject(serializedProperty.serializedObject.targetObject, "Add new Spline");
+            Undo.RegisterCompleteObjectUndo(serializedProperty.serializedObject.targetObject, "Add new Spline");
 
             int added = 0;
 
@@ -139,7 +139,7 @@ namespace UnityEditor.Splines
             if (m_Container == null)
                 return;
 
-            Undo.RecordObject(serializedProperty.serializedObject.targetObject, "Removing Spline from SplineContainer");
+            Undo.RegisterCompleteObjectUndo(serializedProperty.serializedObject.targetObject, "Removing Spline from SplineContainer");
             
             for (int i = selectedIndices.Count - 1; i >= 0; i--)
                 m_Container.RemoveSplineAt(selectedIndices[i]);

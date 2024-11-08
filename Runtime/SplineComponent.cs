@@ -38,7 +38,7 @@ namespace UnityEngine.Splines
         /// Transform a AlignAxis to the associated float3 direction. 
         /// </summary>
         /// <param name="axis">The AlignAxis to transform</param>
-        /// <returns></returns>
+        /// <returns>Returns the corresponding <see cref="float3"/> direction for the specified <see cref="AlignAxis"/>.</returns>
         protected float3 GetAxis(AlignAxis axis)
         {
             return m_AlignAxisToVector[(int) axis];

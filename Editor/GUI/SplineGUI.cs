@@ -22,15 +22,15 @@ namespace UnityEditor.Splines
 
         /// <summary>
         /// Creates a dropdown to select an index between 0 and the count of <see cref="Splines"/> contained in the
-        /// provided <param name="container"></param>.
+        /// provided <paramref name="container"/>.
         /// </summary>
         /// <param name="container">A <see cref="SplineContainer"/> that determines how many splines are available in
         /// the popup selector.</param>
         /// <param name="label">The label to use for this property. If null, the property display name is used.</param>
         /// <param name="rect">The rectangle on the screen to use for the field.</param>
         /// <param name="property">A SerializedProperty that stores an integer value.</param>
-        /// <exception cref="ArgumentException">An exception is thrown if <param name="property"> is not an integer
-        /// field.</param></exception>
+        /// <exception cref="ArgumentException">An exception is thrown if <paramref name="property"/> is not an integer
+        /// field.</exception>
         /// <typeparam name="T">The type implementing <see cref="ISplineContainer"/>.</typeparam>
         public static void SplineIndexField<T>(Rect rect, SerializedProperty property, GUIContent label, T container) where T : ISplineContainer
         {
@@ -38,15 +38,15 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Creates a dropdown to select an index between 0 and <param name="splineCount"></param>.
+        /// Creates a dropdown to select an index between 0 and <paramref name="splineCount"/>.
         /// </summary>
         /// <param name="rect">The rectangle on the screen to use for the field.</param>
         /// <param name="property">A SerializedProperty that stores an integer value.</param>
         /// <param name="label">The label to use for this property. If null, the property display name is used.</param>
         /// <param name="splineCount">The number of splines available. In most cases, this is the size of
         /// <see cref="SplineContainer.Splines"/></param>
-        /// <exception cref="ArgumentException">An exception is thrown if <param name="property"> is not an integer
-        /// field.</param></exception>
+        /// <exception cref="ArgumentException">An exception is thrown if <paramref name="property"/> is not an integer
+        /// field.</exception>
         public static void SplineIndexField(Rect rect, SerializedProperty property, GUIContent label, int splineCount)
         {
             if (property.propertyType != SerializedPropertyType.Integer)
@@ -57,7 +57,7 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Creates a dropdown to select an index between 0 and <param name="splineCount"></param>.
+        /// Creates a dropdown to select an index between 0 and <paramref name="splineCount"/>.
         /// </summary>
         /// <param name="label">An optional prefix label.</param>
         /// <param name="splineCount">The number of splines available. In most cases, this is the size of
@@ -88,13 +88,13 @@ namespace UnityEditor.Splines
     {
         /// <summary>
         /// Creates a dropdown to select an index between 0 and the count of <see cref="Splines"/> contained in the
-        /// provided <param name="container"></param>.
+        /// provided <paramref name="container"/>.
         /// </summary>
         /// <param name="container">A <see cref="SplineContainer"/> that determines how many splines are available in
         /// the popup selector.</param>
         /// <param name="property">A SerializedProperty that stores an integer value.</param>
-        /// <exception cref="ArgumentException">An exception is thrown if <param name="property"> is not an integer
-        /// field.</param></exception>
+        /// <exception cref="ArgumentException">An exception is thrown if <paramref name="property"/> is not an integer
+        /// field.</exception>
         /// <typeparam name="T">The type implementing <see cref="ISplineContainer"/>.</typeparam>
         public static void SplineIndexField<T>(SerializedProperty property, T container) where T : ISplineContainer
         {
@@ -102,13 +102,13 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Creates a dropdown to select an index between 0 and <param name="splineCount"></param>.
+        /// Creates a dropdown to select an index between 0 and <paramref name="splineCount"/>.
         /// </summary>
         /// <param name="property">A SerializedProperty that stores an integer value.</param>
         /// <param name="splineCount">The number of splines available. In most cases, this is the size of
         /// <see cref="SplineContainer.Splines"/></param>
-        /// <exception cref="ArgumentException">An exception is thrown if <param name="property"> is not an integer
-        /// field.</param></exception>
+        /// <exception cref="ArgumentException">An exception is thrown if <paramref name="property"/> is not an integer
+        /// field.</exception>
         public static void SplineIndexField(SerializedProperty property, int splineCount)
         {
             if (property.propertyType != SerializedPropertyType.Integer)
@@ -119,7 +119,7 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Creates a dropdown to select a spline index relative to <param name="container"></param>.
+        /// Creates a dropdown to select a spline index relative to <paramref name="container"/>.
         /// </summary>
         /// <param name="label">An optional prefix label.</param>
         /// <param name="index">The current index.</param>
@@ -133,7 +133,7 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Creates a dropdown to select an index between 0 and <param name="splineCount"></param>.
+        /// Creates a dropdown to select an index between 0 and <paramref name="splineCount"/>.
         /// </summary>
         /// <param name="label">An optional prefix label.</param>
         /// <param name="splineCount">The number of splines available. In most cases, this is the size of

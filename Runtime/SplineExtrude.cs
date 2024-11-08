@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine.Splines.ExtrusionShapes;
-using UnityEditor;
 
 namespace UnityEngine.Splines
 {
@@ -234,7 +233,7 @@ namespace UnityEngine.Splines
         void Start()
         {
 #if UNITY_EDITOR
-            if (EditorApplication.isPlaying)
+            if (UnityEditor.EditorApplication.isPlaying)
 #endif
             {
                 if (m_Container == null || m_Container.Spline == null || m_Container.Splines.Count == 0)
@@ -345,6 +344,11 @@ namespace UnityEngine.Splines
 
             m_NextScheduledRebuild = Time.time + 1f / m_RebuildFrequency;
 
+#if UNITY_EDITOR
+            if (UnityEditor.EditorUtility.IsPersistent(m_Mesh))
+                UnityEditor.EditorApplication.delayCall += () => UnityEditor.AssetDatabase.SaveAssetIfDirty(m_Mesh);
+#endif
+
 #if UNITY_PHYSICS_MODULE
             if (m_UpdateColliders)
             {
@@ -448,7 +452,7 @@ namespace UnityEngine.Splines
 #if UNITY_EDITOR
         void OnValidate()
         {
-            if (EditorApplication.isPlaying)
+            if (UnityEditor.EditorApplication.isPlaying)
                 return;
 
             Rebuild();

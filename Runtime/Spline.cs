@@ -119,7 +119,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Retrieve a <see cref="SplineData{T}"/> reference for <param name="key"></param> if it exists.
+        /// Retrieve a <see cref="SplineData{T}"/> reference for <paramref name="key"/> if it exists.
         /// Note that this is a reference to the stored <see cref="SplineData{T}"/>, not a copy. Any modifications to
         /// this collection will affect the <see cref="Spline"/> data.
         /// </summary>
@@ -223,7 +223,7 @@ namespace UnityEngine.Splines
         public IEnumerable<SplineData<Object>> GetObjectDataValues() => m_ObjectData.Values;
 
         /// <summary>
-        /// Set the <see cref="SplineData{T}"/> for <param name="key"></param>.
+        /// Set the <see cref="SplineData{T}"/> for <paramref name="key"/>.
         /// </summary>
         /// <param name="key">The string key value to search for. Only one instance of a key value can exist in an
         /// embedded <see cref="SplineData{T}"/> collection, however keys are unique to each data type. The same key
@@ -869,10 +869,10 @@ namespace UnityEngine.Splines
         /// <summary>
         /// Return the length of a curve.
         /// </summary>
-        /// <param name="index"></param>
+        /// <param name="index">The knot index that serves as the first control point for this curve.</param>
         /// <seealso cref="Warmup"/>
         /// <seealso cref="GetLength"/>
-        /// <returns></returns>
+        /// <returns>Returns the length of the <see cref="BezierCurve"/> formed by the knot at index and the next knot.</returns>
         public float GetCurveLength(int index)
         {
             EnsureMetaDataValid();

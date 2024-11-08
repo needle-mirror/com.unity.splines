@@ -300,7 +300,7 @@ namespace UnityEngine.Splines
         /// <param name="index">The index of the  <see cref="DataPoint{T}"/> to move. This is the index into the collection, not the PathIndexUnit.Knot.</param>
         /// <param name="newIndex">The new index (<see cref="UnityEngine.Splines.PathIndexUnit.Knot"/>) for this <see cref="DataPoint{T}"/>.</param>
         /// <returns>The index of the modified <see cref="DataPoint{T}"/>.</returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the specified <paramref name="index"/> is out of range.</exception>
         public int MoveDataPoint(int index, float newIndex)
         {
             if (index < 0 || index >= Count)
@@ -505,7 +505,7 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <typeparam name="TSplineType">The Spline type.</typeparam>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute most of PathIndexUnits.</param>
-        /// <param name="toUnit">The unit to convert SplineData to.</param>>
+        /// <param name="toUnit">The unit to convert SplineData to.</param>
         public void ConvertPathUnit<TSplineType>(TSplineType spline, PathIndexUnit toUnit)
             where TSplineType : ISpline
         {
@@ -526,7 +526,7 @@ namespace UnityEngine.Splines
         /// Given a time value using a certain PathIndexUnit type, calculate the normalized time value regarding a specific spline.
         /// </summary>
         /// <param name="spline">The Spline to use for the conversion, this is necessary to compute Normalized and Distance PathIndexUnits.</param>
-        /// <param name="t">The time to normalize in the original PathIndexUnit.</param>>
+        /// <param name="t">The time to normalize in the original PathIndexUnit.</param>
         /// <typeparam name="TSplineType">The Spline type.</typeparam>
         /// <returns>The normalized time.</returns>
         public float GetNormalizedInterpolation<TSplineType>(TSplineType spline, float t) where TSplineType : ISpline

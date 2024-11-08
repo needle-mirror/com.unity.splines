@@ -4,19 +4,35 @@ using UnityEngine.Splines;
 using Unity.Mathematics;
 using System.Collections.Generic;
 using System;
+using UnityEditor.Overlays;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
-{
+{ 
+    [CustomEditor(typeof(CreateSplineTool))]
+#if UNITY_2022_1_OR_NEWER
+    class CreateSplineToolSettings : UnityEditor.Editor, ICreateToolbar
+    {
+        public IEnumerable<string> toolbarElements
+        {
+#else
+    class CreateSplineToolSettings : CreateToolbarBase
+    {
+        protected override IEnumerable<string> toolbarElements
+        {
+#endif
+            get { yield return "Spline Tool Settings/Default Knot Type"; }
+        }
+    }
+    
 #if UNITY_2023_1_OR_NEWER
     [EditorTool("Create Spline", toolPriority = 10)]
 #else
     [EditorTool("Create Spline")]
 #endif
+    [Icon("Packages/com.unity.splines/Editor/Resources/Icons/KnotPlacementTool.png")]
     class CreateSplineTool : KnotPlacementTool
     {
-        public override GUIContent toolbarIcon => PathIcons.createSplineTool;
-
         [NonSerialized]
         List<Object> m_Targets = new List<Object>(1);
 

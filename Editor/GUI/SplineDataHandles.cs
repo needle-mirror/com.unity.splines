@@ -27,10 +27,10 @@ namespace UnityEditor.Splines
         /// on the spline adds a new DataPoint in the SplineData. Left click on an existing DataPoint
         /// allows to move this point along the Spline while a right click on it allows to delete that DataPoint.
         /// </summary>
-        /// <description>
+        /// <remarks>
         /// Left-click an empty location on the spline to add a new DataPoint to the SplineData.
         /// Left-click on a DataPoint to move the point along the Spline. Right-click a DataPoint to delete it.
-        /// </description>
+        /// </remarks>
         /// <param name="spline">The Spline to use to interprete the SplineData.</param>
         /// <param name="splineData">The SplineData for which the handles are drawn.</param>
         /// <param name="useDefaultValueOnAdd">Either to use default value or closer DataPoint value when adding new DataPoint.</param>
@@ -48,10 +48,10 @@ namespace UnityEditor.Splines
         /// <summary>
         /// Creates manipulation handles in the Scene view that can be used to add, move, and remove SplineData's DataPoints along a spline.
         /// </summary>
-        /// <description>
+        /// <remarks>
         /// Left-click an empty location on the spline to add a new DataPoint to the SplineData.
         /// Left-click and drag a DataPoint to move the point along the spline. Right-click a DataPoint to delete it.
-        /// </description>
+        /// </remarks>
         /// <param name="spline">The spline to use to interprete the SplineData.</param>
         /// <param name="splineData">The SplineData for which the handles are drawn.</param>
         /// <param name="splineID">The ID for the spline.</param>
@@ -112,7 +112,7 @@ namespace UnityEditor.Splines
             {
                 case EventType.Layout:
                 {
-                    if (!Tools.viewToolActive)
+                    if (!SplineHandles.ViewToolActive())
                     {
                         var ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
                         SplineUtility.GetNearestPoint(spline, ray, out var pos, out _);
@@ -133,7 +133,7 @@ namespace UnityEditor.Splines
 
                 case EventType.MouseDown:
                     if (evt.button == 0
-                        && !Tools.viewToolActive
+                        && !SplineHandles.ViewToolActive()
                         && HandleUtility.nearestControl == controlID
                         && GUIUtility.hotControl == 0)
                     {
@@ -241,7 +241,7 @@ namespace UnityEditor.Splines
 
                 case EventType.MouseDown:
                     if (evt.button == 0
-                        && !Tools.viewToolActive
+                        && !SplineHandles.ViewToolActive()
                         && HandleUtility.nearestControl == controlID
                         && GUIUtility.hotControl == 0)
                     {
