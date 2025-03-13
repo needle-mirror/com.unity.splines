@@ -41,7 +41,7 @@ namespace UnityEngine.Splines
         public int SegmentCount
         {
             get => m_SegmentCount;
-            set => m_SegmentCount = value;
+            set => m_SegmentCount = math.clamp(value, k_SegmentsMin, k_SegmentsMax);
         }
 
         /// <summary>

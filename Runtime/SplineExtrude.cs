@@ -17,6 +17,9 @@ namespace UnityEngine.Splines
         [SerializeField, Tooltip("The Spline to extrude.")]
         SplineContainer m_Container;
 
+        [SerializeField, Tooltip("The mesh that should be extruded. If none, a temporary mesh will be created.")]
+        Mesh m_TargetMesh;
+
         [SerializeField, Tooltip("Enable to regenerate the extruded mesh when the target Spline is modified. Disable " +
              "this option if the Spline will not be modified at runtime.")]
         bool m_RebuildOnSplineChange = true;
@@ -195,6 +198,22 @@ namespace UnityEngine.Splines
             set => m_FlipNormals = value;
         }
 
+        /// <summary> The mesh that should be extruded. If NULL, a temporary mesh will be created.</summary>
+        public Mesh targetMesh
+        {
+            get => m_TargetMesh;
+            set
+            {
+                if (m_TargetMesh == value)
+                    return;
+
+                CleanupMesh();
+                m_TargetMesh = value;
+                EnsureMeshExists();
+                Rebuild();
+            }
+        }
+
         /// <summary>The main Spline to extrude.</summary>
         [Obsolete("Use Spline instead.", false)]
         public Spline spline => Spline;
@@ -215,9 +234,6 @@ namespace UnityEngine.Splines
         {
             TryGetComponent(out m_Container);
 
-            if (TryGetComponent<MeshFilter>(out var filter))
-                filter.sharedMesh = m_Mesh = CreateMeshAsset();
-
             if (TryGetComponent<MeshRenderer>(out var renderer) && renderer.sharedMaterial == null)
             {
                 // todo Make Material.GetDefaultMaterial() public
@@ -230,47 +246,10 @@ namespace UnityEngine.Splines
             Rebuild();
         }
 
-        void Start()
-        {
-#if UNITY_EDITOR
-            if (UnityEditor.EditorApplication.isPlaying)
-#endif
-            {
-                if (m_Container == null || m_Container.Spline == null || m_Container.Splines.Count == 0)
-                    return;
-
-                if ((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
-                    return;
-            }
-
-            Rebuild();
-        }
-
         internal static readonly string k_EmptyContainerError = "Spline Extrude does not have a valid SplineContainer set.";
         bool IsNullOrEmptyContainer()
         {
             var isNull = m_Container == null || m_Container.Spline == null || m_Container.Splines.Count == 0;
-            if (isNull)
-            {
-                if (Application.isPlaying)
-                    Debug.LogError(k_EmptyContainerError, this);
-                
-                if (!IsNullOrEmptyMeshFilter(false))
-                    m_Mesh.Clear();
-            }
-
-            return isNull;
-        }
-
-        internal static readonly string k_EmptyMeshFilterError = "SplineExtrude.createMeshInstance is disabled," +
-                                                                         " but there is no valid mesh assigned. " +
-                                                                         "Please create or assign a writable mesh asset.";
-        bool IsNullOrEmptyMeshFilter(bool logError = true)
-        {
-            var isNull = (m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null;
-            if (isNull && logError)
-                Debug.LogError(k_EmptyMeshFilterError, this);
-
             return isNull;
         }
 
@@ -286,12 +265,17 @@ namespace UnityEngine.Splines
 
         void OnEnable()
         {
+            EnsureMeshExists();
             Spline.Changed += OnSplineChanged;
+
+            if (!IsNullOrEmptyContainer())
+                Rebuild(); 
         }
 
         void OnDisable()
         {
             Spline.Changed -= OnSplineChanged;
+            CleanupMesh();
         }
 
         void OnSplineChanged(Spline spline, int knotIndex, SplineModification modificationType)
@@ -301,13 +285,56 @@ namespace UnityEngine.Splines
 
             var isMainSpline = m_Container != null && Splines.Contains(spline);
             var isShapeSpline = (m_Shape is SplineShape splineShape) && splineShape.Spline != null && splineShape.Spline.Equals(spline);
-            m_RebuildRequested = isMainSpline || isShapeSpline;
+            m_RebuildRequested |= isMainSpline || isShapeSpline;
         }
 
         void Update()
         {
             if (m_RebuildRequested && Time.time >= m_NextScheduledRebuild)
                 Rebuild();
+        }
+
+        void EnsureMeshExists()
+        {
+            // Get the final target mesh or create a new one
+            if (m_Mesh == null)
+            {
+                if (targetMesh != null)
+                    m_Mesh = targetMesh;
+                else
+                {
+                    m_Mesh = new Mesh { name = "<Spline Extruded Mesh>" };
+                    m_Mesh.hideFlags = HideFlags.HideAndDontSave;
+                }
+            }
+
+            if (TryGetComponent<MeshFilter>(out var filter))
+            {
+                filter.hideFlags = HideFlags.NotEditable;
+                filter.sharedMesh = m_Mesh;
+            }
+        }
+
+        void CleanupMesh()
+        {
+            if (TryGetComponent<MeshFilter>(out var filter))
+            {
+                filter.hideFlags = HideFlags.None;
+                filter.sharedMesh = null;
+            }
+
+            // Check that the mesh isn't part of the library (only possible situation for this is if the target mesh is set)
+            if (m_Mesh != m_TargetMesh)
+            {
+#if UNITY_EDITOR
+                if (!UnityEditor.EditorUtility.IsPersistent(m_Mesh)) 
+                    DestroyImmediate(m_Mesh, true);
+#else
+                DestroyImmediate(m_Mesh);
+#endif
+            }
+
+            m_Mesh = null;
         }
 
         /// <summary>
@@ -322,7 +349,20 @@ namespace UnityEngine.Splines
                 m_Shape = circle;
             }
 
-            if (IsNullOrEmptyContainer() || IsNullOrEmptyMeshFilter())
+            if (m_Mesh == null)
+                return;
+
+            if (IsNullOrEmptyContainer())
+            {
+                if (Application.isPlaying)
+                    Debug.LogError(k_EmptyContainerError, this);
+
+                return;
+            }
+
+            m_Mesh.Clear();
+
+            if (m_Range.x == m_Range.y)
                 return;
 
             // SegmentCount is intentionally omitted for backwards compatibility reasons. This component extrudes many
@@ -369,6 +409,8 @@ namespace UnityEngine.Splines
                 }
             }
 #endif
+
+            m_RebuildRequested = false;
         }
 
         void AutosmoothNormals()
@@ -450,12 +492,26 @@ namespace UnityEngine.Splines
         }
 
 #if UNITY_EDITOR
+        Mesh m_PreviousTargetMesh;
         void OnValidate()
         {
-            if (UnityEditor.EditorApplication.isPlaying)
-                return;
+            if (m_Mesh != null && m_PreviousTargetMesh != targetMesh)
+            {
+                // Delay is require because the shared mesh of the filter cannot be set in the validate loop
+                UnityEditor.EditorApplication.delayCall += () =>
+                {
+                    // Double check that the serialization of target mesh hasn't changed without going through the UI. Only do so if we have initialized the mesh already
+                    CleanupMesh();
+                    EnsureMeshExists();
+                    Rebuild();
+                };
 
-            Rebuild();
+                m_PreviousTargetMesh = targetMesh;
+            }
+            else if(!UnityEditor.EditorApplication.isPlaying)
+            {
+                Rebuild();
+            }
         }
 #endif
 

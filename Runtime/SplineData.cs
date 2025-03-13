@@ -609,7 +609,7 @@ namespace UnityEngine.Splines
                         else
                             point.Index = (fracIdx * prevLength - currentLength) / (prevLength - currentLength);
                     }
-                    else
+                    else if (dataKnotOldIdx >= editedKnotOldIdx)
                         point.Index += 1;
                 }
                 else if (data.Modification == SplineModification.KnotRemoved)

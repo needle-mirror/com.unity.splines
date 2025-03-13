@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
+using UnityEngine;
 using UnityEngine.Splines;
 using UnityEngine.UIElements;
 #if !UNITY_2022_1_OR_NEWER
@@ -35,7 +36,7 @@ namespace UnityEditor.Splines
 
             style.marginBottom = style.marginLeft = style.marginRight = style.marginTop = 0;
 
-            var foldout = new Foldout() { value = false };
+            var foldout = new Foldout() { value = SessionState.GetBool("Splines." + vect3name + ".Foldout", false)};
             var foldoutToggle = foldout.Q<Toggle>();
 
             m_Magnitude = new FloatField(L10n.Tr(text), 6);
@@ -48,6 +49,13 @@ namespace UnityEditor.Splines
             foldoutToggle.Add(m_Magnitude);
             foldout.Add(vector3field);
             foldout.Q<VisualElement>("unity-content").style.marginBottom = 0;
+            foldout.RegisterValueChangedCallback((evt) =>
+            {
+                SessionState.SetBool("Splines." + vect3name + ".Foldout", evt.newValue);
+                #if UNITY_6000_0_OR_NEWER
+                SplineInspectorOverlay.instance?.RefreshPopup();
+                #endif
+            });
 
             var field = m_Magnitude.Q<VisualElement>("unity-text-input");
             field.AddToClassList(k_TangentMagnitudeFloatFieldStyle);

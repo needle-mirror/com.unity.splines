@@ -30,7 +30,7 @@ namespace UnityEditor.Splines
 #else
     [EditorTool("Create Spline")]
 #endif
-    [Icon("Packages/com.unity.splines/Editor/Resources/Icons/KnotPlacementTool.png")]
+    [Icon("Packages/com.unity.splines/Editor/Editor Resources/Icons/KnotPlacementTool.png")]
     class CreateSplineTool : KnotPlacementTool
     {
         [NonSerialized]
@@ -50,6 +50,8 @@ namespace UnityEditor.Splines
                 EditorSplineGizmos.showSelectedGizmo = false;
                 // Set hasChanged to false as we don't want to override a custom transform set by the user.
                 gameObject.transform.hasChanged = false;
+                
+                SceneView.lastActiveSceneView.Focus();
             }
 
             base.AddKnotOnSurface(position, normal, tangentOut);

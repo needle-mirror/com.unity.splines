@@ -1,18 +1,19 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.7.2",
+  "version": "2.8.0",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
     "com.unity.settings-manager": "1.0.3",
-    "com.unity.mathematics": "1.2.1"
+    "com.unity.mathematics": "1.2.1",
+    "com.unity.modules.imgui": "1.0.0"
   },
   "samples": [
     {
       "displayName": "Spline Examples (requires Shader Graph package)",
       "description": "Example code and scenes files showing how to use Splines.",
-      "path": "Samples~/"
+      "path": "Samples~/SplineExamples"
     }
   ],
   "keywords": [
@@ -21,19 +22,19 @@
     "path"
   ],
   "category": "Tool",
-  "type": "tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.7.2"
+    "com.unity.splines.tests": "2.8.0"
   },
   "_upm": {
-    "changelog": "### Bug Fixes\n- [SPLB-315] Fixed a bug where the `DrawSplineTool` icon was missing in the tools overlay.  \n- [STO-3434] Fixed a bug where the `DrawSplineTool` would prevent the use of the view tool.\n- [STO-3435] Fixed a bug where the `DrawSplineTool` would not display the tool settings anymore. \n- [SPLB-296] Fixed a bug where a log message would appear in the console when 2 knots are at the same position with 0-length tangents.\n- [SPLB-304] Fixed a bug where an exception would be thrown when using `SplineInstantiate` with linear distance instantiate method and multiple splines. \n- Fixed some failures related to the inline API documentation.\n- [SPLB-302] Fixed a bug where an exception would be thrown when adding a knot to a closed spline from inspector.\n- [SPLB-311] Fixed a bug where `SplineAnimate` component would not function properly with non-uniform scale transforms.\n- Fixed compilation errors in builds\n- [SPLB-310] Fixed mesh extrude not being saved when a change is applied to a mesh asset. \n- [SPLB-303] Fixed a bug where spline section foldout labels (shape extrude, geometry, advanced) did not unfold the sections when clicked.\n- [SPLB-294] Fixed a bug where adding new splines by using the `SplineContainer` inspector would dirty all open scenes."
+    "changelog": "### Bug Fixes\n- [SPLB-322] Fixed a bug where `SplineExtrude` wouldn't update when multiple splines where modified.\n- [SPLB-323] Fixed a bug where splines displayed in the Scene view would not match serialization changes.\n- [SPLB-324] Re-added a dependency to the IMGUI module that was removed along with the UGUI package.\n- [SPLB-332] Fixed a bug where `Element Inspector` fields get pushed and squashed.\n- [SPLB-329] Fixed a bug where `SplineExtrude` could affect the mesh of other `SplineExtrude`.\n- [SPLB-336] Fixed a bug where `SplineExtrude` would break with a range value of 0.\n- [SPLB-333] Fixed a bug where `Create Spline` tool would sometimes throw an exception when the Esc or Enter keys were pressed.\n\n### Added\n- [SPLB-329] Added the ability to target a mesh in the library with a `SplineExtrude` component"
   },
   "upmCi": {
-    "footprint": "0b0d294a046c19592476739df50cd13407cb2ded"
+    "footprint": "b080b635cfbb153274586a2be3c319cc33d068b5"
   },
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.splines@2.8/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "f8048bc97f9cc23fe3db45eceb767e6ab97f37f5"
+    "revision": "62fda6a9f01314d27d0dfc41f6fc0bbd13e1c300"
   }
 }

@@ -8,8 +8,8 @@ namespace UnityEditor.Splines
     [EditorToolbarElement("Spline Tool Settings/Handle Rotation")]
     class HandleRotationDropdown : EditorToolbarDropdown
     {
-        const string k_ParentRotationIconPath = "Packages/com.unity.splines/Editor/Resources/Icons/ToolHandleParent.png";
-        const string k_ElementRotationIconPath = "Packages/com.unity.splines/Editor/Resources/Icons/ToolHandleElement.png";
+        const string k_ParentRotationIconPath = "Packages/com.unity.splines/Editor/Editor Resources/Icons/ToolHandleParent.png";
+        const string k_ElementRotationIconPath = "Packages/com.unity.splines/Editor/Editor Resources/Icons/ToolHandleElement.png";
         
         readonly List<GUIContent> m_OptionContents = new List<GUIContent>();
 

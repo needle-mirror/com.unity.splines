@@ -26,7 +26,7 @@ namespace UnityEditor.Splines
 
         SplineAnimate m_SplineAnimate;
 
-        const string k_UxmlPath = "Packages/com.unity.splines/Editor/Resources/UI/UXML/splineanimate-inspector.uxml";
+        const string k_UxmlPath = "Packages/com.unity.splines/Editor/Editor Resources/UI/UXML/splineanimate-inspector.uxml";
         static VisualTreeAsset s_TreeAsset;
         static StyleSheet s_ThemeStyleSheet;
 
@@ -77,14 +77,17 @@ namespace UnityEditor.Splines
             if(m_SplineAnimate != null)
                 m_SplineAnimate.Updated -= OnSplineAnimateUpdated;
 
-            if (!EditorApplication.isPlaying)
+            if (!EditorApplication.isPlaying && !EditorApplication.isPlayingOrWillChangePlaymode)
             {
-                foreach (var animate in m_Components)
+                if (m_Components != null)
                 {
-                    if (animate.Container != null)
+                    foreach (var animate in m_Components)
                     {
-                        animate.RecalculateAnimationParameters();
-                        animate.Restart(false);
+                        if (animate != null && animate.Container != null)
+                        {
+                            animate.RecalculateAnimationParameters();
+                            animate.Restart(false);
+                        }
                     }
                 }
             }
@@ -327,7 +330,7 @@ namespace UnityEditor.Splines
         [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
         static void DrawSplineAnimateGizmos(SplineAnimate splineAnimate, GizmoType gizmoType)
         {
-            if (splineAnimate.Container == null)
+            if ((!EditorApplication.isPlaying && EditorApplication.isPlayingOrWillChangePlaymode) || splineAnimate.Container == null)
                 return;
 
             const float k_OffsetGizmoSize = 0.15f;

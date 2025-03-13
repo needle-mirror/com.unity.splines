@@ -20,6 +20,7 @@ namespace UnityEditor.Splines
         SerializedProperty m_Shape;
         SerializedProperty m_UpdateColliders;
         SerializedProperty m_FlipNormals;
+        SerializedProperty m_TargetMesh;
 
         static readonly GUIContent k_RangeContent = new GUIContent(L10n.Tr("Range"), L10n.Tr("The section of the Spline to extrude."));
         static readonly GUIContent k_AdvancedContent = new GUIContent(L10n.Tr("Advanced"), L10n.Tr("Advanced Spline Extrude settings."));
@@ -27,6 +28,8 @@ namespace UnityEditor.Splines
         static readonly GUIContent k_ShapeContent = new GUIContent(L10n.Tr("Shape Extrude"), L10n.Tr("Shape Extrude settings."));
         static readonly GUIContent k_ShapeSettings = EditorGUIUtility.TrTextContent("Settings");
         static readonly GUIContent k_GeometryContent = new GUIContent(L10n.Tr("Geometry"), L10n.Tr("Mesh Geometry settings."));
+        static readonly GUIContent k_MeshTargetContent = new GUIContent(L10n.Tr("Target Mesh Asset"));
+        static readonly GUIContent k_CreateMeshTargetContent = new GUIContent(L10n.Tr("Create Mesh Asset"));
 
         static readonly string k_SourceSplineContainer = L10n.Tr("Source Spline Container");
         static readonly string k_CapEnds = L10n.Tr("Cap Ends");
@@ -35,8 +38,6 @@ namespace UnityEditor.Splines
         static readonly string k_From = L10n.Tr("from");
 
         SplineExtrude[] m_Components;
-
-        bool m_AnyMissingMesh;
 
         protected void OnEnable()
         {
@@ -49,10 +50,11 @@ namespace UnityEditor.Splines
             m_Range = serializedObject.FindProperty("m_Range");
             m_UpdateColliders = serializedObject.FindProperty("m_UpdateColliders");
             m_Shape = serializedObject.FindProperty("m_Shape");
+            m_TargetMesh = serializedObject.FindProperty("m_TargetMesh");
+            
             m_FlipNormals = serializedObject.FindProperty("m_FlipNormals");
 
             m_Components = targets.Select(x => x as SplineExtrude).Where(y => y != null).ToArray();
-            m_AnyMissingMesh = false;
 
             EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
             SplineContainer.SplineAdded += OnContainerSplineSetModified;
@@ -125,15 +127,13 @@ namespace UnityEditor.Splines
             }
         }
 
-        void CreateMeshAssets(SplineExtrude[] components)
+        bool HasEmptyTargetMeshAssets(SplineExtrude[] components)
         {
             foreach (var extrude in components)
-            {
-                if (!extrude.TryGetComponent<MeshFilter>(out var filter) || filter.sharedMesh == null)
-                    filter.sharedMesh = extrude.CreateMeshAsset();
-            }
+                if (extrude.targetMesh == null)
+                    return true;
 
-            m_AnyMissingMesh = false;
+            return false;
         }
 
         void Rebuild()
@@ -145,8 +145,6 @@ namespace UnityEditor.Splines
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-
-            m_AnyMissingMesh = m_Components.Any(x => x.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh == null);
 
             EditorGUI.BeginChangeCheck();
 
@@ -212,15 +210,6 @@ namespace UnityEditor.Splines
 
                 EditorGUILayout.EndHorizontal();
 
-                if (m_AnyMissingMesh)
-                {
-                    GUILayout.BeginHorizontal();
-                    EditorGUILayout.PrefixLabel(" ");
-                    if (GUILayout.Button("Create Mesh Asset"))
-                        CreateMeshAssets(m_Components);
-                    GUILayout.EndHorizontal();
-                }
-
                 EditorGUI.BeginChangeCheck();
                 EditorGUILayout.PropertyField(m_Radius);
                 if (EditorGUI.EndChangeCheck())
@@ -241,18 +230,7 @@ namespace UnityEditor.Splines
 
                 EditorGUILayout.PropertyField(m_FlipNormals);
 
-                EditorGUI.indentLevel--;
-            }
-
-            // advanced section
-            EditorGUILayout.Space(4);
-
-            m_Range.isExpanded = Foldout(m_Range.isExpanded, k_AdvancedContent, true);
-
-            if (m_Range.isExpanded)
-            {
-                EditorGUI.indentLevel++;
-
+                // Range
                 EditorGUI.showMixedValue = m_Range.hasMultipleDifferentValues;
                 var range = m_Range.vector2Value;
                 EditorGUI.BeginChangeCheck();
@@ -281,13 +259,36 @@ namespace UnityEditor.Splines
                     m_Range.vector2Value = newRange;
                 }
 
-                EditorGUI.indentLevel++;
-
                 EditorGUILayout.EndHorizontal();
 
                 EditorGUI.showMixedValue = false;
+            }
+
+            // advanced section
+            EditorGUILayout.Space(4);
+
+            m_UpdateColliders.isExpanded = Foldout(m_UpdateColliders.isExpanded, k_AdvancedContent, true);
+
+            if (m_UpdateColliders.isExpanded)
+            {
+                EditorGUI.indentLevel++;
 
                 EditorGUILayout.PropertyField(m_UpdateColliders);
+
+                EditorGUILayout.PropertyField(m_TargetMesh, k_MeshTargetContent);
+
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(18);
+                if (HasEmptyTargetMeshAssets(m_Components) && GUILayout.Button(k_CreateMeshTargetContent))
+                {
+                    Undo.RecordObjects(m_Components, $"Modified {m_TargetMesh.displayName} in GameObject");
+                    foreach (var extrude in m_Components)
+                    {
+                        if (extrude.targetMesh == null)
+                            extrude.targetMesh = extrude.CreateMeshAsset();
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
 
                 EditorGUI.indentLevel--;
             }

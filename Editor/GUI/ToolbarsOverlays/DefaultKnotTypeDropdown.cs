@@ -9,8 +9,8 @@ namespace UnityEditor.Splines.Editor.GUI
     [EditorToolbarElement("Spline Tool Settings/Default Knot Type")]
     class DefaultKnotTypeDropdown : EditorToolbarDropdown
     {
-        const string k_LinearIconPath = "Packages/com.unity.splines/Editor/Resources/Icons/Tangent_Linear.png";
-        const string k_AutoSmoothIconPath = "Packages/com.unity.splines/Editor/Resources/Icons/AutoSmoothKnot.png";
+        const string k_LinearIconPath = "Packages/com.unity.splines/Editor/Editor Resources/Icons/Tangent_Linear.png";
+        const string k_AutoSmoothIconPath = "Packages/com.unity.splines/Editor/Editor Resources/Icons/AutoSmoothKnot.png";
         readonly GUIContent[] m_OptionContents = new GUIContent[2];
 
         public DefaultKnotTypeDropdown()

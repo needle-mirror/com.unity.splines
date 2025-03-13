@@ -12,19 +12,19 @@ namespace UnityEditor.Splines
         {
             bool is2x = EditorGUIUtility.pixelsPerPoint > 1;
             bool darkSkin = EditorGUIUtility.isProSkin;
-            string path = string.Format($"Icons/{(darkSkin ? "d_" : "")}{name}{(is2x ? "@2x" : "")}");
+            string path = string.Format($"Packages/com.unity.splines/Editor/Editor Resources/Icons/{(darkSkin ? "d_" : "")}{name}{(is2x ? "@2x" : "")}.png");
 
-            Texture2D texture = Resources.Load<Texture2D>(path);
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (texture != null)
                 return texture;
 
             path = string.Format($"Icons/{(darkSkin ? "d_" : "")}{name}");
-            texture = Resources.Load<Texture2D>(path);
+            texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (texture != null)
                 return texture;
 
             path = string.Format($"Icons/{name}");
-            return Resources.Load<Texture2D>(path);
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
     }
 }

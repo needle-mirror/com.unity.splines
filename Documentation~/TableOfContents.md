@@ -18,6 +18,7 @@
     * [Spline Animate component reference](animate-component.md)  
 * [Extrude a mesh along a spline](extrude.md)
     * [Create a 3D mesh along a spline](extrude-mesh.md)
+    * [Extrude a spline at runtime](extrude-runtime.md)
     * [Spline Extrude component reference](extrude-component.md)
 * [Spline Element Inspector overlay reference](element-inspector.md)  
 * [Spline component reference](spline-component.md)

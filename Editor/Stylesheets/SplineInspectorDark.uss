@@ -1,10 +1,10 @@
 ElementInspector {
-	--image-linear-tangent-mode: url("../Resources/Icons/d_Tangent_Linear.png");
-	--image-auto-smooth-tangent-mode: url("../Resources/Icons/d_AutoSmoothKnot.png");
-	--image-bezier-tangent-mode: url("../Resources/Icons/d_Tangent_Continuous.png");
-	--image-linear-tangent-mode-on: url("../Resources/Icons/d_Tangent_Linear On.png");
-	--image-auto-smooth-tangent-mode-on: url("../Resources/Icons/d_AutoSmoothKnot On.png");
-	--image-bezier-tangent-mode-on: url("../Resources/Icons/d_Tangent_Continuous On.png");
+	--image-linear-tangent-mode: url("../Editor Resources/Icons/d_Tangent_Linear.png");
+	--image-auto-smooth-tangent-mode: url("../Editor Resources/Icons/d_AutoSmoothKnot.png");
+	--image-bezier-tangent-mode: url("../Editor Resources/Icons/d_Tangent_Continuous.png");
+	--image-linear-tangent-mode-on: url("../Editor Resources/Icons/d_Tangent_Linear On.png");
+	--image-auto-smooth-tangent-mode-on: url("../Editor Resources/Icons/d_AutoSmoothKnot On.png");
+	--image-bezier-tangent-mode-on: url("../Editor Resources/Icons/d_Tangent_Continuous On.png");
 }
 
 #PositionIcon {

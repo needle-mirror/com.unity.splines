@@ -98,9 +98,9 @@ namespace UnityEditor.Splines
         internal const float knotDiscRadiusFactorHover = 0.07f;
         internal const float knotDiscRadiusFactorSelected = 0.085f;
 
-        internal static readonly Texture2D denseLineAATex = Resources.Load<Texture2D>(k_TangentLineAATexPath);
+        internal static readonly Texture2D denseLineAATex = AssetDatabase.LoadAssetAtPath<Texture2D>(k_TangentLineAATexPath);
 
-        const string k_TangentLineAATexPath = "Textures/TangentLineAATex";
+        const string k_TangentLineAATexPath = "Packages/com.unity.splines/Editor/Editor Resources/Textures/TangentLineAATex.png";
         const int k_MaxDecimals = 15;
         const int k_SegmentsPointCount = 30;
         static readonly Vector3[] s_ClosestPointArray = new Vector3[k_SegmentsPointCount];

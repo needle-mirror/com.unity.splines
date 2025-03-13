@@ -5,19 +5,33 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2025-03-13
+
+### Bug Fixes
+- [SPLB-322] Fixed a bug where `SplineExtrude` wouldn't update when multiple splines where modified.
+- [SPLB-323] Fixed a bug where splines displayed in the Scene view would not match serialization changes.
+- [SPLB-324] Re-added a dependency to the IMGUI module that was removed along with the UGUI package.
+- [SPLB-332] Fixed a bug where `Element Inspector` fields get pushed and squashed.
+- [SPLB-329] Fixed a bug where `SplineExtrude` could affect the mesh of other `SplineExtrude`.
+- [SPLB-336] Fixed a bug where `SplineExtrude` would break with a range value of 0.
+- [SPLB-333] Fixed a bug where `Create Spline` tool would sometimes throw an exception when the Esc or Enter keys were pressed.
+
+### Added
+- [SPLB-329] Added the ability to target a mesh in the library with a `SplineExtrude` component
+
 ## [2.7.2] - 2024-11-08
 
 ### Bug Fixes
-- [SPLB-315] Fixed a bug where the `DrawSplineTool` icon was missing in the tools overlay.  
-- [STO-3434] Fixed a bug where the `DrawSplineTool` would prevent the use of the view tool.
-- [STO-3435] Fixed a bug where the `DrawSplineTool` would not display the tool settings anymore. 
-- [SPLB-296] Fixed a bug where a log message would appear in the console when 2 knots are at the same position with 0-length tangents.
+- [SPLB-315] Fixed a bug where the `DrawSplineTool` icon was missing in the Tools overlay.  
+- [STO-3434] Fixed a bug where the `DrawSplineTool` prevented the use of the View tool.
+- [STO-3435] Fixed a bug where the `DrawSplineTool` did not display the Tool settings overlay. 
+- [SPLB-296] Fixed a bug where a log message appeared in the console when two knots are at the same position with 0-length tangents.
 - [SPLB-304] Fixed a bug where an exception would be thrown when using `SplineInstantiate` with linear distance instantiate method and multiple splines. 
 - Fixed some failures related to the inline API documentation.
-- [SPLB-302] Fixed a bug where an exception would be thrown when adding a knot to a closed spline from inspector.
-- [SPLB-311] Fixed a bug where `SplineAnimate` component would not function properly with non-uniform scale transforms.
-- Fixed compilation errors in builds
-- [SPLB-310] Fixed mesh extrude not being saved when a change is applied to a mesh asset. 
+- [SPLB-302] Fixed a bug where an exception would be thrown when adding a knot to a closed spline from the Inspector.
+- [SPLB-311] Fixed a bug where the `SplineAnimate` component would not function correctly with non-uniform scale transforms.
+- Fixed compilation errors in builds.
+- [SPLB-310] Fixed a bug where mesh extrude would not save when a change was applied to a mesh asset. 
 - [SPLB-303] Fixed a bug where spline section foldout labels (shape extrude, geometry, advanced) did not unfold the sections when clicked.
 - [SPLB-294] Fixed a bug where adding new splines by using the `SplineContainer` inspector would dirty all open scenes.
 

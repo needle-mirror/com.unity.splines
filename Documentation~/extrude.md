@@ -7,4 +7,5 @@ To refer to a sample scene that demonstrates how the Spline Extrude component ca
 | **Topic**             | **Description**         |
 | :-------------------- | :----------------------- |
 | **[Create a 3D mesh along a spline](extrude-mesh.md)**    | Use the Spline Extrude component to extrude a mesh along a spline. |
+| **[Extrude a spline at runtime](extrude-runtime.md)** | Review a code example for extruding a spline at runtime. |
 | **[Spline Extrude component reference](extrude-component.md)**  | Understand the properties of the Spline Extrude component.  |

@@ -11,6 +11,15 @@ Vector3Field FloatInput {
 	max-width: 64px;
 }
 
+#Position FloatInput {
+	width: 50px;
+}
+
+#Rotation FloatInput {
+	width: 50px;
+
+}
+
 #TangentIn FloatInput, #TangentOut FloatInput {
     width: 50px;
 }
@@ -89,7 +98,6 @@ SplineActionButtons .button-strip-button--right-spacer {
 #Vector3WithIcon
 {
     height: 20px;
-    margin: 2px;
 }
 
 #TangentIcon
@@ -105,8 +113,7 @@ SplineActionButtons .button-strip-button--right-spacer {
     align-self: center;
     height: 16px;
     width: 16px;
-    margin-right: 4px;
-    margin-left: 4px;
+    margin: 2px 4px;
 }
 
 #RotationIcon
@@ -114,8 +121,7 @@ SplineActionButtons .button-strip-button--right-spacer {
     align-self: center;
     height: 16px;
     width: 16px;
-    margin-right: 4px;
-    margin-left: 4px;
+	margin: 2px 4px;
 }
 
 #ErrorMessage

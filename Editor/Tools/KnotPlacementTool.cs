@@ -707,8 +707,18 @@ namespace UnityEditor.Splines
             {
                 if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.Escape)
                 {
+                    var splineInTargets = false;
+                    foreach (var toolTarget in targets)
+                    {
+                        if (toolTarget is GameObject targetGO && targetGO.GetComponent<SplineContainer>() != null)
+                        {
+                            splineInTargets = true;
+                            break;
+                        }
+                    }
+             
                     //If we are currently drawing, end the drawing operation and start a new one. If we haven't started drawing, switch to move tool instead
-                    if (m_CurrentDrawingOperation != null)
+                    if (splineInTargets && m_CurrentDrawingOperation != null)
                     {
                         ToolManager.SetActiveContext<SplineToolContext>();
                         ToolManager.SetActiveTool<SplineMoveTool>();
@@ -717,7 +727,6 @@ namespace UnityEditor.Splines
                         ToolManager.RestorePreviousTool();
 
                     evt.Use();
-
                 }
             }
         }
