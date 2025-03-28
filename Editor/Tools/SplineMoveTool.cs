@@ -10,7 +10,7 @@ namespace UnityEditor.Splines
     /// <summary>
     /// Provides methods that move knots and tangents in the Scene view. This tool is only available when you use SplineToolContext.
     /// `SplineMoveTool` works similarly to the Move tool for GameObjects, except that it has extra handle configurations according to the `handleOrientation` settings.
-    /// `SplineToolContext` manages the selection of knots and tangents. You can manipulate the selection of knots and tangents with `SplineMoveTool`. 
+    /// `SplineToolContext` manages the selection of knots and tangents. You can manipulate the selection of knots and tangents with `SplineMoveTool`.
     /// </summary>
 #if UNITY_2021_2_OR_NEWER
     [EditorTool("Spline Move Tool", typeof(ISplineContainer), typeof(SplineToolContext))]
@@ -24,7 +24,7 @@ namespace UnityEditor.Splines
         {
             get => handleOrientation == HandleOrientation.Global;
         }
-        
+
         /// <inheritdoc />
         public override GUIContent toolbarIcon => PathIcons.splineMoveTool;
 

@@ -74,7 +74,7 @@ namespace UnityEngine.Splines
         /// Returns the length of the curve of index 'index' in the spline.
         /// </returns>
         public float GetCurveLength(int index);
-        
+
         /// <summary>
         /// Return the up vector for a t ratio on the curve. Contrary to <see cref="SplineUtility.EvaluateUpVector"/>,
         /// this method uses cached values when possible for better performance when accessing

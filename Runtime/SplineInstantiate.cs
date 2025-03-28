@@ -856,7 +856,7 @@ namespace UnityEngine.Splines
                             break;
 
                         m_TimesCache.Add(currentDist / splineLength);
-                        
+
                         if (m_Method == Method.SpacingDistance)
                         {
                             spacing = Random.Range(m_Spacing.x, m_Spacing.y);

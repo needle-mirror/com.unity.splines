@@ -27,7 +27,7 @@ namespace UnityEditor.Splines
 
         // Tracks selected splines in the SplineReorderableList
         static List<SplineInfo> s_SelectedSplines = new ();
-        
+
         /// <summary>
         /// The number of elements in the current selection.
         /// </summary>
@@ -126,7 +126,7 @@ namespace UnityEditor.Splines
                     if (TryGetElement(selection[i], targets[j], out T result))
                         results.Add(result);
         }
-        
+
         /// <summary>
         /// Gets all the elements of the current selection, from a single spline target. Elements are added to the given collection.
         /// </summary>
@@ -141,7 +141,7 @@ namespace UnityEditor.Splines
                 if (TryGetElement(selection[i], target, out T result))
                     results.Add(result);
         }
-        
+
         static bool TryGetElement<T>(SelectableSplineElement element, SplineInfo splineInfo, out T value)
             where T : ISelectableElement
         {
@@ -278,7 +278,7 @@ namespace UnityEditor.Splines
             context.selection.AddRange(selection);
             NotifySelectionChanged();
         }
-        
+
         /// <summary>
         /// Adds an element to the current selection.
         /// </summary>
@@ -296,7 +296,7 @@ namespace UnityEditor.Splines
             NotifySelectionChanged();
             return true;
         }
-        
+
         /// <summary>
         /// Add a set of elements to the current selection.
         /// </summary>
@@ -323,7 +323,7 @@ namespace UnityEditor.Splines
             if (changed)
                 NotifySelectionChanged();
         }
-        
+
         /// <summary>
         /// Remove an element from the current selection.
         /// </summary>
@@ -387,7 +387,7 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Checks if the selection contains a knot or a tangent.c'est 
+        /// Checks if the selection contains a knot or a tangent.c'est
         /// </summary>
         /// <param name="element">The element to verify.</param>
         /// <typeparam name="T"><see cref="SelectableKnot"/> or <see cref="SelectableTangent"/>.</typeparam>
@@ -601,7 +601,7 @@ namespace UnityEditor.Splines
         {
             return s_SelectedSplines.Contains(info);
         }
-        
+
         internal static bool Remove(SplineInfo info)
         {
             return s_SelectedSplines.Remove(info);

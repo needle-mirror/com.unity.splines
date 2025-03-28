@@ -201,13 +201,13 @@ namespace UnityEditor.Splines
                     {
                         if (s_RotatedKnotCache.Contains(knot))
                             continue;
-                        
+
                         // Build rotation sync data based on active selection's transformation
                         if (!s_RotationSyncData.initialized)
                         {
                             var newTangentPosWorld = knot.Position + tangent.Direction + delta;
                             var deltas = CalculateMirroredTangentTranslationDeltas(tangent, newTangentPosWorld);
-                            
+
                             s_RotationSyncData.Initialize(deltas.knotRotationDelta, deltas.tangentLocalMagnitudeDelta, 1f);
                         }
                         ApplyTangentRotationSyncTransform(tangent);
@@ -217,7 +217,7 @@ namespace UnityEditor.Splines
 
             s_RotationSyncData.Clear();
         }
-        
+
         public static void ApplyRotation(Quaternion deltaRotation, float3 rotationCenter)
         {
             s_RotatedKnotCache.Clear();
@@ -462,7 +462,7 @@ namespace UnityEditor.Splines
                     var localDirection = tangent.LocalDirection;
                     if (Mathf.Approximately(math.length(localDirection), 0f))
                         localDirection = new float3(0, 0, 1f);
-                    
+
                     tangent.LocalDirection += math.normalizesafe(localDirection) * s_RotationSyncData.magnitudeDelta;
                 }
                 else
@@ -473,7 +473,7 @@ namespace UnityEditor.Splines
         }
 
         /*
-         Given a mirrored tangent and a target position, calculate the knot rotation delta and tangent's local magnitude change required to 
+         Given a mirrored tangent and a target position, calculate the knot rotation delta and tangent's local magnitude change required to
          put the tangent into target world position while fully respecting the owner spline's transformation (including non-uniform scale).
          */
         internal static (quaternion knotRotationDelta, float tangentLocalMagnitudeDelta) CalculateMirroredTangentTranslationDeltas(SelectableTangent tangent, float3 targetPosition)

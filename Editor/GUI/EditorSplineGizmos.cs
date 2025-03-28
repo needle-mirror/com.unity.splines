@@ -6,7 +6,7 @@ namespace UnityEditor.Splines
 {
     static class EditorSplineGizmos
     {
-        public static bool showSelectedGizmo = false; 
+        public static bool showSelectedGizmo = false;
 
         [DrawGizmo(GizmoType.Active | GizmoType.NonSelected | GizmoType.Selected | GizmoType.Pickable)]
         // ReSharper disable once Unity.ParameterNotDerivedFromComponent

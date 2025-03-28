@@ -60,7 +60,7 @@ namespace UnityEngine.Splines
         ReadOnlyCollection<Spline> m_ReadOnlySplines;
         Dictionary<ISpline, NativeSpline> m_NativeSplinesCache = new();
         float4x4 m_NativeSplinesCacheTransform = float4x4.identity;
-        
+
         /// <summary>
         /// The list of all splines attached to that container.
         /// </summary>
@@ -98,7 +98,7 @@ namespace UnityEngine.Splines
                 for (int i = 0; i < m_Splines.Length; ++i)
                 {
                     m_Splines[i] = value[i];
-                    if (IsNonUniformlyScaled) 
+                    if (IsNonUniformlyScaled)
                         GetOrBakeNativeSpline(m_Splines[i]);
                 }
 
@@ -140,10 +140,30 @@ namespace UnityEngine.Splines
         /// <param name="index">The zero-based index of the element to get or set.</param>
         public Spline this[int index] => m_Splines[index];
 
+        // The finalizer is empty because it was no longer needed but removing it is a removal of part
+        // of the API so would require a major version change, so it stays in until we release a new
+        // major version.
         ~SplineContainer()
         {
-            DisposeNativeSplinesCache();
         }
+
+#if UNITY_EDITOR
+        // In the editor OnDestroy doesn't get called due to the [ExecuteAlways] attribute, which causes the spline
+        // container to leak from the native spline cache when you switch between edit and play mode.
+        // This ensures the cache is always cleared when switching, to prevent the leak.
+        void Awake()
+        {
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange state)
+        {
+            if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode || state == UnityEditor.PlayModeStateChange.ExitingEditMode)
+            {
+                DisposeNativeSplinesCache();
+            }
+        }
+#endif
 
         void OnEnable()
         {
@@ -154,10 +174,13 @@ namespace UnityEngine.Splines
         {
             Spline.Changed -= OnSplineChanged;
         }
-        
+
         void OnDestroy()
         {
             DisposeNativeSplinesCache();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+#endif
         }
 
         /// <summary>
@@ -173,16 +196,16 @@ namespace UnityEngine.Splines
                 GetOrBakeNativeSpline(spline);
             }
         }
-        
+
         internal void ClearCaches()
         {
             m_ReorderedSplinesIndices.Clear();
             m_RemovedSplinesIndices.Clear();
             m_AddedSplinesIndices.Clear();
-            
+
             m_ReadOnlySplines = null;
         }
-        
+
         void DisposeNativeSplinesCache()
         {
             // Dispose cached native splines
@@ -212,7 +235,7 @@ namespace UnityEngine.Splines
                     m_Knots.KnotRemoved(splineIndex, index);
                     break;
             }
-            
+
             if (m_NativeSplinesCache.TryGetValue(spline, out var nativeSpline))
                 nativeSpline.Dispose();
             m_NativeSplinesCache.Remove(spline);
@@ -372,7 +395,7 @@ namespace UnityEngine.Splines
 
             if (IsNonUniformlyScaled)
                 return SplineUtility.EvaluateTangent(GetOrBakeNativeSpline(spline), t);
-            
+
             return transform.TransformVector(SplineUtility.EvaluateTangent(spline, t));
         }
 
@@ -493,7 +516,7 @@ namespace UnityEngine.Splines
                     {
                         changed = true;
                         break;
-                    }    
+                    }
                 }
             }
 
@@ -516,7 +539,7 @@ namespace UnityEngine.Splines
                 m_NativeSplinesCacheTransform = transform.localToWorldMatrix;
                 cachedNativeSpline = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
                 m_NativeSplinesCache.Add(spline, cachedNativeSpline);
-            } 
+            }
             // or if the cached spline was baked using different transform
             else if (!MathUtility.All(m_NativeSplinesCacheTransform, transform.localToWorldMatrix))
             {
@@ -528,10 +551,10 @@ namespace UnityEngine.Splines
                 {
                     var oldCache = m_NativeSplinesCache[iSpline];
                     var newCache = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
-                    
+
                     if (iSpline == (ISpline)spline)
                         cachedNativeSpline = newCache;
-                    
+
                     oldCache.Dispose();
                     // Doing this dance as dictionaries can't be modified mid-iteration
                     s_AllocPreventionHelperBuffer.Add(new SplineToNative() { spline = iSpline, nativeSpline = newCache });

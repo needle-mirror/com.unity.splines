@@ -1,6 +1,6 @@
 # Extrude a spline at runtime
 
-To extrude a spline at runtime, use a script to create a new GameObject with a `SplineContainer` component. You can then access the spline from the `SplineContainer` and add knots to it. 
+To extrude a spline at runtime, use a script to create a new GameObject with a `SplineContainer` component. You can then access the spline from the `SplineContainer` and add knots to it.
 
 ```
 using UnityEngine;
@@ -11,7 +11,7 @@ public class ExtrudeExample : MonoBehaviour
 {
     void Start()
     {
-        var splineContainer = new GameObject("Spline").AddComponent<SplineContainer>(); 
+        var splineContainer = new GameObject("Spline").AddComponent<SplineContainer>();
         splineContainer.Spline = new Spline();
         splineContainer.Spline.AddRange(new float3[]
         {
@@ -20,11 +20,11 @@ public class ExtrudeExample : MonoBehaviour
             new (1, 0, 1),
             new (1, 0, 0)
         });
-        
+
         var go = splineContainer.gameObject;
         var extrudeComponent = go.AddComponent<SplineExtrude>();
         extrudeComponent.Container = splineContainer;
-        
+
         var hasMeshFilter = go.TryGetComponent<MeshFilter>(out var meshFilter);
         if (hasMeshFilter)
         {
@@ -39,7 +39,7 @@ public class ExtrudeExample : MonoBehaviour
             extrudeComponent.SegmentsPerUnit = 20;
             extrudeComponent.Sides = 8;
             extrudeComponent.Range = new float2(0, 100);
-            
+
             var hasMeshRenderer = go.TryGetComponent<MeshRenderer>(out var meshRenderer);
             if (hasMeshRenderer)
                 meshRenderer.material = new Material(Shader.Find("Standard"));

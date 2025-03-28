@@ -72,7 +72,7 @@ namespace UnityEditor.Splines
     {
         /// <summary>The current orientation of the handles for the tool in use.</summary>
         static UserSetting<HandleOrientation> m_HandleOrientation = new UserSetting<HandleOrientation>(PathSettings.instance, "SplineTool.HandleOrientation", HandleOrientation.Global, SettingsScope.User);
-        
+
         /// <summary>The current orientation of the handles for the current spline tool.</summary>
         public static HandleOrientation handleOrientation
         {
@@ -97,18 +97,18 @@ namespace UnityEditor.Splines
         }
 
         internal static event Action handleOrientationChanged;
-        
+
         /// <summary>
         /// The current active SplineTool in use.
         /// </summary>
         // Workaround for lack of access to ShortcutContext. Use this to pass shortcut actions to tool instances.
         protected static SplineTool activeTool { get; private set; }
-        
+
         /// <summary>
         /// The current position of the pivot regarding the selection.
         /// </summary>
         public static Vector3 pivotPosition => TransformOperation.pivotPosition;
-        
+
         /// <summary>
         /// The current rotation of the handle regarding the selection and the Handle Rotation configuration.
         /// </summary>
@@ -119,7 +119,7 @@ namespace UnityEditor.Splines
         /// UpdateHandleRotation can be called to refresh the handle rotation after manipulating spline elements, for instance, such as rotating a knot.
         /// </summary>
         public static void UpdateHandleRotation() => TransformOperation.UpdateHandleRotation();
-        
+
         /// <summary>
         /// Updates current pivot position, usually called internally by callbacks.
         /// It can be called to refresh the pivot position after manipulating spline elements, for instance, such as moving a knot.
@@ -157,7 +157,7 @@ namespace UnityEditor.Splines
             Tools.pivotRotationChanged -= OnPivotRotationChanged;
             Tools.pivotModeChanged -= OnPivotModeChanged;
             handleOrientationChanged -= OnHandleOrientationChanged;
-            
+
             SplineToolContext.useCustomSplineHandles = false;
             activeTool = null;
         }

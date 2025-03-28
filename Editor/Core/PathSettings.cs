@@ -1,4 +1,4 @@
-﻿using UnityEditor.SettingsManagement;
+using UnityEditor.SettingsManagement;
 using UnityEngine;
 
 namespace UnityEditor.Splines
@@ -28,7 +28,7 @@ namespace UnityEditor.Splines
             return provider;
         }
     }
-    
+
     /// <summary>
     /// The wrapper to define user preferences through Settings Manager.
     /// </summary>

@@ -59,13 +59,13 @@ namespace UnityEditor.Splines
                 if (animate.Container != null)
                     animate.RecalculateAnimationParameters();
             }
-            
+
             m_Roots.Clear();
             m_ObjectForwardFields.Clear();
             m_ObjectUpFields.Clear();
             m_ProgressSliders.Clear();
             m_ElapsedTimeFields.Clear();
-            
+
             EditorApplication.update += OnEditorUpdate;
             Spline.Changed += OnSplineChange;
             SplineContainer.SplineAdded += OnContainerSplineSetModified;
@@ -148,7 +148,7 @@ namespace UnityEditor.Splines
                 s_ThemeStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"Packages/com.unity.splines/Editor/Stylesheets/SplineAnimateInspector{(EditorGUIUtility.isProSkin ? "Dark" : "Light")}.uss");
 
             root.styleSheets.Add(s_ThemeStyleSheet);
-            
+
             var methodField = root.Q<PropertyField>("method");
             methodField.RegisterValueChangeCallback((_) => { RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex); });
             RefreshMethodParamFields((SplineAnimate.Method)m_MethodProperty.enumValueIndex);
@@ -187,16 +187,16 @@ namespace UnityEditor.Splines
                 {
                     m_SplineAnimate.Restart(false);
                     OnElapsedTimeFieldChange(elapsedTimeField.value);
-                }   
+                }
             });
 
             m_Roots.Add(root);
             m_ProgressSliders.Add(progressSlider);
             m_ElapsedTimeFields.Add(elapsedTimeField);
-            
+
             m_ObjectForwardFields.Add(objectForwardField);
             m_ObjectUpFields.Add(objectUpField);
-            
+
             return root;
         }
 
@@ -256,7 +256,7 @@ namespace UnityEditor.Splines
             if (changeEvent.newValue == null)
                 return;
 
-            
+
             var newValue = (SplineAnimate.AlignAxis)changeEvent.newValue;
             var previousValue = (SplineAnimate.AlignAxis)changeEvent.previousValue;
 
@@ -347,7 +347,7 @@ namespace UnityEditor.Splines
                     forward = splineAnimate.Container.EvaluateTangent(Mathf.Min(1f, splineAnimate.StartOffsetT + 0.01f));
                 else
                     forward = splineAnimate.Container.EvaluateTangent(splineAnimate.StartOffsetT - 0.01f);
-                    
+
             }
             Handles.ConeHandleCap(-1, offsetPos, Quaternion.LookRotation(Vector3.Normalize(forward), up), k_OffsetGizmoSize * HandleUtility.GetHandleSize(offsetPos), EventType.Repaint);
         }

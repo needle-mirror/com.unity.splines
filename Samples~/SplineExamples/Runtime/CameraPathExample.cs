@@ -10,7 +10,7 @@ namespace Unity.Splines.Examples
     {
         public SplineContainer container;
 
-        [SerializeField] 
+        [SerializeField]
         float speed = 0.01f;
 
         SplinePath cameraTrack;

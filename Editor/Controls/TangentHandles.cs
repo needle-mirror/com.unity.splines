@@ -16,7 +16,7 @@ namespace UnityEditor.Splines
         const float k_TangentHandleWidth = 2f;
         const float k_TangentRotWidthDefault = 1.5f;
         const float k_TangentRotDiscWidth = 3f;
-        
+
         internal static void Do(int controlId, SelectableTangent tangent, bool selected = false, bool hovered = false)
         {
             var owner = tangent.Owner;
@@ -93,14 +93,14 @@ namespace UnityEditor.Splines
             var hovered = SplineHandleUtility.IsHoverAvailableForSplineElement() && SplineHandleUtility.IsElementHovered(controlId);
             Draw(controlId, position, rotation, knotPosition, selected, oppositeSelected, hovered, oppositeHovered, mode, active);
         }
-        
+
         static void Draw(int controlId, Vector3 position, Quaternion rotation, Vector3 knotPosition, bool selected, bool oppositeSelected, bool hovered, bool oppositeHovered, TangentMode mode, bool active)
         {
             if (Event.current.GetTypeForControl(controlId) != EventType.Repaint)
                 return;
 
             var size = HandleUtility.GetHandleSize(position);
-            
+
             var tangentColor = SplineHandleUtility.elementColor;
             if (hovered)
                 tangentColor = SplineHandleUtility.elementPreselectionColor;

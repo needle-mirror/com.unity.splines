@@ -110,7 +110,7 @@ namespace Unity.Splines.Examples
                 m_LoftRoadsRequested = false;
             }
         }
-        
+
         public void OnEnable()
         {
             // Avoid to point to an existing instance when duplicating the GameObject

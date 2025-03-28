@@ -1,4 +1,4 @@
-﻿using UnityEditor.Toolbars;
+using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.Splines;
 #if !UNITY_2022_1_OR_NEWER

@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -23,18 +23,18 @@
   ],
   "category": "Tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.8.0"
+    "com.unity.splines.tests": "2.8.1"
   },
   "_upm": {
-    "changelog": "### Bug Fixes\n- [SPLB-322] Fixed a bug where `SplineExtrude` wouldn't update when multiple splines where modified.\n- [SPLB-323] Fixed a bug where splines displayed in the Scene view would not match serialization changes.\n- [SPLB-324] Re-added a dependency to the IMGUI module that was removed along with the UGUI package.\n- [SPLB-332] Fixed a bug where `Element Inspector` fields get pushed and squashed.\n- [SPLB-329] Fixed a bug where `SplineExtrude` could affect the mesh of other `SplineExtrude`.\n- [SPLB-336] Fixed a bug where `SplineExtrude` would break with a range value of 0.\n- [SPLB-333] Fixed a bug where `Create Spline` tool would sometimes throw an exception when the Esc or Enter keys were pressed.\n\n### Added\n- [SPLB-329] Added the ability to target a mesh in the library with a `SplineExtrude` component"
+    "changelog": "### Bug Fixes\n- [SPLB-345] Fixed a bug which was causing null reference exceptions during shutdown in IL2CPP builds.\n- [SPLB-337] Fixed a bug where `JoinSplinesOnKnots` would throw a null reference exception when one of the splines was linked with another spline.\n- [SPLB-341] Fixed a bug where changing the tangent mode on a knot on a prefab would not persist when entering play mode.\n\n### Changed\n- Internal code cleanup to align with release standards."
   },
   "upmCi": {
-    "footprint": "b080b635cfbb153274586a2be3c319cc33d068b5"
+    "footprint": "aad672cfeeabdb074ba394ba7b81c5120ba03901"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.splines@2.8/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "62fda6a9f01314d27d0dfc41f6fc0bbd13e1c300"
+    "revision": "ae2c33950924058f2912683d16e02268813ce44a"
   }
 }

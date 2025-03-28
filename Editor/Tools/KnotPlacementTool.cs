@@ -16,7 +16,7 @@ using UnityEditor.Overlays;
 namespace UnityEditor.Splines
 {
     abstract class KnotPlacementTool : SplineTool
-    {   
+    {
         // 6f is the threshold used in RectSelection, but felt a little too sensitive when drawing a path.
         const float k_MinDragThreshold = 8f;
 
@@ -25,7 +25,7 @@ namespace UnityEditor.Splines
         static Pref<bool> s_EnableDragTangent = new ($"{nameof(KnotPlacementHandle)}.{nameof(s_EnableDragTangent)}", true);
 
         static readonly string k_KnotPlacementUndoMessage = L10n.Tr("Add Spline Knot");
-        
+
         sealed class DrawingOperation : IDisposable
         {
             /// <summary>
@@ -111,14 +111,14 @@ namespace UnityEditor.Splines
                     }
                 }
             }
-            
+
             internal void CreateKnotOnKnot(SelectableKnot knot, float3 tangentOut)
             {
                 EditorSplineUtility.RecordObject(CurrentSplineInfo, k_KnotPlacementUndoMessage);
 
                 var lastAddedKnot = GetLastAddedKnot();
 
-                // The knot parameter of this method, in a practical context is the knot the user has clicked on. It is 
+                // The knot parameter of this method, in a practical context is the knot the user has clicked on. It is
                 // NOT necessarily the closing knot of this spline.
 
                 // If the user clicks on the closing knot (or a knot linked to the closing knot) of the spline, close the spline.
@@ -131,9 +131,9 @@ namespace UnityEditor.Splines
                     knot.SplineInfo.Spline.Closed = true;
 
                     bool didDrawTangent = math.lengthsq(tangentOut) > float.Epsilon;
-                    
+
                     // Closing a spline should only affect the closing knot (first or last knot),
-                    // not the clicked knot. If we drew a tangent or the closing knot is Auto tangent 
+                    // not the clicked knot. If we drew a tangent or the closing knot is Auto tangent
                     // mode, we set closing knot tangent mode to Broken to retain the shape.
                     var closingKnot = new SelectableKnot(CurrentSplineInfo, closeKnotIndex);
                     if (didDrawTangent || closingKnot.Mode == TangentMode.AutoSmooth)
@@ -170,11 +170,11 @@ namespace UnityEditor.Splines
                     else
                         EditorSplineUtility.LinkKnots(new SelectableKnot(knot.SplineInfo, knot.KnotIndex + 1),
                             lastAddedKnot);
-                    
+
                     // Already called in AddKnot but this is not recording the updated Linkedknots in that case
                     PrefabUtility.RecordPrefabInstancePropertyModifications(knot.SplineInfo.Object);
                 }
-                
+
             }
 
             internal void CreateKnotOnSurface(float3 position, float3 normal, float3 tangentOut)
@@ -249,7 +249,7 @@ namespace UnityEditor.Splines
                 {
                     EditorSplineUtility.RecordObject(CurrentSplineInfo, "Removing Empty Spline");
                     CurrentSplineInfo.Container.RemoveSplineAt(CurrentSplineInfo.Index);
-                    //Force to record changes if part of a prefab instance 
+                    //Force to record changes if part of a prefab instance
                     PrefabUtility.RecordPrefabInstancePropertyModifications(CurrentSplineInfo.Object);
                 }
             }
@@ -300,7 +300,7 @@ namespace UnityEditor.Splines
             var targets = GetSortedTargets(out var mainTarget);
             s_MainTarget = mainTarget as Component;
             var allSplines = EditorSplineUtility.GetSplinesFromTargetsInternal(targets);
- 
+
             //If the spline being drawn on doesn't exist anymore, end the drawing operation
             if (m_CurrentDrawingOperation != null &&
                 ( !allSplines.Contains(m_CurrentDrawingOperation.CurrentSplineInfo) ||
@@ -434,7 +434,7 @@ namespace UnityEditor.Splines
 
                     m_CurrentDrawingOperation = new DrawingOperation(startFrom.SplineInfo,
                         DrawingOperation.DrawingDirection.End, false);
-                    
+
                     return;
                 }
 
@@ -450,7 +450,7 @@ namespace UnityEditor.Splines
 
                     m_CurrentDrawingOperation = new DrawingOperation(startFrom.SplineInfo,
                         DrawingOperation.DrawingDirection.Start, false);
-                    
+
                     return;
                 }
             }
@@ -519,8 +519,8 @@ namespace UnityEditor.Splines
         {
             var controlId = GUIUtility.GetControlID(FocusType.Passive);
             var evt = Event.current;
-            
-            if (s_PlacementData != null 
+
+            if (s_PlacementData != null
                 && SceneView.currentDrawingSceneView != null
                 && EditorWindow.mouseOverWindow == SceneView.currentDrawingSceneView
                 && GUIUtility.hotControl != controlId)
@@ -632,9 +632,9 @@ namespace UnityEditor.Splines
                                      out Vector3 normal))
                         {
                             s_PlacementData = new PlacementData(
-                                evt.mousePosition, 
-                                position, 
-                                normal, 
+                                evt.mousePosition,
+                                position,
+                                normal,
                                 s_MainTarget != null ? s_MainTarget.transform.lossyScale : Vector3.one);
                         }
                     }
@@ -655,9 +655,9 @@ namespace UnityEditor.Splines
                             if (s_PlacementData.Plane.Raycast(ray, out float distance))
                             {
                                 var tangent = ( ray.origin + ray.direction * distance ) - s_PlacementData.Position;
-                                s_PlacementData.TangentOut = new Vector3( 
-                                    tangent.x / s_PlacementData.Scale.x, 
-                                    tangent.y / s_PlacementData.Scale.y, 
+                                s_PlacementData.TangentOut = new Vector3(
+                                    tangent.x / s_PlacementData.Scale.x,
+                                    tangent.y / s_PlacementData.Scale.y,
                                     tangent.z / s_PlacementData.Scale.z );
                             }
                         }
@@ -716,7 +716,7 @@ namespace UnityEditor.Splines
                             break;
                         }
                     }
-             
+
                     //If we are currently drawing, end the drawing operation and start a new one. If we haven't started drawing, switch to move tool instead
                     if (splineInTargets && m_CurrentDrawingOperation != null)
                     {
@@ -789,7 +789,7 @@ namespace UnityEditor.Splines
             if (activeTool is KnotPlacementTool tool)
                 tool.CycleActiveTarget();
         }
-        
+
         /// <summary>
         /// Used for tests
         /// </summary>
@@ -799,11 +799,11 @@ namespace UnityEditor.Splines
                 AddKnotOnSurface(position, Vector3.up, tangentOut);
             else
                 m_CurrentDrawingOperation.CreateKnotOnSurface(position, Vector3.up, tangentOut);
-            
+
             if(endDrawing)
                 EndDrawingOperation();
         }
-        
+
         /// <summary>
         /// Used for tests
         /// </summary>
@@ -814,7 +814,7 @@ namespace UnityEditor.Splines
                 AddKnotOnKnot(new SelectableKnot(fromSplineInfo, knotIndex), tangentOut);
             else
                 m_CurrentDrawingOperation.CreateKnotOnKnot(new SelectableKnot(fromSplineInfo, knotIndex), tangentOut);
-            
+
             if(endDrawing)
                 EndDrawingOperation();
         }

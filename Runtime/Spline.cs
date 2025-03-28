@@ -614,7 +614,7 @@ namespace UnityEngine.Splines
                 if (m_Closed == value)
                     return;
                 m_Closed = value;
-                
+
                 CheckAutoSmoothExtremityKnots();
                 SetDirty(SplineModification.ClosedModified);
             }

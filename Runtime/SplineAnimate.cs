@@ -305,7 +305,7 @@ namespace UnityEngine.Splines
                 }
                 else
                     m_ElapsedTime = m_Duration * m_NormalizedTime;
-                
+
                 UpdateTransform();
             }
         }
@@ -356,12 +356,12 @@ namespace UnityEngine.Splines
         private bool m_EndReached = false;
         /// <summary> Invoked every time the object's animation reaches the end of the Spline.
         /// In case the animation loops, this event is called at the end of each loop.</summary>
-        public event Action Completed; 
+        public event Action Completed;
 
         void Awake()
         {
             RecalculateAnimationParameters();
-#if UNITY_EDITOR      
+#if UNITY_EDITOR
             if(EditorApplication.isPlaying)
 #endif
             Restart(m_PlayOnAwake);
@@ -388,7 +388,7 @@ namespace UnityEngine.Splines
             m_MaxSpeed = Mathf.Max(0f, m_MaxSpeed);
             RecalculateAnimationParameters();
         }
-        
+
         internal void RecalculateAnimationParameters()
         {
             RebuildSplinePath();
@@ -408,7 +408,7 @@ namespace UnityEngine.Splines
                     break;
             }
         }
-     
+
         internal static readonly string k_EmptyContainerError = "SplineAnimate does not have a valid SplineContainer set.";
         bool IsNullOrEmptyContainer()
         {
@@ -446,7 +446,7 @@ namespace UnityEngine.Splines
             // [SPLB-269]: Early exit if the container is null to remove log error when initializing the spline animate object from code
             if (Container == null)
                 return;
-            
+
             if(IsNullOrEmptyContainer())
                 return;
 
@@ -567,7 +567,7 @@ namespace UnityEngine.Splines
                 m_Playing = false;
             }
         }
-        
+
         void UpdateEndReached(float previousTime, float currentDuration)
         {
             m_EndReached = Mathf.FloorToInt(previousTime/currentDuration) < Mathf.FloorToInt(m_ElapsedTime/currentDuration);
@@ -648,9 +648,9 @@ namespace UnityEngine.Splines
                         Debug.Log($"{m_AlignmentMode} animation alignment mode is not supported!", this);
                         break;
                 }
-                
+
                 var valid = math.isfinite(forward) & math.isfinite(up);
-                
+
                 if (math.all(valid))
                     rotation = Quaternion.LookRotation(forward, up) * axisRemapRotation;
                 else
@@ -749,7 +749,7 @@ namespace UnityEngine.Splines
                 t = Mathf.Clamp01(normalizedTimeWithOffset);
             else
                 t = normalizedTimeWithOffset % 1f;
-            
+
             return t;
         }
 

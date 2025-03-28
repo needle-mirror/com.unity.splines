@@ -15,7 +15,7 @@ namespace UnityEditor.Splines
         static GUIStyle HelpLabelStyle
         {
             get
-            {            
+            {
                 if (s_HelpLabelStyle == null)
                 {
                     s_HelpLabelStyle = new GUIStyle(EditorStyles.helpBox);
@@ -25,9 +25,9 @@ namespace UnityEditor.Splines
                 return s_HelpLabelStyle;
             }
         }
-        
+
         static GUIContent m_HelpLabelContent;
-        
+
         const string k_HelpBoxIconPath = "SplineEditMode-Info";
         static GUIContent m_HelpLabelContentIcon;
 
@@ -45,7 +45,7 @@ namespace UnityEditor.Splines
         {
             Undo.undoRedoPerformed -= UndoRedoPerformed;
         }
-        
+
         void UndoRedoPerformed()
         {
             foreach (var t in targets)
@@ -63,20 +63,20 @@ namespace UnityEditor.Splines
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            
+
             // [SPLB-132] Reverting to custom helpbox as the default helpbox style as a trouble to handle custom icons
             // when using a screen with PixelPerPoints different than 1. This is done in trunk by setting the
             // Texture2d.pixelsPerPoints which is an internal property than cannot be access from here.
             EditorGUILayout.BeginHorizontal(HelpLabelStyle);
             EditorGUIUtility.SetIconSize(new Vector2(32f, 32f));
-            EditorGUILayout.LabelField(m_HelpLabelContentIcon, 
+            EditorGUILayout.LabelField(m_HelpLabelContentIcon,
                 GUILayout.Width(34), GUILayout.MinHeight(34), GUILayout.ExpandHeight(true));
             EditorGUIUtility.SetIconSize(Vector2.zero);
-            EditorGUILayout.LabelField(m_HelpLabelContent, 
-                new GUIStyle(EditorStyles.label){wordWrap = HelpLabelStyle.wordWrap, fontSize = HelpLabelStyle.fontSize, padding = new RectOffset(-2, 0, 0, 0)}, 
+            EditorGUILayout.LabelField(m_HelpLabelContent,
+                new GUIStyle(EditorStyles.label){wordWrap = HelpLabelStyle.wordWrap, fontSize = HelpLabelStyle.fontSize, padding = new RectOffset(-2, 0, 0, 0)},
                 GUILayout.ExpandHeight(true));
             EditorGUILayout.EndHorizontal();
-            
+
             SplineReorderableList.Get(splinesProperty).DoLayoutList();
             serializedObject.ApplyModifiedProperties();
         }

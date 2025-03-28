@@ -21,7 +21,7 @@ namespace Unity.Splines.Examples
             {
                 t = 0f;
                 var path = paths[n % 4];
-    
+
                 while (t <= 1f)
                 {
                     var pos = path.EvaluatePosition(t);

@@ -12,10 +12,10 @@ namespace UnityEditor.Splines
     {
         static readonly int[] k_MissingContainerValues = new int[] { 0 };
         static readonly GUIContent[] k_MissingContainerContent = new GUIContent[] { new GUIContent("") };
-        
-        string GetWarningMessage(SplineIndexAttribute attrib) => 
+
+        string GetWarningMessage(SplineIndexAttribute attrib) =>
             $"SplineIndex property attribute does not reference a valid SplineContainer: \"{attrib.SplineContainerProperty}\"";
-        
+
         /// <summary>
         /// Returns the height of a SerializedProperty in pixels.
         /// </summary>

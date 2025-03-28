@@ -75,7 +75,7 @@ namespace UnityEngine.Splines
                 var p = SplineUtility.PreviousIndex(i, knotCount, closed);
 
                 var tangentOut = math.rotate(
-                    math.inverse(rotation), 
+                    math.inverse(rotation),
                     SplineUtility.GetAutoSmoothTangent(positions[p], positions[i], positions[n], SplineUtility.CatmullRomTension));
                 var tangentIn = -tangentOut;
                 spline.Add(new BezierKnot(position, tangentIn, tangentOut, rotation), TangentMode.AutoSmooth);
@@ -118,7 +118,7 @@ namespace UnityEngine.Splines
         /// </summary>
         /// <param name="radius">The distance from the center to the helix's curve.</param>
         /// <param name="height">The height of the helix shape.</param>
-        /// <param name="revolutions">The number of revolutions the helix should have.</param> 
+        /// <param name="revolutions">The number of revolutions the helix should have.</param>
         /// <returns>A new Spline.</returns>
         public static Spline CreateHelix(float radius, float height, int revolutions)
         {
@@ -129,11 +129,11 @@ namespace UnityEngine.Splines
             var ax = radius * math.cos(alpha);
             var az = radius * math.sin(alpha);
             var b = p * alpha * (radius - ax) * (3f * radius - ax) / (az * (4f * radius - ax) * math.tan(alpha));
-            
+
             var yOffset = revHeight * 0.25f;
             var p0 = new float3(ax,  -alpha * p + yOffset, -az);
             var p1 = new float3((4f * radius - ax) / 3f, -b + yOffset, -(radius - ax) * (3f * radius - ax) / (3f * az));
-            var p2 = new float3((4f * radius - ax) / 3f, b + yOffset, (radius - ax) * (3f * radius - ax) / (3f * az)); 
+            var p2 = new float3((4f * radius - ax) / 3f, b + yOffset, (radius - ax) * (3f * radius - ax) / (3f * az));
             var p3 = new float3(ax, alpha * p + yOffset, az);
 
             Spline spline = new Spline();
@@ -158,7 +158,7 @@ namespace UnityEngine.Splines
             tangentNorm = math.normalize(tangent);
             normal = math.cross(math.cross(tangentNorm, math.up()), tangentNorm);
             spline.Add(new BezierKnot(p3, new float3(0f, 0f, -tangentLength),  new float3(0f, 0f, tangentLength), quaternion.LookRotation(tangentNorm, normal)));
-            
+
             // Create knots for remaining revolutions
             var revYOffset = new float3(0f, revHeight, 0f);
             for (int i = 1; i < revolutions; ++i)
@@ -167,14 +167,14 @@ namespace UnityEngine.Splines
                 knotA.Position += revYOffset;
                 var knotB = spline[^2];
                 knotB.Position += revYOffset;
-                
+
                 spline.Add(knotB);
                 spline.Add(knotA);
             }
-            
+
             return spline;
         }
-        
+
         /// <summary>
         /// Creates a <see cref="Spline"/> in the shape of a square with circular arcs at its corners.
         /// </summary>
@@ -194,7 +194,7 @@ namespace UnityEngine.Splines
             float3 cornerP1 = new float3(-radius + cornerRadius, 0f, radius);
             float cornerTangentLen = SplineMath.GetUnitCircleTangentLength() * cornerRadius;
             float cornerAngle = 0f;
-            
+
             var spline = new Spline();
             for (int i = 0; i < 4; i++)
             {
@@ -215,7 +215,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Creates a <see cref="Spline"/> in the shape of a square with sharp corners. 
+        /// Creates a <see cref="Spline"/> in the shape of a square with sharp corners.
         /// </summary>
         /// <param name="size">The size of the square's edges.</param>
         /// <returns>A new Spline.</returns>
@@ -227,7 +227,7 @@ namespace UnityEngine.Splines
             float3 p3 = new float3( .5f, 0f, -.5f) * size;
             return CreateLinear(new float3[] { p0, p1, p2, p3 }, true);
         }
-        
+
         /// <summary>
         /// Creates a <see cref="Spline"/> in the shape of a circle.
         /// </summary>
@@ -259,7 +259,7 @@ namespace UnityEngine.Splines
         public static Spline CreatePolygon(float edgeSize, int sides)
         {
             sides = math.max(3, sides);
-            
+
             var points = new float3[sides];
             var angleStep = 2f * math.PI / sides;
             var radius = edgeSize * 0.5f / math.sin(angleStep * 0.5f);
@@ -274,7 +274,7 @@ namespace UnityEngine.Splines
 
             return CreateLinear(points, true);
         }
-        
+
         /// <summary>
         /// Creates a <see cref="Spline"/> in in the shape of a star with a specified number of corners.
         /// </summary>
@@ -287,7 +287,7 @@ namespace UnityEngine.Splines
             concavity = math.clamp(concavity, 0f, 1f);
             if (concavity == 0f)
                 CreatePolygon(edgeSize, corners);
-            
+
             corners = math.max(3, corners);
 
             var sidesDouble = corners * 2;

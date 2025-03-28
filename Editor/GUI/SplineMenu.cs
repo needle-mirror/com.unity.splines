@@ -29,7 +29,7 @@ namespace UnityEditor.Splines
                 var container = gameObject.GetComponent<SplineContainer>();
                 container.Spline = spline;
             }
-            
+
             Selection.activeGameObject = gameObject;
             return gameObject;
         }

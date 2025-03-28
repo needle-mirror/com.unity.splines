@@ -9,7 +9,7 @@ namespace UnityEditor.Splines
         bool HasKnot(Spline spline, int index);
         void PopulateTargets(IReadOnlyList<SplineInfo> splines);
         void Update();
-        string GetLabelForTargets(); 
+        string GetLabelForTargets();
     }
 
     abstract class ElementDrawer<T> : VisualElement, IElementDrawer where T : ISelectableElement

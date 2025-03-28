@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Splines;
 
 /// <summary>
-/// Collection of commonly used functions in the Spline package. 
+/// Collection of commonly used functions in the Spline package.
 /// </summary>
 class SplineExamples : MonoBehaviour
 {
@@ -19,7 +19,7 @@ class SplineExamples : MonoBehaviour
         IReadOnlyList<Spline> splines = container.Splines;
 
         // Get the position along a spline at a ratio from 0 to 1. 0 is the beginning of the spline and 1 is the end of the spline.
-        // Call the SplineContainer version of EvaluatePosition to get results in world space. 
+        // Call the SplineContainer version of EvaluatePosition to get results in world space.
         float3 worldPosition = container.EvaluatePosition(.5f);
 
         // Get the position, tangent, and direction of a spline at a location along a spline, and then rotate a GameObject to match the position and rotation of the spline.
@@ -30,7 +30,7 @@ class SplineExamples : MonoBehaviour
         // Knot connections are stored in the KnotLinkConnection type.
         var links = container.KnotLinkCollection;
 
-        // Knots are referenced by an index to the SplineContainer.Splines array and Knot Index. 
+        // Knots are referenced by an index to the SplineContainer.Splines array and Knot Index.
         // This example queries whether any knots are linked to the fourth knot of the first spline.
         var knotIndex = new SplineKnotIndex(0, 3);
         if (links.TryGetKnotLinks(knotIndex, out var linked))

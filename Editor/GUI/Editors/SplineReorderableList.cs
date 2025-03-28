@@ -140,15 +140,15 @@ namespace UnityEditor.Splines
                 return;
 
             Undo.RegisterCompleteObjectUndo(serializedProperty.serializedObject.targetObject, "Removing Spline from SplineContainer");
-            
+
             for (int i = selectedIndices.Count - 1; i >= 0; i--)
                 m_Container.RemoveSplineAt(selectedIndices[i]);
-            
+
             PrefabUtility.RecordPrefabInstancePropertyModifications(serializedProperty.serializedObject.targetObject);
 
             ClearSelection();
             SplineSelection.ClearInspectorSelectedSplines();
-            
+
             SceneView.RepaintAll();
         }
     }

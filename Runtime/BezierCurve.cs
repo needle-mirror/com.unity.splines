@@ -135,7 +135,7 @@ namespace UnityEngine.Splines
         {
             return new BezierCurve(pointA, pointA + tangentOutA, pointB + tangentInB, pointB);
         }
-        
+
         /// <summary>
         /// Gets the same BezierCurve but in the opposite direction.
         /// </summary>
@@ -167,7 +167,7 @@ namespace UnityEngine.Splines
         {
             return obj is BezierCurve other && Equals(other);
         }
-    
+
         /// <summary>
         /// Calculate a hash code for this curve.
         /// </summary>
@@ -185,7 +185,7 @@ namespace UnityEngine.Splines
                 return hashCode;
             }
         }
-        
+
         /// <summary>
         /// Compare two curves for equality.
         /// </summary>
@@ -196,7 +196,7 @@ namespace UnityEngine.Splines
         {
             return left.Equals(right);
         }
-        
+
         /// <summary>
         /// Compare two curves for inequality.
         /// </summary>

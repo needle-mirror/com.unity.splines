@@ -20,7 +20,7 @@ namespace UnityEditor.Splines
         public class SplineHandleScope : IDisposable
         {
             int m_NearestControl;
-            
+
             /// <summary>
             /// Defines a new scope to draw spline elements in.
             /// </summary>
@@ -30,7 +30,7 @@ namespace UnityEditor.Splines
                 Clear();
                 SplineHandleUtility.minElementId = GUIUtility.GetControlID(FocusType.Passive);
             }
-            
+
             /// <summary>
             /// Called automatically when the `SplineHandleScope` is disposed.
             /// </summary>
@@ -39,17 +39,17 @@ namespace UnityEditor.Splines
                 SplineHandleUtility.maxElementId = GUIUtility.GetControlID(FocusType.Passive);
 
                 var evtType = Event.current.type;
-                if ( (evtType == EventType.MouseMove || evtType == EventType.Layout) 
+                if ( (evtType == EventType.MouseMove || evtType == EventType.Layout)
                     && HandleUtility.nearestControl == m_NearestControl)
                     SplineHandleUtility.ResetLastHoveredElement();
             }
         }
-        
+
         /// <summary>
         /// The color of sections of spline curve handles that are behind objects in the Scene view.
         /// </summary>
         public static Color lineBehindColor => SplineHandleUtility.lineBehindColor;
-        
+
         /// <summary>
         /// The color of sections of spline curves handles that are in front of objects in the Scene view.
         /// </summary>
@@ -59,12 +59,12 @@ namespace UnityEditor.Splines
         /// The color of tangent handles for a spline.
         /// </summary>
         public static Color tangentColor => SplineHandleUtility.tangentColor;
-        
+
         /// <summary>
         /// The distance to pick a spline knot, tangent, or curve handle at.
         /// </summary>
         public static float pickingDistance => SplineHandleUtility.pickingDistance;
-        
+
         static List<int> s_ControlIDs = new();
         static List<int> s_CurveIDs = new();
 
@@ -82,7 +82,7 @@ namespace UnityEditor.Splines
             s_CurveIDs.Clear();
             s_KnotsIDs.Clear();
         }
-        
+
         /// <summary>
         /// Creates handles for a set of splines. These handles display the knots, tangents, and segments of a spline.
         /// These handles support selection and the direct manipulation of spline elements.
@@ -124,7 +124,7 @@ namespace UnityEditor.Splines
             //Drawing knots on top of all other elements and above other splines
             KnotHandles.DrawVisibleKnots();
         }
-        
+
         /// <summary>
         /// Creates knot and tangent handles for multiple splines. Call `DoKnotsAndTangentsHandles` in a `SplineHandleScope`.
         /// This method is used internally by `DoHandles`.
@@ -203,7 +203,7 @@ namespace UnityEditor.Splines
                     }
                 }
             }
-            
+
             for (int curveIndex = 0; curveIndex < lastIndex + 1; ++curveIndex)
             {
                 CurveHandles.DrawWithHighlight(
@@ -215,7 +215,7 @@ namespace UnityEditor.Splines
                     new SelectableKnot(splineInfo, SplineUtility.NextIndex(curveIndex, spline.Count, spline.Closed)),
                     drawHandlesAsActive);
             }
-            
+
             SplineHandleUtility.canDrawOnCurves = true;
         }
 
@@ -248,13 +248,13 @@ namespace UnityEditor.Splines
             DrawKnotWithTangentsHandles_Internal(knot);
             KnotHandles.DrawVisibleKnots();
         }
-        
+
         static void DrawKnotWithTangentsHandles_Internal(SelectableKnot knot)
         {
             var splineInfo = knot.SplineInfo;
             if (SplineUtility.AreTangentsModifiable(splineInfo.Spline.GetTangentMode(knot.KnotIndex)))
                 DoTangentsHandles(knot);
-            
+
             DrawKnotHandles_Internal(knot);
         }
 
@@ -277,7 +277,7 @@ namespace UnityEditor.Splines
             KnotHandles.Draw(id, knot);
         }
         /// <summary>
-        /// Create handles for a knot's tangents if those tangents are modifiable. `DoTangentsHandles` does not create handles for the knot. 
+        /// Create handles for a knot's tangents if those tangents are modifiable. `DoTangentsHandles` does not create handles for the knot.
         /// These handles support the selection and direct manipulation of the spline elements.
         /// Call `DoTangentsHandles` in a `SplineHandleScope`.
         /// </summary>
@@ -286,11 +286,11 @@ namespace UnityEditor.Splines
         {
             if(!knot.IsValid())
                 return;
-            
+
             var splineInfo = knot.SplineInfo;
             var spline = splineInfo.Spline;
             var knotIndex = knot.KnotIndex;
-            
+
             var tangentIn = new SelectableTangent(splineInfo, knotIndex, BezierTangent.In);
             var tangentOut = new SelectableTangent(splineInfo, knotIndex, BezierTangent.Out);
 
@@ -309,7 +309,7 @@ namespace UnityEditor.Splines
                 TangentHandles.Draw(controlIdOut, tangentOut);
             }
         }
-        
+
         static int GetKnotID(SelectableKnot knot)
         {
             EditorSplineUtility.GetKnotLinks(knot, k_KnotBuffer);
@@ -361,7 +361,7 @@ namespace UnityEditor.Splines
                             EditorSplineUtility.ApplyPositionToTangent(tangent, pos);
                         else
                             element.Position = pos;
-                        
+
                         GUI.changed = true;
                         evt.Use();
                     }
@@ -418,7 +418,7 @@ namespace UnityEditor.Splines
         /// <param name="controlID">The spline mesh controlID.</param>
         /// <param name="curve">The <see cref="BezierCurve"/> to create handles for.</param>
         public static void DoCurve(int controlID, BezierCurve curve) => CurveHandles.Draw(controlID, curve);
-        
+
 
         /// <summary>
         /// Draws handles for a knot. These handles are drawn only during repaint events and not on selection.
@@ -426,7 +426,7 @@ namespace UnityEditor.Splines
         /// <param name="knot">The <see cref="SelectableKnot"/> to create handles for.</param>
         /// <param name="selected">Set to true to draw the knot handle as a selected element.</param>
         /// <param name="hovered">Set to true to draw the knot handle as a hovered element.</param>
-        public static void DrawKnot(SelectableKnot knot, bool selected = false, bool hovered = false) 
+        public static void DrawKnot(SelectableKnot knot, bool selected = false, bool hovered = false)
             => DrawKnot(-1, knot, selected, hovered);
 
         /// <summary>
@@ -440,7 +440,7 @@ namespace UnityEditor.Splines
         {
             KnotHandles.Do(controlID, knot, selected, hovered);
         }
-        
+
         /// <summary>
         /// Draws handles for a tangent. These handles are drawn only during repaint events and not on selection.
         /// </summary>

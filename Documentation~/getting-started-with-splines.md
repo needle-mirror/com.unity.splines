@@ -3,9 +3,9 @@
 ## Creating the Asset
 To create a spline game object there are three different methods.
 
-In the Unity menu, go to **GameObject** > **Spline** > **New Spline**. 
+In the Unity menu, go to **GameObject** > **Spline** > **New Spline**.
 <br/><img src="images/getting-started-create-spline-unity-menu.png" alt="Create Spline, Unity Menu" width="350"/>
-          
+
 In the Hierarchy window. RMB > **Spline** > **New Spline**
 <br/><img src="images/getting-started-create-spline-hierarchy.png" alt="Create Spline, Hierarchy window" width="350"/>
 
@@ -21,7 +21,7 @@ The **Knot Placement**, **Knot Move**, and the **Tangent Move** tools are availa
 ### Knot Placement Tool
 Use the **Knot Placement** tool to add knots. ![](images/KnotPlacementTool.png "Knot Placement Tool")
 
-When the tool is engaged, you can place knots on a surface, such as, a Terrain object or a mesh face. 
+When the tool is engaged, you can place knots on a surface, such as, a Terrain object or a mesh face.
 <br/><img src="images/getting-started-knot-placement.gif" alt="Point Placement" width="350"/>
 
 Clicking on the first point will close the spline.

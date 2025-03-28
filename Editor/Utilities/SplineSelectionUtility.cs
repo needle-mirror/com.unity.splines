@@ -43,7 +43,7 @@ namespace UnityEditor.Splines
                             hasActive |= SplineSelection.IsActive(k);
                         }
 
-                        if (allContained && (!setActive || hasActive)) 
+                        if (allContained && (!setActive || hasActive))
                             SplineSelection.RemoveRange(s_KnotBuffer);
                         else
                             SplineSelection.AddRange(s_KnotBuffer);
@@ -67,7 +67,7 @@ namespace UnityEditor.Splines
 
                 if (setActive && SplineSelection.Contains(element))
                     SplineSelection.SetActive(element);
-                    
+
             }
             else
             {

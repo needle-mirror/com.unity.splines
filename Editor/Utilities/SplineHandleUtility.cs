@@ -85,11 +85,11 @@ namespace UnityEditor.Splines
         static Color s_DefaultElementPreselectionColor = Handles.preselectionColor;
         static Color s_DefaultElementSelectionColor = Handles.selectedColor;
 #endif
-        
+
         internal static Color elementColor = s_DefaultElementColor;
         internal static Color elementPreselectionColor = s_DefaultElementPreselectionColor;
         internal static Color elementSelectionColor = s_DefaultElementSelectionColor;
-        
+
         internal const float pickingDistance = 8f;
         internal const float handleWidth = 4f;
         internal const float aliasedLineSizeMultiplier = 0.5f;
@@ -108,13 +108,13 @@ namespace UnityEditor.Splines
         const float k_KnotPickingDistance = 18f;
 
         static readonly Vector3[] s_LineBuffer = new Vector3[2];
-        
+
         internal static bool canDrawOnCurves = false;
 
         internal  static ISelectableElement lastHoveredElement { get; private set; }
         internal  static int lastHoveredElementId { get; private set; }
 
-        //Settings min and max ids used by handles when drawing curves/knots/tangents 
+        //Settings min and max ids used by handles when drawing curves/knots/tangents
         //This helps to determine if nearest control is a spline element or a built-in tool
         static Vector2Int s_ElementIdRange = Vector2Int.zero;
         internal static int minElementId
@@ -157,7 +157,7 @@ namespace UnityEditor.Splines
             lastHoveredElementId = -1;
             lastHoveredElement = null;
         }
-        
+
         internal static bool IsLastHoveredElement<T>(T element)
         {
             return element.Equals(lastHoveredElement);
@@ -177,11 +177,11 @@ namespace UnityEditor.Splines
             var isDirectManipElement = GUIUtility.hotControl == controlId;
             return isElementHovered || isDirectManipElement;
         }
-        
+
         //Check if the nearest control is one belonging to the spline elements
         internal static bool IsHoverAvailableForSplineElement()
         {
-            return GUIUtility.hotControl == 0 && (!canDrawOnCurves || (HandleUtility.nearestControl > minElementId && HandleUtility.nearestControl < maxElementId)) 
+            return GUIUtility.hotControl == 0 && (!canDrawOnCurves || (HandleUtility.nearestControl > minElementId && HandleUtility.nearestControl < maxElementId))
                 || GUIUtility.hotControl > minElementId && GUIUtility.hotControl < maxElementId;
         }
 

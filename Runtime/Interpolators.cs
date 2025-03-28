@@ -3,7 +3,7 @@ using Unity.Mathematics;
 namespace UnityEngine.Splines.Interpolators
 {
     /// <summary>
-    /// Linearly interpolate between two values a and b by ratio t. 
+    /// Linearly interpolate between two values a and b by ratio t.
     /// </summary>
     public struct LerpFloat : IInterpolator<float>
     {
@@ -19,9 +19,9 @@ namespace UnityEngine.Splines.Interpolators
             return math.lerp(a, b, t);
         }
     }
-    
+
     /// <summary>
-    /// Linearly interpolate between two values a and b by ratio t. 
+    /// Linearly interpolate between two values a and b by ratio t.
     /// </summary>
     public struct LerpFloat2 : IInterpolator<float2>
     {
@@ -37,9 +37,9 @@ namespace UnityEngine.Splines.Interpolators
             return math.lerp(a, b, t);
         }
     }
-    
+
     /// <summary>
-    /// Linearly interpolate between two values a and b by ratio t. 
+    /// Linearly interpolate between two values a and b by ratio t.
     /// </summary>
     public struct LerpFloat3 : IInterpolator<float3>
     {
@@ -57,7 +57,7 @@ namespace UnityEngine.Splines.Interpolators
     }
 
     /// <summary>
-    /// Linearly interpolate between two values a and b by ratio t. 
+    /// Linearly interpolate between two values a and b by ratio t.
     /// </summary>
     public struct LerpFloat4 : IInterpolator<float4>
     {
@@ -73,9 +73,9 @@ namespace UnityEngine.Splines.Interpolators
             return math.lerp(a, b, t);
         }
     }
-    
+
     /// <summary>
-    /// Spherically interpolate between two values a and b by ratio t. 
+    /// Spherically interpolate between two values a and b by ratio t.
     /// </summary>
     public struct SlerpFloat2 : IInterpolator<float2>
     {
@@ -93,9 +93,9 @@ namespace UnityEngine.Splines.Interpolators
             return new float2(result.x, result.y);
         }
     }
-    
+
     /// <summary>
-    /// Spherically interpolate between two values a and b by ratio t. 
+    /// Spherically interpolate between two values a and b by ratio t.
     /// </summary>
     public struct SlerpFloat3 : IInterpolator<float3>
     {
@@ -112,9 +112,9 @@ namespace UnityEngine.Splines.Interpolators
             return Vector3.Slerp(a, b, t);
         }
     }
-    
+
     /// <summary>
-    /// Linearly interpolate between two values a and b by ratio t. 
+    /// Linearly interpolate between two values a and b by ratio t.
     /// </summary>
     public struct LerpQuaternion : IInterpolator<quaternion>
     {
@@ -132,7 +132,7 @@ namespace UnityEngine.Splines.Interpolators
     }
 
     /// <summary>
-    /// Linearly interpolate between two values a and b by ratio t. 
+    /// Linearly interpolate between two values a and b by ratio t.
     /// </summary>
     public struct LerpColor : IInterpolator<Color>
     {
@@ -150,7 +150,7 @@ namespace UnityEngine.Splines.Interpolators
     }
 
     /// <summary>
-    /// Interpolate between two values a and b by ratio t with smoothing at the start and end. 
+    /// Interpolate between two values a and b by ratio t with smoothing at the start and end.
     /// </summary>
     public struct SmoothStepFloat : IInterpolator<float>
     {
@@ -171,7 +171,7 @@ namespace UnityEngine.Splines.Interpolators
     }
 
     /// <summary>
-    /// Interpolate between two values a and b by ratio t with smoothing at the start and end. 
+    /// Interpolate between two values a and b by ratio t with smoothing at the start and end.
     /// </summary>
     public struct SmoothStepFloat2 : IInterpolator<float2>
     {
@@ -190,9 +190,9 @@ namespace UnityEngine.Splines.Interpolators
             return math.smoothstep(a, b, t);
         }
     }
-    
+
     /// <summary>
-    /// Interpolate between two values a and b by ratio t with smoothing at the start and end. 
+    /// Interpolate between two values a and b by ratio t with smoothing at the start and end.
     /// </summary>
     public struct SmoothStepFloat3 : IInterpolator<float3>
     {
@@ -211,9 +211,9 @@ namespace UnityEngine.Splines.Interpolators
             return math.smoothstep(a, b, t);
         }
     }
-    
+
     /// <summary>
-    /// Interpolate between two values a and b by ratio t with smoothing at the start and end. 
+    /// Interpolate between two values a and b by ratio t with smoothing at the start and end.
     /// </summary>
     public struct SmoothStepFloat4 : IInterpolator<float4>
     {
@@ -232,9 +232,9 @@ namespace UnityEngine.Splines.Interpolators
             return math.smoothstep(a, b, t);
         }
     }
-    
+
     /// <summary>
-    /// Spherically interpolates between quaternions a and b by ratio t. The parameter t is clamped b the range [0, 1]. 
+    /// Spherically interpolates between quaternions a and b by ratio t. The parameter t is clamped b the range [0, 1].
     /// </summary>
     public struct SlerpQuaternion : IInterpolator<quaternion>
     {

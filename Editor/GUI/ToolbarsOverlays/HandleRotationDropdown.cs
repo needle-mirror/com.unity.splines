@@ -10,7 +10,7 @@ namespace UnityEditor.Splines
     {
         const string k_ParentRotationIconPath = "Packages/com.unity.splines/Editor/Editor Resources/Icons/ToolHandleParent.png";
         const string k_ElementRotationIconPath = "Packages/com.unity.splines/Editor/Editor Resources/Icons/ToolHandleElement.png";
-        
+
         readonly List<GUIContent> m_OptionContents = new List<GUIContent>();
 
         public HandleRotationDropdown()
@@ -21,17 +21,17 @@ namespace UnityEditor.Splines
                 "Toggle Tool Handle Rotation\n\nTool handles are in the active object's rotation.",
                 "ToolHandleLocal");
             m_OptionContents.Add(content);
-            
+
             content = EditorGUIUtility.TrTextContent("Global",
                 "Toggle Tool Handle Rotation\n\nTool handles are in global rotation.",
                 "ToolHandleGlobal");
             m_OptionContents.Add(content);
-            
+
             content = EditorGUIUtility.TrTextContent("Parent",
                 "Toggle Tool Handle Rotation\n\nTool handles are in active element's parent's rotation.",
                 k_ParentRotationIconPath);
             m_OptionContents.Add(content);
-            
+
             content = EditorGUIUtility.TrTextContent("Element",
                 "Toggle Tool Handle Rotation\n\nTool handles are in active element's rotation.",
                 k_ElementRotationIconPath);
@@ -44,7 +44,7 @@ namespace UnityEditor.Splines
 
             RefreshElementContent();
         }
-        
+
         void OpenContextMenu()
         {
             var menu = new GenericMenu();
@@ -53,7 +53,7 @@ namespace UnityEditor.Splines
 
             menu.AddItem(m_OptionContents[(int)HandleOrientation.Local], SplineTool.handleOrientation == HandleOrientation.Local,
                 () => SetHandleOrientationIfNeeded(HandleOrientation.Local));
-            
+
             menu.AddItem(m_OptionContents[(int)HandleOrientation.Parent], SplineTool.handleOrientation == HandleOrientation.Parent,
                 () => SetHandleOrientationIfNeeded(HandleOrientation.Parent));
 
@@ -67,7 +67,7 @@ namespace UnityEditor.Splines
         {
             if (SplineTool.handleOrientation != handleOrientation)
             {
-                SplineTool.handleOrientation = handleOrientation;                
+                SplineTool.handleOrientation = handleOrientation;
                 RefreshElementContent();
             }
         }

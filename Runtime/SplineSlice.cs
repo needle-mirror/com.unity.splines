@@ -14,9 +14,9 @@ namespace UnityEngine.Splines
     /// This class is a data structure that defines the range of curves to associate together. This class is not meant to be
     /// used intensively for runtime evaluation because it is not performant. Data is not meant to be
     /// stored in that struct and that struct is not reactive to spline changes. The GameObject that contains this
-    /// slice can be scaled and the knots of the targeted spline that can moved around the curve length cannot be stored 
-    /// here so evaluating positions, tangents and up vectors is expensive. 
-    /// 
+    /// slice can be scaled and the knots of the targeted spline that can moved around the curve length cannot be stored
+    /// here so evaluating positions, tangents and up vectors is expensive.
+    ///
     /// If performance is a critical requirement, create a new <see cref="Spline"/> or
     /// <see cref="NativeSpline"/> from the relevant <see cref="SplinePath{T}"/> or <see cref="SplineSlice{T}"/>.
     /// Note that you might pass a <see cref="SplineSlice{T}"/> to constructors for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
@@ -213,7 +213,7 @@ namespace UnityEngine.Splines
         {
             return SplineUtility.CalculateUpVector(this, index, t);
         }
-        
+
         /// <summary>
         /// Return the normalized interpolation (t) corresponding to a distance on a <see cref="BezierCurve"/>.
         /// </summary>

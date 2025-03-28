@@ -2040,7 +2040,7 @@ namespace UnityEngine.Splines
                         if(knotInfo.Spline == otherSplineIndex && !isActiveKnotAtStart)
                             newIndex += activeSplineCount - 1;
 
-                        linkedKnots[i] = new SplineKnotIndex(activeSplineIndex, newIndex);
+                        linkedKnots[i] = new SplineKnotIndex(newActiveSplineIndex, newIndex);
                     }
                     else
                     {

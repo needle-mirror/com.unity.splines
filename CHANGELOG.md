@@ -5,6 +5,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.8.1] - 2025-03-28
+
+### Bug Fixes
+- [SPLB-345] Fixed a bug which was causing null reference exceptions during shutdown in IL2CPP builds.
+- [SPLB-337] Fixed a bug where `JoinSplinesOnKnots` would throw a null reference exception when one of the splines was linked with another spline.
+- [SPLB-341] Fixed a bug where changing the tangent mode on a knot on a prefab would not persist when entering play mode.
+
+### Changed
+- Internal code cleanup to align with release standards.
+
 ## [2.8.0] - 2025-03-13
 
 ### Bug Fixes
@@ -22,16 +32,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [2.7.2] - 2024-11-08
 
 ### Bug Fixes
-- [SPLB-315] Fixed a bug where the `DrawSplineTool` icon was missing in the Tools overlay.  
+- [SPLB-315] Fixed a bug where the `DrawSplineTool` icon was missing in the Tools overlay.
 - [STO-3434] Fixed a bug where the `DrawSplineTool` prevented the use of the View tool.
-- [STO-3435] Fixed a bug where the `DrawSplineTool` did not display the Tool settings overlay. 
+- [STO-3435] Fixed a bug where the `DrawSplineTool` did not display the Tool settings overlay.
 - [SPLB-296] Fixed a bug where a log message appeared in the console when two knots are at the same position with 0-length tangents.
-- [SPLB-304] Fixed a bug where an exception would be thrown when using `SplineInstantiate` with linear distance instantiate method and multiple splines. 
+- [SPLB-304] Fixed a bug where an exception would be thrown when using `SplineInstantiate` with linear distance instantiate method and multiple splines.
 - Fixed some failures related to the inline API documentation.
 - [SPLB-302] Fixed a bug where an exception would be thrown when adding a knot to a closed spline from the Inspector.
 - [SPLB-311] Fixed a bug where the `SplineAnimate` component would not function correctly with non-uniform scale transforms.
 - Fixed compilation errors in builds.
-- [SPLB-310] Fixed a bug where mesh extrude would not save when a change was applied to a mesh asset. 
+- [SPLB-310] Fixed a bug where mesh extrude would not save when a change was applied to a mesh asset.
 - [SPLB-303] Fixed a bug where spline section foldout labels (shape extrude, geometry, advanced) did not unfold the sections when clicked.
 - [SPLB-294] Fixed a bug where adding new splines by using the `SplineContainer` inspector would dirty all open scenes.
 
@@ -74,7 +84,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- Changed supported version in the documentation dropdown selector to 2022.3 and later. 
+- Changed supported version in the documentation dropdown selector to 2022.3 and later.
 
 ### Bug Fixes
 
@@ -91,7 +101,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- [SPLB-222] Added safety checks to spline changed events. 
+- [SPLB-222] Added safety checks to spline changed events.
 
 ### Changed
 
@@ -127,14 +137,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [SPLB-196] Fixed a bug where the `Random` state was not restored after an update of the instances in `SplineInstantiate`.
 - Fixed a bug where the `SplineCacheUtility` would send null reference exceptions.
 - [SPLB-183] Fixed a bug where duplicating the `SplineExtrude` component was not updating the mesh asset reference.
-- [SPLB-178] Fixed a bug where linking knots would not trigger a `Spline.changed` event. 
+- [SPLB-178] Fixed a bug where linking knots would not trigger a `Spline.changed` event.
 - [SPLB-185] Fixed a bug where the Up vector evaluation would return NaN values when normals and curve tangents are parallel.
 
 ### Changed
 
 - [SPLB-187] Fixed a bug where `Spline.EvaluatePosition` was allocating memory when called.
 - [SPLB-181] Fixed a bug where the Auto tangent mode computed incorrect knot rotations.
-- Changed the `SplineComponent` display name in the Inspector to `Spline Container` as a response to user feedback. 
+- Changed the `SplineComponent` display name in the Inspector to `Spline Container` as a response to user feedback.
 
 ## [2.4.0] - 2023-07-26
 
@@ -148,7 +158,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Changed `Splines/Cycle Active Spline` shortcut to Shift-S to remove a conflict with Unity default shortcuts.
 - [SPLB-163] Improved performance of spline handles by caching spline data.
 - [SPLB-167] Changed the evaluation of up vectors to use a cache instead of re-evaluate the values on every single request.
-- In Editor versions of 2023.2 or newer, moved the following actions from the Element Inspector to the Scene view context menu: Link, Unlink, Split, Join, and Reverse Spline Flow. 
+- In Editor versions of 2023.2 or newer, moved the following actions from the Element Inspector to the Scene view context menu: Link, Unlink, Split, Join, and Reverse Spline Flow.
 
 ### Bug Fixes
 
@@ -162,12 +172,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Exposed public APIs for `SplineTool` and `SplineHandles`.
-- Added a method to *bake* SplineInstantiate objects in the scene so the users can modify the resulting GameObjects. 
+- Added a method to *bake* SplineInstantiate objects in the scene so the users can modify the resulting GameObjects.
 
 ### Bug Fixes
 
 - [SPLB-165] Fixed a bug that prevented actions from being retained with prefab instances that contained splines when entering playmode.
-- [SPLB-162] Fixed a bug where the start offset in `SplineAnimate` did not work in Play mode. 
+- [SPLB-162] Fixed a bug where the start offset in `SplineAnimate` did not work in Play mode.
 - [SPLB-152] Fixed objects created from `SplineInstantiate` not inheriting static flags from parent `GameObject`.
 - [SPLB-160] Fixed potential 'look rotation vector is zero' in SplineInstantiate.
 - [SPLB-156] Fixed possible null reference exception when accessing curve length.
@@ -180,11 +190,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- [SPLB-100] Improved `SplineMeshHandles` rendering. 
+- [SPLB-100] Improved `SplineMeshHandles` rendering.
 
 ### Fixed
 
-- Fixed a bug where spline selection would be incorrect after a spline was deleted. 
+- Fixed a bug where spline selection would be incorrect after a spline was deleted.
 - [SPLB-146] Fixed a bug that prevented actions from being undone with prefab instances that contained splines .
 - [SPLB-148] Fixed a bug in the `LoftRoadBehaviour` component where Undo calls prevented the project from building.
 
@@ -209,8 +219,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - [SPLB-127] Changes made to a spline in the Inspector no longer invoke the `Spline.Changed` event with the `SplineModification.Default` type. The `Spline.Changed` event is still invoked, but with specific modification types like `SplineModification.KnotModified`.
-- [SPLB-118] Changed the documentation of `SplineMath.PointLineNearestPoint` and `SplineMath.RayLineNearestPoint` to explain the returned values more precisely. 
-- [SPLB-96] Changed the default tension of tangents in **Auto** mode so they are smoother.  **Auto** mode is now closer to the Catmull-Rom behavior of Splines 1.0. 
+- [SPLB-118] Changed the documentation of `SplineMath.PointLineNearestPoint` and `SplineMath.RayLineNearestPoint` to explain the returned values more precisely.
+- [SPLB-96] Changed the default tension of tangents in **Auto** mode so they are smoother.  **Auto** mode is now closer to the Catmull-Rom behavior of Splines 1.0.
 - [SPLB-72] Removed the `WidthSplineData` and `MultipleRoadBehaviour` components from the samples.
 - Reduced heap allocations when modifying Spline properties.
 - [SPLB-92] Modified the Inspector to use `SplineModification.KnotRemoved` events to remove knots and pass the index for each removed knot.
@@ -224,7 +234,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [SPLB-138] Fixed a bug where `SplineJobs.EvaluatePositionTangentNormal` returned incorrect values.
 - [SPLB-136] Fixed a bug where undoing actions on a spline was not marking the spline as dirty.
 - [SPLB-123] Fixed an inconsistency between inserting a `BezierKnot` using Editor tools and runtime API.
-- [SPLB-130] Fixed a bug that would crash the Editor if the `SplineInstantiate` component had its parent GameObject in the list of items to instantiate. 
+- [SPLB-130] Fixed a bug that would crash the Editor if the `SplineInstantiate` component had its parent GameObject in the list of items to instantiate.
 - [SPLB-90] Fixed an issue where `Spline.SetKnotNoNotify` triggered change callbacks.
 - [SPLB-77] Fixed a null reference exception when spline animate didn't have a spline referenced.
 - [SPLB-125] Fixed issue where the spline would have different state during the `Spline.Changed` callback depending if it was modified using the API or inspector.
@@ -247,7 +257,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed an issue where modifying knot values or order in the Inspector could affect unassociated knot data.
 - Fixed use of obsolete `Objects.FindObjectsOfType` API in Unity 2023.1 and newer.
 - Fixed incorrect icon import settings.
-- Fixed a bug that would prevent Spline Instantiate from instantiating when it was loaded from an addressable build in the Editor. 
+- Fixed a bug that would prevent Spline Instantiate from instantiating when it was loaded from an addressable build in the Editor.
 - Fixed a bug where calling `SplineDataHandles.DataPointHandles` without a `splineID` argument would crash.
 - Fixed a bug that would cause `SplineData` handles to interfere with scene navigation.
 - Fixed SplineData handles not setting `GUI.changed` correctly.
@@ -279,8 +289,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Exposed API to draw spline and curve handles.
 - Added settings to generate a 3D mesh around spline handles to better visualize depth.
 - Added the functionality to disable specific Spline tool handles.
-- Added the functionality to tweak knot position without being in the position tool. 
-- Added spline index to the Element Inspector when a spline element is selected. 
+- Added the functionality to tweak knot position without being in the position tool.
+- Added spline index to the Element Inspector when a spline element is selected.
 - Updated public API documentation.
 - Updated built-in Spline components to support spline containers with multiple splines.
 - New `SplineUtility.ReducePoints` function to remove redundant points on a line and still retain the original shape.
@@ -295,7 +305,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added the functionality to to delete tangents.
 - Removed the disc that displayed around selected knots.
 - Added a disc that displays when a user has the Tweak tool enabled and hovers over a tangent.
-- Added transparency to the disc that displays when a knot or tangent is hovered on if the disc occludes an object in the scene. 
+- Added transparency to the disc that displays when a knot or tangent is hovered on if the disc occludes an object in the scene.
 - Reduced the transparency of the Tweak tool handles when they occlude an object in the scene.
 - New `EditorSplineUtility.SetKnotPlacementTool` function to set the active context to `SplineToolContext` and the active tool to `KnotPlacementTool`.
 
@@ -309,8 +319,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [STO-2700] Modified Spline Instantiate so it no longer serializes instances in the Scene or prefabs.
 - [STO-2682] Unified `Draw Splines Tool` naming across menus and docs.
 - [STO-2728] Changed the label of the `SplineAnimate` component's `World` alignment mode to `World Space` in the Inspector.
-- Modified the `Draw Splines Tool` to clear any Spline element selection when it activates.  
-- [STO-2490] Made active element selection consistent with standard Editor behavior for GameObjects. Now you can hold Shift and click a knot to set it as the active element. 
+- Modified the `Draw Splines Tool` to clear any Spline element selection when it activates.
+- [STO-2490] Made active element selection consistent with standard Editor behavior for GameObjects. Now you can hold Shift and click a knot to set it as the active element.
 - Spline element handles now use the `Element Selection` and `Element Preselection` colors.
 - Changed tangent's shapes to diamonds.
 - Modified the `Knot Placement Tool` to have a live preview for segments with auto-smoothed knots.
@@ -330,7 +340,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [STO-2729] Fixed an issue where reordering knots would break knot links until moved.
 - [STO-2730] Fixed the curve highlight color when using the Tweak tool.
 - [STO-2693] Fixed a bug that prevented users from adding and reordering knots in the Inspector when the spline comes from a class that inherits from `ISplineContainer`.
-- [STO-2725] Fixed a bug where knots, discs, and the normal line of knots would use incorrect colors. 
+- [STO-2725] Fixed a bug where knots, discs, and the normal line of knots would use incorrect colors.
 - [STO-2726] Fixed a bug where knots handles were drawn under curves handles.
 - [STO-2727] Corrected a typo in the Loop Mode of the `SplineAnimate`.
 - [STO-2653] Fixed a bug where the Tweak tool's guide plane would flicker when drawn directly on a surface.
@@ -339,11 +349,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [STO-2679] Fixed the segmentation of the curve highlight.
 - [STO-2665] Fixed sample scenes not rendering correctly when URP or HDRP was used.
 - [STO-2702] Removed the **Dist** label in the Inspector when the `SplineInstantiate` component is set to `Exact`.
-- [STO-2656] Fixed a bug where hovering on linked knots would display discs on each linked knot. 
+- [STO-2656] Fixed a bug where hovering on linked knots would display discs on each linked knot.
 - [STO-2686] Fixed an issue where inserting a knot on the closing curve would result in other knots moving around.
-- [STO-2685] Fixed a bug where `LoftRoadBehavior `would throw exceptions with knots that had linear tangents. 
+- [STO-2685] Fixed a bug where `LoftRoadBehavior `would throw exceptions with knots that had linear tangents.
 - [STO-2657] Fixed a bug where spline gizmos would appear at unexpected moments.
-- [STO-2655] Fixed a bug that caused knots to highlight with the wrong color. 
+- [STO-2655] Fixed a bug that caused knots to highlight with the wrong color.
 - [STO-2687] Fixed an error that would occur when deleting the last knot of a spline.
 - [STO-2684] Fixed a bug that prevented Select All from selecting elements.
 - [STO-2680] Fixed a bug where `SplineMesh.Extrude` would create twisted mesh geometry.
@@ -351,7 +361,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [STO-2705] Fixed a bug where `SplineInstantiate` was not instantiating correctly when the instantiation method was set to `Method.InstanceCount`.
 - [STO-2668] Fixed a bug where Spline element inspector values would not update when a knot is modified.
 - [STO-2706] Fixed a bug where selecting a knot from the inspector was desynchronizing the tool selection.
-- [STO-2696] Fixed a bug where clearing knot selection was not updating in the inspector. 
+- [STO-2696] Fixed a bug where clearing knot selection was not updating in the inspector.
 - [STO-2689] Fixed the behavior of the spline inspector selection when clicking on a selected element.
 - [STO-2688] Fixed a delay in the scene view update after changing selection from the spline inspector.
 - [STO-2669] Fixed a bug where modifying a spline in the Inspector would not invoke the `Changed` callback.
@@ -377,7 +387,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed tangent and knot handles incorrectly highlighting while a tool is engaged.
 - Fixed a bug where deleting some element selections would result in an exception being thrown.
 - Fixed a bug where undoing after deleting a selection would not re-select the restored elements.
-- [STO-2690] Fixed a bug that prevented data points from being added to a spline when the spline was clicked on. 
+- [STO-2690] Fixed a bug that prevented data points from being added to a spline when the spline was clicked on.
 - [STO-2691] Fixed a bug where moving a data point along a spline behaved incorrectly.
 - Fixed compile errors in sample scenes when building player.
 - Added an ellipsis to the Draw Spline Tool menu item label.

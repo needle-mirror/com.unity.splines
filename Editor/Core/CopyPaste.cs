@@ -51,8 +51,8 @@ namespace UnityEditor.Splines
         {
             if (string.IsNullOrEmpty(contents))
                 return false;
-            
-            
+
+
             var buffer = new CopyPasteBuffer();
             try
             {
@@ -155,7 +155,7 @@ namespace UnityEditor.Splines
                 Splines = splines.ToArray(),
                 Links = links.ToArray(),
             };
-            
+
             return EditorJsonUtility.ToJson(buffer);
         }
 
@@ -252,7 +252,7 @@ namespace UnityEditor.Splines
             }
 
             var selection = new List<SelectableKnot>();
-            
+
             var inverse = (target is Component component)
                 ? component.transform.localToWorldMatrix.inverse
                 : Matrix4x4.identity;

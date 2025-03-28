@@ -13,7 +13,7 @@ namespace UnityEngine.Splines
         /// Represents the default value for an invalid index.
         /// </summary>
         public static SplineKnotIndex Invalid = new SplineKnotIndex(-1, -1);
-        
+
         /// <summary>
         /// The index of the spline in the <see cref="SplineContainer.Splines"/>.
         /// </summary>
@@ -23,7 +23,7 @@ namespace UnityEngine.Splines
         /// The index of the knot in the spline.
         /// </summary>
         public int Knot;
-        
+
         /// <summary>
         /// Creates a new SplineKnotIndex to reference a knot.
         /// </summary>
@@ -77,7 +77,7 @@ namespace UnityEngine.Splines
             if (ReferenceEquals(null, obj)) return false;
             return obj is SplineKnotIndex other && Equals(other);
         }
-        
+
         /// <summary>
         /// Checks if an index is greater than or equal to 0.
         /// </summary>

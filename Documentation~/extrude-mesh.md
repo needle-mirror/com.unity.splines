@@ -1,6 +1,6 @@
 # Create a 3D mesh along a spline
 
-Use the [Spline Extrude](extrude-component.md) component to extrude a mesh along a spline to create shapes such as tubes, wires, ropes, and noodles.  
+Use the [Spline Extrude](extrude-component.md) component to extrude a mesh along a spline to create shapes such as tubes, wires, ropes, and noodles.
 
 To create a 3D mesh along a spline:
 

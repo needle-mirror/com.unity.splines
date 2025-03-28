@@ -21,7 +21,7 @@ namespace UnityEditor.Splines
             var popupWidth = 150;
 #else
             var popupWidth = 180;
-#endif 
+#endif
             window.ShowAsDropDown(GUIUtility.GUIToScreenRect(buttonRect), new Vector2(popupWidth, 80));
         }
 
@@ -40,13 +40,13 @@ namespace UnityEditor.Splines
 
             rootVisualElement.Add(m_FlowDirection = new Toggle(L10n.Tr("Flow Direction")));
             m_FlowDirection.style.flexDirection = FlexDirection.RowReverse;
-            
+
             rootVisualElement.Add(m_AllTangents = new Toggle(L10n.Tr("All Tangents")));
             m_AllTangents.style.flexDirection = FlexDirection.RowReverse;
-            
+
             rootVisualElement.Add(m_KnotIndices = new Toggle(L10n.Tr("Knot Indices")));
             m_KnotIndices.style.flexDirection = FlexDirection.RowReverse;
-            
+
             rootVisualElement.Add(m_SplineMesh = new Toggle(L10n.Tr("Show Mesh")));
             m_SplineMesh.style.flexDirection = FlexDirection.RowReverse;
 

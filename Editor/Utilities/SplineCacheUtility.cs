@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEditor.SceneManagement;
@@ -10,7 +10,7 @@ namespace UnityEditor.Splines
     static class SplineCacheUtility
     {
         const int k_SegmentsCount = 32;
-        
+
         static Dictionary<Spline, Vector3[]> s_SplineCacheTable = new Dictionary<Spline, Vector3[]>();
 
         [InitializeOnLoadMethod]
@@ -19,7 +19,7 @@ namespace UnityEditor.Splines
             Spline.Changed += ClearCache;
             Undo.undoRedoPerformed +=  ClearAllCache;
             PrefabStage.prefabStageClosing += _ => ClearAllCache();
-            
+
 #if UNITY_2022_3_OR_NEWER
             PrefabUtility.prefabInstanceReverting += _ => ClearAllCache();
 #else
@@ -57,12 +57,12 @@ namespace UnityEditor.Splines
                         {
                             SplineContainer splineContainer = null;
                             GameObject splineGO = obj as GameObject;
-                            
+
                             if (splineGO != null)
                                 splineContainer = splineGO.GetComponent<SplineContainer>();
                             else
                                 splineContainer = obj as SplineContainer;
-                          
+
                             if (splineContainer != null)
                             {
                                 foreach (var spline in splineContainer.Splines)
@@ -81,7 +81,7 @@ namespace UnityEditor.Splines
             };
 #endif
         }
-        
+
         internal static void ClearAllCache()
         {
             s_SplineCacheTable.Clear();
@@ -103,7 +103,7 @@ namespace UnityEditor.Splines
             }
             positions = s_SplineCacheTable[spline];
         }
-       
+
         static void CacheCurvePositionsTable(Spline spline, int curveCount)
         {
             float inv = 1f / (k_SegmentsCount - 1);
@@ -121,16 +121,16 @@ namespace UnityEditor.Splines
             internal Vector3[] positions;
             internal (Vector3[] positions, Matrix4x4 trs) flowArrow;
         }
-        
+
         //internal for tests
         internal static Dictionary<BezierCurve, CurveBufferData> s_CurvesBuffers = null;
-        
+
         //internal for tests
         internal static Dictionary<SelectableTangent, (float3 position, quaternion rotation)> s_TangentsCache = null;
 
         const int k_CurveDrawResolution = 64;
         internal static int CurveDrawResolution => k_CurveDrawResolution;
-        
+
         static void ClearCache(Spline spline, int knotIndex, SplineModification modificationType)
         {
             if (knotIndex == -1 || modificationType != SplineModification.KnotModified)
@@ -150,7 +150,7 @@ namespace UnityEditor.Splines
                 UpdateCachePosition(spline, knotIndex);
                 UpdateCachePosition(spline, knotIndexAfter);
             }
-            
+
             //We don't have access to the spline container here so we cannot detect which specific SelectableTangents are impacted
             s_TangentsCache?.Clear();
         }
@@ -159,7 +159,7 @@ namespace UnityEditor.Splines
         {
             if (curveIndex > spline.Count)
                 return;
-            
+
             var curve = spline.GetCurve(curveIndex);
             if (s_CurvesBuffers != null)
             {
@@ -170,7 +170,7 @@ namespace UnityEditor.Splines
 
             if (s_SplineCacheTable == null || !s_SplineCacheTable.ContainsKey(spline) || s_SplineCacheTable[spline] == null)
                 return;
-                
+
             // Update position cache
             float inv = 1f / (k_SegmentsCount - 1);
             var startIndex = curveIndex * k_SegmentsCount;
@@ -186,7 +186,7 @@ namespace UnityEditor.Splines
             s_CurvesBuffers = new Dictionary<BezierCurve, CurveBufferData>();
             s_TangentsCache = new Dictionary<SelectableTangent, (float3, quaternion)>();
         }
-        
+
         internal static void ClearCache()
         {
             s_TangentsCache?.Clear();
@@ -208,29 +208,29 @@ namespace UnityEditor.Splines
         {
             if (s_TangentsCache == null)
                 return (tangent.Position, EditorSplineUtility.GetElementRotation(math.length(tangent.LocalPosition) > 0 ? (ISelectableElement)tangent : tangent.Owner));
-            
+
             if (!s_TangentsCache.TryGetValue(tangent, out var tuple))
                 tuple = InitTangentEntry(tangent);
 
             return tuple;
         }
-        
+
         internal static quaternion GetTangentRotation(SelectableTangent tangent)
         {
             if (s_TangentsCache == null)
                 return EditorSplineUtility.GetElementRotation(math.length(tangent.LocalPosition) > 0 ? (ISelectableElement)tangent : tangent.Owner);
-            
+
             if (!s_TangentsCache.TryGetValue(tangent, out var tuple))
                 tuple = InitTangentEntry(tangent);
 
             return tuple.rotation;
         }
-        
+
         internal static float3 GetTangentPosition(SelectableTangent tangent)
         {
             if (s_TangentsCache == null)
                 return tangent.Position;
-            
+
             if (!s_TangentsCache.TryGetValue(tangent, out var tuple))
                 tuple = InitTangentEntry(tangent);
 
@@ -255,10 +255,10 @@ namespace UnityEditor.Splines
             {
                 curveBufferData.positions = new Vector3[buffer.Length];
                 ComputeCurveBuffer(curve, curveBufferData.positions);
-                
+
                 s_CurvesBuffers[curve] = curveBufferData;
             }
-            
+
             Array.Copy(curveBufferData.positions, buffer, curveBufferData.positions.Length);
         }
 
@@ -270,7 +270,7 @@ namespace UnityEditor.Splines
                 buffer[i] = CurveUtility.EvaluatePosition(curve, i * segmentPercentage);
             }
         }
-        
+
         internal static (Vector3[] positions, Matrix4x4 trs) GetCurveArrow(ISpline spline, int curveIndex, BezierCurve curve)
         {
             if (s_CurvesBuffers == null)
@@ -287,17 +287,17 @@ namespace UnityEditor.Splines
                 var arrow = ComputeArrowPositions(spline, curveIndex, curve);
                 curveBufferData.flowArrow.positions = arrow.positions;
                 curveBufferData.flowArrow.trs = arrow.trs;
-                
+
                 s_CurvesBuffers[curve] = curveBufferData;
             }
 
             return curveBufferData.flowArrow;
         }
-        
+
         internal static (Vector3[] positions, Matrix4x4 trs) ComputeArrowPositions(ISpline spline, int curveIndex, BezierCurve curve)
         {
             var t = EditorSplineUtility.GetCurveMiddleInterpolation(curve, spline, curveIndex);
-            
+
             var position = CurveUtility.EvaluatePosition(curve, t);
             var tangent = math.normalizesafe(CurveUtility.EvaluateTangent(curve, t));
             var up = spline.GetCurveUpVector(curveIndex, t);
@@ -324,7 +324,7 @@ namespace UnityEditor.Splines
 
             return (positions, Matrix4x4.TRS(position, rotation, Vector3.one));
         }
-        
+
 
     }
 }

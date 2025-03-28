@@ -27,7 +27,7 @@ namespace UnityEditor.Splines
             row.style.flexDirection = FlexDirection.Row;
             row.Add(new VisualElement(){name = "PositionIcon"});
             row.Add(m_Position = new Float3PropertyField<SelectableKnot>("",
-                (knot) => knot.LocalPosition, 
+                (knot) => knot.LocalPosition,
                 (knot, value) => knot.LocalPosition = value)
                 { name = "Position" });
 
@@ -64,14 +64,14 @@ namespace UnityEditor.Splines
         {
             if (targets.Count > 1)
                 return $"<b>({targets.Count}) Knots</b> selected";
-            
+
             return $"<b>Knot {target.KnotIndex}</b> (<b>Spline {target.SplineInfo.Index}</b>) selected";
         }
 
         public override void Update()
         {
             base.Update();
-            
+
             m_Position.Update(targets);
             m_Rotation.Update(targets);
 
@@ -80,7 +80,7 @@ namespace UnityEditor.Splines
 
             m_TangentIn.Update(targets);
             m_TangentOut.Update(targets);
-            
+
             //Disabling edition when using linear tangents
             UpdateTangentsState();
         }

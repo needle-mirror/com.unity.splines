@@ -1,8 +1,8 @@
 # Spline Extrude component reference
 
-Use the Spline Extrude component to customize the geometry of the mesh you extrude on a spline. 
+Use the Spline Extrude component to customize the geometry of the mesh you extrude on a spline.
 
-**Note:** If you add Spline Extrude to a GameObject that already has a mesh, that mesh is replaced with a new one. 
+**Note:** If you add Spline Extrude to a GameObject that already has a mesh, that mesh is replaced with a new one.
 
 ## Source Spline Container
 
@@ -19,10 +19,10 @@ You can use a Spline as a source for the extruded mesh of one or more GameObject
 | **Type** > **Square** | | Create a shape with a square cross-section. |
 | **Type** >  **Road** | | Create a shape with a flat cross-section and a slight lip. |
 | **Type** > **Spline Profile** | | Use a different spline as a template for the current spline. |
-| | **Spline Profile Settings** > **Template** |  Select the spline container you want to use as a template. | 
-| | **Spline Profile Settings** > **Spline Index** | If the template container has more than one spline, select the spline you want.| 
-| | **Spline Profile Settings** > **Side Count** | Increase to create a smoother surface. The minimum value is `2`. | 
-| | **Spline Profile Settings** > **Axis** | Which of the template spline axes to follow when drawing this spline. | 
+| | **Spline Profile Settings** > **Template** |  Select the spline container you want to use as a template. |
+| | **Spline Profile Settings** > **Spline Index** | If the template container has more than one spline, select the spline you want.|
+| | **Spline Profile Settings** > **Side Count** | Increase to create a smoother surface. The minimum value is `2`. |
+| | **Spline Profile Settings** > **Axis** | Which of the template spline axes to follow when drawing this spline. |
 
 
 ## Geometry
@@ -44,12 +44,12 @@ You can use a Spline as a source for the extruded mesh of one or more GameObject
 | **Percentage** | Another way to control the **Range**. |
 | **Update Colliders** | If the spline has a collider, update the collider to match the 3D shape as you change the extrusion properties. |
 
-  
+
 ## Mesh Filter and Mesh Renderer components
 
 When you add the Spline Extrude component to a GameObject, the Unity Editor adds two more components that all 3D GameObject need:
 
-* [Mesh Renderer Component](https://docs.unity3d.com/Manual/class-MeshRenderer.html) 
+* [Mesh Renderer Component](https://docs.unity3d.com/Manual/class-MeshRenderer.html)
 * [Mesh Filter Component](https://docs.unity3d.com/Manual/class-MeshFilter.html)
 
 ## Additional resources

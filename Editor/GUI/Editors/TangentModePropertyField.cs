@@ -111,13 +111,16 @@ namespace UnityEditor.Splines
                     knot.SetTangentMode(mode, (BezierTangent)tangent.TangentIndex);
                 else
                 {
-                    // Continuous mode should be prefered instead of Mirrored when switching from AutoSmooth to Bezier 
+                    // Continuous mode should be prefered instead of Mirrored when switching from AutoSmooth to Bezier
                     // as Centripetal Catmull-Rom's tangents are not always of equal length.
                     if (knot.Mode == TangentMode.AutoSmooth && mode == TangentMode.Mirrored)
                         knot.Mode = TangentMode.Continuous;
-                    else 
+                    else
                         knot.Mode = mode;
                 }
+                var container = m_Elements[i]?.SplineInfo.Container as SplineContainer;
+                if (container != null)
+                    EditorUtility.SetDirty(container);
             }
 
             changed?.Invoke();

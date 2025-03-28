@@ -1,8 +1,8 @@
 # Spline Animate component reference
-  
-Use the Spline Animate component to animate the position and rotation of a GameObject along a spline. 
- 
-  
+
+Use the Spline Animate component to animate the position and rotation of a GameObject along a spline.
+
+
 | **Property**          | **Description**           |
 | :-------------------- | :------------------------ |
 | **Spline** | Select a GameObject that has an attached Spline component you want to animate on. |

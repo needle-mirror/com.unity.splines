@@ -51,7 +51,7 @@ namespace UnityEditor.Splines
             m_UpdateColliders = serializedObject.FindProperty("m_UpdateColliders");
             m_Shape = serializedObject.FindProperty("m_Shape");
             m_TargetMesh = serializedObject.FindProperty("m_TargetMesh");
-            
+
             m_FlipNormals = serializedObject.FindProperty("m_FlipNormals");
 
             m_Components = targets.Select(x => x as SplineExtrude).Where(y => y != null).ToArray();

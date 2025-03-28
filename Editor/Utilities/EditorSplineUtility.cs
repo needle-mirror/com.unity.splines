@@ -330,11 +330,11 @@ namespace UnityEditor.Splines
             // If the element is part of a prefab, the changes have to be recorded AFTER being done on the prefab instance
             // otherwise they would not be saved in the scene.
             PrefabUtility.RecordPrefabInstancePropertyModifications(splineInfo.Object);
-            
+
             var knot = new SelectableKnot(splineInfo, index);
             if(updateSelection)
                 SplineSelection.Set(knot);
-            
+
             return knot;
         }
 
@@ -352,7 +352,7 @@ namespace UnityEditor.Splines
         {
             knot.SplineInfo.Spline.RemoveAt(knot.KnotIndex);
 
-            //Force to record changes if part of a prefab instance 
+            //Force to record changes if part of a prefab instance
             PrefabUtility.RecordPrefabInstancePropertyModifications(knot.SplineInfo.Object);
             knotRemoved?.Invoke(knot);
         }
@@ -394,7 +394,7 @@ namespace UnityEditor.Splines
 
             spline[knotIndex] = bezierKnot;
         }
-        
+
         /// <summary>
         /// Returns the interpolation value that corresponds to the middle (distance wise) of the curve.
         /// If spline and curveIndex are provided, the function leverages the spline's LUTs, otherwise the LUT is built on the fly.
@@ -413,7 +413,7 @@ namespace UnityEditor.Splines
 
             return curveMidT;
         }
-        
+
         static BezierCurve GetPreviewCurveInternal(SplineInfo info, int from, float3 fromWorldTangent, float3 toWorldPoint, float3 toWorldTangent, TangentMode toMode, int previousIndex)
         {
             var spline = info.Spline;
@@ -610,7 +610,7 @@ namespace UnityEditor.Splines
             var container = knot.SplineInfo.Container;
             if (container == null)
                 return;
-            
+
             knots.Clear();
             if (container.KnotLinkCollection == null)
             {
@@ -652,8 +652,8 @@ namespace UnityEditor.Splines
                     container.SetLinkedKnotPosition(splineKnotIndex);
                 }
             }
-            
-            //Force to record changes if part of a prefab instance 
+
+            //Force to record changes if part of a prefab instance
             if(knots.Count > 0 && knots[0].IsValid())
                 PrefabUtility.RecordPrefabInstancePropertyModifications(knots[0].SplineInfo.Object);
         }
@@ -668,8 +668,8 @@ namespace UnityEditor.Splines
                 RecordObject(knot.SplineInfo, "Unlink Knots");
                 container.KnotLinkCollection.Unlink(splineKnotIndex);
             }
-            
-            //Force to record changes if part of a prefab instance 
+
+            //Force to record changes if part of a prefab instance
             if(knots.Count > 0 && knots[0].IsValid())
                 PrefabUtility.RecordPrefabInstancePropertyModifications(knots[0].SplineInfo.Object);
         }
@@ -683,8 +683,8 @@ namespace UnityEditor.Splines
                 return;
 
             containerA.KnotLinkCollection.Link(GetIndex(a), GetIndex(b));
-            
-            //Force to record changes if part of a prefab instance 
+
+            //Force to record changes if part of a prefab instance
             if(a.IsValid())
                 PrefabUtility.RecordPrefabInstancePropertyModifications(a.SplineInfo.Object);
         }
@@ -700,7 +700,7 @@ namespace UnityEditor.Splines
             return containerA.AreKnotLinked(
                 new SplineKnotIndex(a.SplineInfo.Index, a.KnotIndex),
                 new SplineKnotIndex(b.SplineInfo.Index, b.KnotIndex));
-            
+
         }
 
         internal static bool TryGetNearestKnot(IReadOnlyList<SplineInfo> splines, out SelectableKnot knot, float maxDistance = SplineHandleUtility.pickingDistance)
@@ -793,10 +793,10 @@ namespace UnityEditor.Splines
         {
             if (!knotA.IsValid())
                 throw new ArgumentException("Knot is invalid", nameof(knotA));
-        
+
             if (!knotB.IsValid())
                 throw new ArgumentException("Knot is invalid", nameof(knotB));
-        
+
             //Check knots properties
             var isKnotAActive = !SplineSelection.IsActive(knotB);
             var knotIndexA = new SplineKnotIndex(knotA.SplineInfo.Index, knotA.KnotIndex);
@@ -805,11 +805,11 @@ namespace UnityEditor.Splines
             var otherKnot = isKnotAActive ? knotIndexB : knotIndexA;
 
             var res = knotA.SplineInfo.Container.JoinSplinesOnKnots(activeKnot, otherKnot);
-            
-            //Force to record changes if part of a prefab instance 
-            var activeSplineInfo = isKnotAActive ? knotA.SplineInfo : knotB.SplineInfo; 
+
+            //Force to record changes if part of a prefab instance
+            var activeSplineInfo = isKnotAActive ? knotA.SplineInfo : knotB.SplineInfo;
             PrefabUtility.RecordPrefabInstancePropertyModifications(activeSplineInfo.Object);
-        
+
             return new SelectableKnot(new SplineInfo(knotA.SplineInfo.Container, res.Spline), res.Knot);
         }
 
@@ -829,7 +829,7 @@ namespace UnityEditor.Splines
                 var element = selectedElements[i];
                 if (element.Equals(formerActiveElement))
                     newActiveElementIndex = i;
-                
+
                 if (element is SelectableKnot knot)
                     selectedElements[i] = new SelectableKnot(knot.SplineInfo, knot.SplineInfo.Spline.Count - knot.KnotIndex - 1);
                 else if (element is SelectableTangent tangent)
@@ -838,7 +838,7 @@ namespace UnityEditor.Splines
 
             SplineSelection.Clear();
             SplineSelection.AddRange(selectedElements);
-            
+
             if(newActiveElementIndex >= 0)
                 SplineSelection.SetActive(selectedElements[newActiveElementIndex]);
             else

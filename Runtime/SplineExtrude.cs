@@ -269,7 +269,7 @@ namespace UnityEngine.Splines
             Spline.Changed += OnSplineChanged;
 
             if (!IsNullOrEmptyContainer())
-                Rebuild(); 
+                Rebuild();
         }
 
         void OnDisable()
@@ -327,7 +327,7 @@ namespace UnityEngine.Splines
             if (m_Mesh != m_TargetMesh)
             {
 #if UNITY_EDITOR
-                if (!UnityEditor.EditorUtility.IsPersistent(m_Mesh)) 
+                if (!UnityEditor.EditorUtility.IsPersistent(m_Mesh))
                     DestroyImmediate(m_Mesh, true);
 #else
                 DestroyImmediate(m_Mesh);

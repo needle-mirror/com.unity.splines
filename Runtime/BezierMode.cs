@@ -9,7 +9,7 @@ namespace UnityEngine.Splines
         /// Tangents are calculated using the previous and next knot positions.
         /// </summary>
         AutoSmooth = 0,
-        
+
         /// <summary>
         /// Tangents are not used. A linear spline is a series of knots connected by a path with no curvature.
         /// </summary>

@@ -1,9 +1,9 @@
 apiRules:
   - exclude:
-      uidRegex: Tests$
+      uidRegex: \.Tests$
       type: Namespace
   - exclude:
-      uidRegex: Debug$
+      uidRegex: \.Debug$
       type: Namespace
   - exclude:
       hasAttribute:

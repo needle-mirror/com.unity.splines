@@ -22,10 +22,10 @@ namespace UnityEditor.Splines
         {
             if (Event.current.GetTypeForControl(controlId) != EventType.Repaint)
                 return;
-            
+
             //Hovered might not be available if a TRS tool is in use
             hovered &= SplineHandleUtility.IsHoverAvailableForSplineElement();
-            
+
             var knotColor = SplineHandleUtility.elementColor;
             var rotationDiscColor = SplineHandleUtility.elementPreselectionColor;
             if (hovered)
@@ -33,7 +33,7 @@ namespace UnityEditor.Splines
             else if (selected)
                 knotColor = SplineHandleUtility.elementSelectionColor;
 
-            Draw(knot.Position, knot.Rotation, knotColor, selected, hovered, rotationDiscColor, k_KnotRotDiscWidthHover);    
+            Draw(knot.Position, knot.Rotation, knotColor, selected, hovered, rotationDiscColor, k_KnotRotDiscWidthHover);
             DrawKnotIndices(knot);
         }
 
@@ -44,27 +44,27 @@ namespace UnityEditor.Splines
 
             if(!knot.IsValid())
                 return;
-            
+
             var selected = SplineSelection.Contains(knot);
             var knotHovered = SplineHandleUtility.IsElementHovered(controlId);
- 
+
             //Retrieving linked knots
             EditorSplineUtility.GetKnotLinks(knot, k_KnotBuffer);
             var drawLinkedKnotHandle = k_KnotBuffer.Count != 1;
             var mainKnot = knot;
-            
+
             SelectableKnot lastHovered = new SelectableKnot();
-            // Retrieving the last hovered element 
+            // Retrieving the last hovered element
             // SplineHandleUtility.lastHoveredElement is pointing either to:
             // - the hovered Knot and the ID is pointing to the controlID of that knot in that case
             // - if a curve is hovered, the element is the knot closest to the hovered part of the curve (start or end knot depending)
-            //   and the controlID is the one of the curve 
+            //   and the controlID is the one of the curve
             var lastHoveredElementIsKnot = SplineHandleUtility.lastHoveredElement is SelectableKnot;
             if (lastHoveredElementIsKnot)
                 lastHovered = (SelectableKnot)SplineHandleUtility.lastHoveredElement;
 
             var isCurveId = SplineHandles.IsCurveId(SplineHandleUtility.lastHoveredElementId);
-            
+
             var curveIsHovered = lastHoveredElementIsKnot &&
                 k_KnotBuffer.Contains(lastHovered) &&
                 isCurveId;
@@ -116,7 +116,7 @@ namespace UnityEditor.Splines
 
             //Hovered might not be available if a TRS tool is in use
             hovered &= SplineHandleUtility.IsHoverAvailableForSplineElement();
-            
+
             var knotColor = SplineHandleUtility.elementColor;
             var highlightColor = SplineHandleUtility.elementPreselectionColor;
             var rotationDiscColor = SplineHandleUtility.elementPreselectionColor;
@@ -143,7 +143,7 @@ namespace UnityEditor.Splines
                 DrawKnotIndices(knot);
             }
         }
-        
+
         internal static void ClearVisibleKnots()
         {
             if (Event.current.type != EventType.Repaint)

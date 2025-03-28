@@ -14,7 +14,7 @@ namespace UnityEditor.Splines
         class SplineMeshDrawingScope : IDisposable
         {
             Material m_Material;
-            
+
             int m_HandleZTestId;
             int m_BlendSrcModeId;
             int m_BlendDstModeId;
@@ -22,7 +22,7 @@ namespace UnityEditor.Splines
             float m_PreviousZTest;
             int m_PreviousBlendSrcMode;
             int m_PreviousBlendDstMode;
-            
+
             public SplineMeshDrawingScope(Material material, Color color)
             {
                 Shader.SetGlobalColor("_HandleColor", color);
@@ -32,15 +32,15 @@ namespace UnityEditor.Splines
                 if (material == null)
                 {
                     m_Material = HandleUtility.handleMaterial;
-                    
+
                     m_HandleZTestId = Shader.PropertyToID("_HandleZTest");
                     m_BlendSrcModeId = Shader.PropertyToID("_BlendSrcMode");
                     m_BlendDstModeId =  Shader.PropertyToID("_BlendDstMode");
-                    
+
                     m_PreviousZTest = m_Material.GetFloat(m_HandleZTestId);
                     m_PreviousBlendSrcMode = m_Material.GetInt(m_BlendSrcModeId);
                     m_PreviousBlendDstMode = m_Material.GetInt(m_BlendDstModeId);
-                    
+
                     m_Material.SetFloat(m_HandleZTestId, (float)Handles.zTest);
                     m_Material.SetInt(m_BlendSrcModeId, (int)UnityEngine.Rendering.BlendMode.One);
                     m_Material.SetInt(m_BlendDstModeId, (int)UnityEngine.Rendering.BlendMode.One);
@@ -61,8 +61,8 @@ namespace UnityEditor.Splines
                 }
             }
         }
-        
-        
+
+
         Mesh m_Mesh;
 
         Material m_Material;
@@ -99,7 +99,7 @@ namespace UnityEditor.Splines
             get => m_Material;
             set => m_Material = value;
         }
-        
+
         /// <summary>
         /// Draws a 3D mesh from a spline.
         /// </summary>

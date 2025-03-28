@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace UnityEngine.Splines
 {
-    static class ArrayUtility 
+    static class ArrayUtility
     {
         public static void RemoveAt<T>(ref T[] array, int index)
         {

@@ -38,7 +38,7 @@ namespace UnityEditor.Splines
                 k_TangentModeLabels);
             if (EditorGUI.EndChangeCheck())
             {
-                // Continuous mode should be prefered instead of Mirrored when switching from AutoSmooth to Bezier 
+                // Continuous mode should be prefered instead of Mirrored when switching from AutoSmooth to Bezier
                 // as Centripetal Catmull-Rom's tangents are not always of equal length.
                 if (property.enumValueIndex == (int)TangentMode.AutoSmooth && type == (int)TangentMode.Mirrored)
                     type = (int)TangentMode.Continuous;

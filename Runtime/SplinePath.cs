@@ -37,7 +37,7 @@ namespace UnityEngine.Splines
             /// </summary>
             [SerializeField]
             public SplineRange Range;
-            
+
             /// <summary>
             /// Constructor for a new <see cref="SliceRef"/>.
             /// </summary>
@@ -71,9 +71,9 @@ namespace UnityEngine.Splines
     /// This class is a data structure that defines the range of curves to associate together. This class is not meant to be
     /// used intensively for runtime evaluation because it is not performant. Data is not meant to be
     /// stored in that struct and that struct is not reactive to spline changes. The GameObject that contains this
-    /// slice can be scaled and the knots of the targeted spline that can moved around the curve length cannot be stored 
+    /// slice can be scaled and the knots of the targeted spline that can moved around the curve length cannot be stored
     /// here so evaluating positions, tangents and up vectors is expensive.
-    /// 
+    ///
     /// If performance is a critical requirement, create a new <see cref="Spline"/> or
     /// <see cref="NativeSpline"/> from your <see cref="SplinePath{T}"/>. Note that you might pass a <see cref="SplinePath{T}"/>
     /// to constructors for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
@@ -96,7 +96,7 @@ namespace UnityEngine.Splines
     /// The SplinePath type is an implementation of <see cref="ISpline"/> that is composed of multiple sections of
     /// other splines (see <see cref="SplineSlice{T}"/>). This is useful when you want to evaluate a path that follows
     /// multiple splines, typically in the case where splines share linked knots.
-    /// 
+    ///
     /// If performance is a critical requirement, create a new <see cref="Spline"/> or
     /// <see cref="NativeSpline"/> from your <see cref="SplinePath{T}"/>. Note that you might pass a <see cref="SplinePath{T}"/>
     /// to constructors for both <see cref="Spline"/> and <see cref="NativeSpline"/>.
@@ -293,7 +293,7 @@ namespace UnityEngine.Splines
                 return CurveUtility.CalculateLength(GetCurve(index));
             return slice.GetCurveLength(knot.Knot);
         }
-        
+
         /// <summary>
         /// Return the up vector for a t ratio on the curve.
         /// </summary>
@@ -306,22 +306,22 @@ namespace UnityEngine.Splines
         {
             if(IsDegenerate(index))
                 return 0f;
-            
+
             var knot = GetBranchKnotIndex(index);
             var slice = m_Splines[knot.Spline];
-            
+
             // Closing curve
             if (knot.Spline >= m_Splines.Length - 1 && knot.Knot >= slice.Count - 1)
             {
                 BezierKnot a = this[knot], b = this.Next(index);
                 var curve = new BezierCurve(a, b);
-                
+
                 var curveStartUp = math.rotate(a.Rotation, math.up());
                 var curveEndUp = math.rotate(b.Rotation, math.up());
-                
+
                 return CurveUtility.EvaluateUpVector(curve, t, curveStartUp, curveEndUp);
             }
-            
+
             return slice.GetCurveUpVector(knot.Knot, t);
         }
 

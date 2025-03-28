@@ -13,7 +13,7 @@ namespace UnityEngine.Splines
     public struct BezierKnot : ISerializationCallbackReceiver, IEquatable<BezierKnot>
     {
         /// <summary>
-        /// The position of the knot. On a cubic Bezier curve, this is equivalent to <see cref="BezierCurve.P0"/> or
+        /// The position of the knot in local space. On a cubic Bezier curve, this is equivalent to <see cref="BezierCurve.P0"/> or
         /// <see cref="BezierCurve.P3"/>, depending on whether this knot is forming the first or second control point
         /// of the curve.
         /// </summary>
@@ -32,7 +32,7 @@ namespace UnityEngine.Splines
         public float3 TangentOut;
 
         /// <summary>
-        /// Rotation of the knot.
+        /// The rotation of the knot in local space.
         /// </summary>
         public quaternion Rotation;
 
@@ -117,7 +117,7 @@ namespace UnityEngine.Splines
                 float lead = math.length(main == BezierTangent.In ? TangentIn : TangentOut);
                 return new BezierKnot(Position,
                     new float3(0f, 0f, -lead),
-                    new float3(0f, 0f,  lead),    
+                    new float3(0f, 0f,  lead),
                     SplineUtility.GetKnotRotation(
                         math.mul(Rotation, main == BezierTangent.In ? -TangentIn : TangentOut),
                         math.mul(Rotation, math.up())));

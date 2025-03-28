@@ -5,7 +5,7 @@ using UnityEngine.Splines;
 namespace UnityEditor.Splines
 {
     /// <summary>
-    /// An interface that represents a selectable spline element. A selectable spline element can be a knot or a tangent. 
+    /// An interface that represents a selectable spline element. A selectable spline element can be a knot or a tangent.
     /// `ISelectableElement` is used by the selection to get information about the spline, the knot, and the positions of the spline elements.
     /// </summary>
     public interface ISelectableElement : IEquatable<ISelectableElement>
@@ -19,17 +19,17 @@ namespace UnityEditor.Splines
         /// that the tangent is attached to.
         /// </summary>
         int KnotIndex { get; }
-        
+
         /// <summary>
         /// The position of the spline element in local space.
         /// </summary>
         float3 LocalPosition { get; set; }
-        
+
         /// <summary>
         /// The position of the spline element in world space.
         /// </summary>
         float3 Position { get; set; }
-        
+
         /// <summary>
         /// Checks if the element is valid. For example, checks if the spline is not null and the index is valid.
         /// </summary>
@@ -45,7 +45,7 @@ namespace UnityEditor.Splines
     {
         /// <inheritdoc />
         public SplineInfo SplineInfo { get; }
-        
+
         /// <inheritdoc />
         public int KnotIndex { get; }
 
@@ -128,7 +128,7 @@ namespace UnityEditor.Splines
         /// Sets the tangent mode of the knot.
         /// </summary>
         /// <param name="mode">The <see cref="TangentMode"/> to apply to the knot.</param>
-        /// <param name="main">The tangent to use as the main tangent when the tangent is set to the Mirrored or Continuous tangent mode. 
+        /// <param name="main">The tangent to use as the main tangent when the tangent is set to the Mirrored or Continuous tangent mode.
         /// The main tangent is not modified, but the other tangent attached to that knot is modified to adopt the new tangent mode.</param>
         public void SetTangentMode(TangentMode mode, BezierTangent main)
         {
@@ -194,7 +194,7 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Checks if two instances of an object are equal. 
+        /// Checks if two instances of an object are equal.
         /// </summary>
         /// <param name="obj">The object to compare against.</param>
         /// <returns>
@@ -218,27 +218,27 @@ namespace UnityEditor.Splines
         }
     }
     /// <summary>
-    /// Represents a struct that implements the <see cref="ISelectableElement"/> interface. Spline selection uses 
+    /// Represents a struct that implements the <see cref="ISelectableElement"/> interface. Spline selection uses
     /// `SelectableTangent` and handles to easily manipulate spline elements with tools and handles.
     /// </summary>
     public struct SelectableTangent : ISelectableElement, IEquatable<SelectableTangent>
     {
         /// <inheritdoc />
         public SplineInfo SplineInfo { get; }
-        
+
         /// <inheritdoc />
         public int KnotIndex { get; }
-        
+
         /// <summary>
         /// The index of the tangent. A value of 0 represents an In tangent. A value of 1 represents an Out tangent.
         /// </summary>
         public int TangentIndex { get; }
-        
+
         /// <summary>
         /// The knot associated with this tangent.
         /// </summary>
         public SelectableKnot Owner => new SelectableKnot(SplineInfo, KnotIndex);
-        
+
         /// <summary>
         /// The opposite tangent on the knot. If this tangent is the In tangent, then the opposite tangent is the Out tangent. If this tangent is the Out tangent, then the opposite tangent is the In tangent.
         /// </summary>
@@ -290,7 +290,7 @@ namespace UnityEditor.Splines
                 spline.SetKnot(KnotIndex, knot, (BezierTangent)TangentIndex);
             }
         }
-        
+
         /// <summary>
         /// Matrix that transforms a tangent point from local space into world space using its associated knot (Read Only).
         /// </summary>
@@ -359,7 +359,7 @@ namespace UnityEditor.Splines
         }
 
         /// <summary>
-        /// Checks if two objects are equal. 
+        /// Checks if two objects are equal.
         /// </summary>
         /// <param name="obj">The object to compare against.</param>
         /// <returns>
@@ -370,7 +370,7 @@ namespace UnityEditor.Splines
             if (ReferenceEquals(null, obj)) return false;
             return obj is SelectableTangent other && Equals(other);
         }
-        
+
         /// <summary>
         /// Gets a hash code for this tangent.
         /// </summary>

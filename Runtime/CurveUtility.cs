@@ -18,7 +18,7 @@ namespace UnityEngine.Splines
         }
 
         const int k_NormalsPerCurve = 16;
-        
+
         /// <summary>
         /// Given a Bezier curve, return an interpolated position at ratio t.
         /// </summary>
@@ -209,7 +209,7 @@ namespace UnityEngine.Splines
                 prev = point;
             }
         }
-        
+
         const float k_Epsilon = 0.0001f;
         /// <summary>
         /// Mathf.Approximately is not working when using BurstCompile, causing NaN values in the EvaluateUpVector
@@ -220,7 +220,7 @@ namespace UnityEngine.Splines
             // Reusing Mathf.Approximately code
             return math.abs(b - a) < math.max(0.000001f * math.max(math.abs(a), math.abs(b)), k_Epsilon * 8);
         }
-        
+
         /// <summary>
         /// Calculate the approximate length of a <see cref="BezierCurve"/>. This is less accurate than
         /// <see cref="CalculateLength"/>, but can be significantly faster. Use this when accuracy is
@@ -246,7 +246,7 @@ namespace UnityEngine.Splines
                 upVectors[i] = EvaluateUpVector(curve, curveT, upVectors[0], endUp);
             }
         }
-        
+
         internal static float3 EvaluateUpVector(BezierCurve curve, float t, float3 startUp, float3 endUp,
             bool fixEndUpMismatch = true)
         {
@@ -259,7 +259,7 @@ namespace UnityEngine.Splines
                 curve.P2 = curve.P3 - linearTangentOut;
 
             var normalBuffer = new NativeArray<float3>(k_NormalsPerCurve, Allocator.Temp);
-            
+
             // Construct initial frenet frame
             FrenetFrame frame;
             frame.origin = curve.P0;
@@ -271,9 +271,9 @@ namespace UnityEngine.Splines
             // to indicate that this is not a valid up vector.
             if(float.IsNaN(frame.binormal.x))
                 return float3.zero;
-            
+
             normalBuffer[0] = frame.normal;
-            
+
             // Continue building remaining rotation minimizing frames
             var stepSize = 1f / (k_NormalsPerCurve - 1);
             var currentT = stepSize;
@@ -283,8 +283,8 @@ namespace UnityEngine.Splines
             for (int i = 1; i < k_NormalsPerCurve; ++i)
             {
                 prevFrame = frame;
-                frame = GetNextRotationMinimizingFrame(curve, prevFrame, currentT);                
-                
+                frame = GetNextRotationMinimizingFrame(curve, prevFrame, currentT);
+
                 normalBuffer[i] = frame.normal;
 
                 if (prevT <= t && currentT >= t)
@@ -322,7 +322,7 @@ namespace UnityEngine.Splines
 
             currentT = stepSize;
             prevT = 0f;
-            
+
             for (int i = 1; i < normalBuffer.Length; i++)
             {
                 var normal = normalBuffer[i];

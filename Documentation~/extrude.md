@@ -2,7 +2,7 @@
 
 Extrude a mesh along a spline to create shapes such as tubes, wires, and roads.
 
-To refer to a sample scene that demonstrates how the Spline Extrude component can extrude a mesh along a spline, [import the **Extrude Spline and Nearest Point** sample scene](index.md#import-splines-samples). 
+To refer to a sample scene that demonstrates how the Spline Extrude component can extrude a mesh along a spline, [import the **Extrude Spline and Nearest Point** sample scene](index.md#import-splines-samples).
 
 | **Topic**             | **Description**         |
 | :-------------------- | :----------------------- |

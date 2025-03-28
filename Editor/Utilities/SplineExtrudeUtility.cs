@@ -11,7 +11,7 @@ namespace UnityEditor.Splines
     public static class SplineExtrudeUtility
     {
         static SplineExtrudeUtility()
-        {            
+        {
 #if UNITY_2022_2_OR_NEWER
             ClipboardUtility.duplicatedGameObjects += OnPasteOrDuplicated;
             ClipboardUtility.pastedGameObjects += OnPasteOrDuplicated;
@@ -61,7 +61,7 @@ namespace UnityEditor.Splines
                 }
             }
         }
-        
+
         static void GameObjectCreatedOrStructureModified(int instanceId)
         {
             if (EditorUtility.InstanceIDToObject(instanceId) is GameObject go)
@@ -87,7 +87,7 @@ namespace UnityEditor.Splines
             //Check if the current GameObject has a SplineExtrude component
             if(go.TryGetComponent<SplineExtrude>(out var extrudeComponent))
                 extrudeComponent.Reset();
-            
+
             var childCount = go.transform.childCount;
             if (childCount > 0)
             {

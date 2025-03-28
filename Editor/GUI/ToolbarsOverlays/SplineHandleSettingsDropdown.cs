@@ -17,7 +17,7 @@ namespace UnityEditor.Splines
             icon = (Texture2D)content.image;
 
             clicked += OnClick;
-            
+
             RegisterCallback<AttachToPanelEvent>(AttachToPanel);
         }
 
@@ -25,7 +25,7 @@ namespace UnityEditor.Splines
         {
             SplineHandleSettingsWindow.Show(worldBound);
         }
-        
+
         void AttachToPanel(AttachToPanelEvent evt)
         {
             var toolType = ToolManager.activeToolType;

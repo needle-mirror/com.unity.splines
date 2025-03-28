@@ -49,7 +49,7 @@ class EvaluateSpline : MonoBehaviour
 
     [SerializeField]
     GameObject m_Prefab;
-    
+
     void Start()
     {
         Spline spline = GetComponent<SplineContainer>()[0];

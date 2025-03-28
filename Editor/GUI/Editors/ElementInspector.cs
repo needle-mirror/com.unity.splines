@@ -11,7 +11,7 @@ namespace UnityEditor.Splines
         public static bool ignoreKnotCallbacks = false;
 
         static readonly string k_NoSelectionMessage = L10n.Tr("No element selected");
-        
+
         readonly Label m_KnotIdentifierLabel;
         readonly Label m_ErrorMessage;
         readonly SplineActionButtons m_SplineActionButtons;
@@ -34,7 +34,7 @@ namespace UnityEditor.Splines
 
             styleSheets.Add(s_CommonStyleSheet);
             styleSheets.Add(s_ThemeStyleSheet);
-            
+
             Add(m_KnotIdentifierLabel = new Label());
             m_KnotIdentifierLabel.style.height = 24;
             m_KnotIdentifierLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
@@ -60,7 +60,7 @@ namespace UnityEditor.Splines
         public void UpdateSelection(IReadOnlyList<SplineInfo> selectedSplines)
         {
             UpdateDrawerForElements(selectedSplines);
-            
+
             if (SplineSelection.Count < 1 || m_ElementDrawer == null)
             {
                 ShowErrorMessage(k_NoSelectionMessage);
@@ -87,7 +87,7 @@ namespace UnityEditor.Splines
 
             IElementDrawer targetDrawer;
             if (hasKnot && hasTangent)
-                targetDrawer = m_CommonElementDrawer; 
+                targetDrawer = m_CommonElementDrawer;
             else if (hasKnot)
                 targetDrawer = m_BezierKnotDrawer;
             else if (hasTangent)
@@ -97,7 +97,7 @@ namespace UnityEditor.Splines
 
             if (targetDrawer == m_ElementDrawer)
                 return;
-            
+
             m_SplineDrawerRoot.Clear();
             if (targetDrawer != null)
                 m_SplineDrawerRoot.Add((VisualElement) targetDrawer);

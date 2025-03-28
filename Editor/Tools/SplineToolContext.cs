@@ -294,7 +294,7 @@ namespace UnityEditor.Splines
                     var spline = splinesToRemove[i];
                     SplineSelection.Remove(spline);
                     spline.Container.RemoveSplineAt(spline.Index);
-                    
+
                     if (spline.Object != null)
                         PrefabUtility.RecordPrefabInstancePropertyModifications(spline.Object);
                 }

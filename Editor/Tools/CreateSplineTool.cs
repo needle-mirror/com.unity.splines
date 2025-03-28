@@ -8,7 +8,7 @@ using UnityEditor.Overlays;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.Splines
-{ 
+{
     [CustomEditor(typeof(CreateSplineTool))]
 #if UNITY_2022_1_OR_NEWER
     class CreateSplineToolSettings : UnityEditor.Editor, ICreateToolbar
@@ -24,7 +24,7 @@ namespace UnityEditor.Splines
             get { yield return "Spline Tool Settings/Default Knot Type"; }
         }
     }
-    
+
 #if UNITY_2023_1_OR_NEWER
     [EditorTool("Create Spline", toolPriority = 10)]
 #else
@@ -50,7 +50,7 @@ namespace UnityEditor.Splines
                 EditorSplineGizmos.showSelectedGizmo = false;
                 // Set hasChanged to false as we don't want to override a custom transform set by the user.
                 gameObject.transform.hasChanged = false;
-                
+
                 SceneView.lastActiveSceneView.Focus();
             }
 

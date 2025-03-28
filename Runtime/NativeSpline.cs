@@ -27,12 +27,12 @@ namespace UnityEngine.Splines
         // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
         [ReadOnly]
         NativeArray<DistanceToInterpolation> m_SegmentLengthsLookupTable;
-        
+
         // As we cannot make a NativeArray of NativeArray all segments lookup tables are stored in a single array
         // each lookup table as a length of k_SegmentResolution and starts at index i = curveIndex * k_SegmentResolution
         [ReadOnly]
         NativeArray<float3> m_UpVectorsLookupTable;
-        
+
         bool m_Closed;
         float m_Length;
         const int k_SegmentResolution = 30;
@@ -112,7 +112,7 @@ namespace UnityEngine.Splines
         public NativeSpline(ISpline spline, bool cacheUpVectors, Allocator allocator = Allocator.Temp)
             : this(spline, float4x4.identity, cacheUpVectors, allocator)
         {
-            
+
         }
 
 
@@ -151,7 +151,7 @@ namespace UnityEngine.Splines
                 allocator)
         {
         }
-        
+
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
         /// </summary>
@@ -166,7 +166,7 @@ namespace UnityEngine.Splines
             Allocator allocator = Allocator.Temp) : this(knots, null, closed, transform, false, allocator)
         {
         }
-        
+
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
         /// </summary>
@@ -186,7 +186,7 @@ namespace UnityEngine.Splines
             Allocator allocator = Allocator.Temp) : this(knots, null, closed, transform, cacheUpVectors, allocator)
         {
         }
-        
+
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
         /// </summary>
@@ -199,7 +199,7 @@ namespace UnityEngine.Splines
         public NativeSpline(IReadOnlyList<BezierKnot> knots, IReadOnlyList<int> splits, bool closed, float4x4 transform, Allocator allocator = Allocator.Temp)
             : this(knots, splits, closed, transform, false, allocator)
         { }
-        
+
         /// <summary>
         /// Create a new NativeSpline from a set of <see cref="BezierKnot"/>.
         /// </summary>
@@ -271,7 +271,7 @@ namespace UnityEngine.Splines
                     for (int index = 0; index < k_SegmentResolution; index++)
                     {
                         m_SegmentLengthsLookupTable[i * k_SegmentResolution + index] = distanceToTimes[index];
-                        
+
                         if(cacheUpVectors)
                             m_UpVectorsLookupTable[i * k_SegmentResolution + index] = upVectors[index];
                     }
@@ -298,9 +298,9 @@ namespace UnityEngine.Splines
         /// <returns>The length of the bezier curve at index.</returns>
         public float GetCurveLength(int curveIndex)
         {
-            return m_SegmentLengthsLookupTable[curveIndex * k_SegmentResolution + k_SegmentResolution - 1].Distance;    
+            return m_SegmentLengthsLookupTable[curveIndex * k_SegmentResolution + k_SegmentResolution - 1].Distance;
         }
-        
+
         /// <summary>
         /// Return the up vector for a t ratio on the curve.
         /// </summary>
@@ -314,7 +314,7 @@ namespace UnityEngine.Splines
             // Value  is not cached, compute the value directly on demand
             if (m_UpVectorsLookupTable.Length == 0)
                 return this.CalculateUpVector(index, t);
-            
+
             var curveIndex = index * k_SegmentResolution;
             var offset = 1f / (float)(k_SegmentResolution - 1);
             var curveT = 0f;
@@ -322,10 +322,10 @@ namespace UnityEngine.Splines
             {
                 if (t <= curveT + offset)
                 {
-                    var value = math.lerp(m_UpVectorsLookupTable[curveIndex + i], 
-                                        m_UpVectorsLookupTable[curveIndex + i + 1], 
+                    var value = math.lerp(m_UpVectorsLookupTable[curveIndex + i],
+                                        m_UpVectorsLookupTable[curveIndex + i + 1],
                                         (t - curveT) / offset);
-                    
+
                     return value;
                 }
                 curveT += offset;

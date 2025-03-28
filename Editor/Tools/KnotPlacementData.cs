@@ -53,7 +53,7 @@ namespace UnityEditor.Splines
             TangentOut = Vector3.zero;
             Plane = new Plane(normal, position);
         }
-        
+
         public PlacementData(Vector2 mouse, Vector3 position, Vector3 normal, Vector3 scale) : this(mouse, position, normal)
         {
             Scale = scale;

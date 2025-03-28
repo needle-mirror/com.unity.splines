@@ -15,7 +15,7 @@ namespace UnityEditor.Splines
 
         [UserSetting("Tweak Mode", "Snap to Guide Distance")]
         static readonly Pref<float> s_SnapToGuideDistance = new Pref<float>("Handles.DirectManipulation.SnapToGuideDistance", 7f);
-        
+
         static readonly Vector3[] s_VertexBuffer = new Vector3[4];
 
         public static bool IsDragging => s_IsDragging;
@@ -116,11 +116,11 @@ namespace UnityEditor.Splines
 
             if(Mathf.Approximately(dir.magnitude, 0f))
                 dir = Vector3.forward;
-            
+
             var translation = Handles.SnapValue(Quaternion.Inverse(rotation) * dir, new Vector3(EditorSnapSettings.move.x, 0, EditorSnapSettings.move.z));
             return origin + rotation * translation;
         }
-        
+
         static Vector3 MoveOnNormal(Vector2 mousePosition, Vector3 origin, Quaternion rotation)
         {
             var upAxis = rotation * Vector3.up;
@@ -132,7 +132,7 @@ namespace UnityEditor.Splines
         {
             var start = origin - axis.normalized * 10000f;
             var end = origin + axis.normalized * 10000f;
-            
+
             using (new ZTestScope(CompareFunction.Less))
                 using (new Handles.DrawingScope(color))
                 {
@@ -158,7 +158,7 @@ namespace UnityEditor.Splines
             var normal = math.normalizesafe(cross);
             var scaledOffset = k_GuidePlaneZTestOffset * HandleUtility.GetHandleSize(origin);
             var calculatedOffset = new Vector3(scaledOffset.x * normal.x, scaledOffset.y * normal.y, scaledOffset.z * normal.z);
-           
+
             position += calculatedOffset;
             origin += calculatedOffset;
 

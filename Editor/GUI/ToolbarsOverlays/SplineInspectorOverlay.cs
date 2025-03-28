@@ -33,7 +33,7 @@ namespace UnityEditor.Splines
 
         static SplineInspectorOverlay s_Instance;
         internal static SplineInspectorOverlay instance => s_Instance;
-        
+
         public bool visible => ToolManager.activeContextType == typeof(SplineToolContext) && ToolManager.activeToolType != typeof(KnotPlacementTool);
 
         ElementInspector m_ElementInspector;

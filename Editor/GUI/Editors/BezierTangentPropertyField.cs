@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine.Splines;
 using UnityEngine.UIElements;
@@ -10,7 +10,7 @@ namespace UnityEditor.Splines
     {
         static readonly SplineGUIUtility.EqualityComparer<T> s_Comparer = (a, b) =>
             EditorSplineUtility.GetKnot(a).Mode == EditorSplineUtility.GetKnot(b).Mode;
-        
+
         static readonly List<string> k_Modes = new List<string>{L10n.Tr("Mirrored"), L10n.Tr("Continuous"), L10n.Tr("Broken")};
 
         static readonly string k_Tooltip = L10n.Tr(
@@ -34,7 +34,7 @@ namespace UnityEditor.Splines
 
         bool ShouldShow(IReadOnlyList<T> targets)
         {
-            // Don't show if an element in the selection isn't a bezier mode 
+            // Don't show if an element in the selection isn't a bezier mode
             for (int i = 0; i < targets.Count; ++i)
             {
                 var knot = EditorSplineUtility.GetKnot(targets[i]);

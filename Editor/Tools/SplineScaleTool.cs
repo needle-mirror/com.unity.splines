@@ -10,8 +10,8 @@ namespace UnityEditor.Splines
 
     /// <summary>
     /// Provides methods to scale knots and tangents in the Scene view. This tool is only available when you use SplineToolContext.
-    /// When you scale a knot, you also scale both its tangents and change the curvature of the segment around the knot. 
-    /// `SplineToolContext` manages the selection of knots and tangents. You can manipulate the selection of knots and tangents with `SplineRotateTool`. 
+    /// When you scale a knot, you also scale both its tangents and change the curvature of the segment around the knot.
+    /// `SplineToolContext` manages the selection of knots and tangents. You can manipulate the selection of knots and tangents with `SplineRotateTool`.
     /// </summary>
 #if UNITY_2021_2_OR_NEWER
     [EditorTool("Spline Scale Tool", typeof(ISplineContainer), typeof(SplineToolContext))]

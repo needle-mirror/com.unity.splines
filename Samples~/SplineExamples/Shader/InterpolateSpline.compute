@@ -12,5 +12,5 @@ float positionsCount;
 void GetPositions (uint id : SV_DispatchThreadID)
 {
     float curve = SplineToCurveT(info, curveLengths, id/(positionsCount - 1));
-    positions[id] = EvaluatePosition(curves[floor(curve) % GetKnotCount(info)], frac(curve)); 
+    positions[id] = EvaluatePosition(curves[floor(curve) % GetKnotCount(info)], frac(curve));
 }
