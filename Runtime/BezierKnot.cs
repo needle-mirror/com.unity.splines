@@ -89,7 +89,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Knot position addition. This operation only applies to the position, tangents and rotation are unmodified.
+        /// Adds a knot position. This operation applies only to the position and does not modify tangents or rotation.
         /// </summary>
         /// <param name="knot">The target knot.</param>
         /// <param name="rhs">The value to add.</param>
@@ -100,7 +100,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Knot position subtraction. This operation only applies to the position, tangents and rotation are unmodified.
+        /// Subtracts a knot position. This operation applies only to the position and does not modify tangents or rotation.
         /// </summary>
         /// <param name="knot">The target knot.</param>
         /// <param name="rhs">The value to subtract.</param>

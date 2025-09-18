@@ -278,6 +278,7 @@ namespace UnityEngine.Splines
 
 #if UNITY_EDITOR
         internal static Action<Spline> afterSplineWasModified;
+        internal static Action<Spline> afterSplineWasModifiedSceneLoop;
         [NonSerialized]
         bool m_QueueAfterSplineModifiedCallback;
 #endif
@@ -313,6 +314,7 @@ namespace UnityEngine.Splines
 
             m_QueueAfterSplineModifiedCallback = true;
 
+            UnityEditor.SceneView.duringSceneGui += OnAfterSplineWasModifiedSceneLoop;
             UnityEditor.EditorApplication.delayCall += () =>
             {
                 m_QueueAfterSplineModifiedCallback = false;
@@ -320,6 +322,14 @@ namespace UnityEngine.Splines
             };
 #endif
         }
+
+#if UNITY_EDITOR
+        private void OnAfterSplineWasModifiedSceneLoop(UnityEditor.SceneView sceneView)
+        {
+            UnityEditor.SceneView.duringSceneGui -= OnAfterSplineWasModifiedSceneLoop;
+            afterSplineWasModifiedSceneLoop?.Invoke(this);
+        }
+#endif
 
         /// <summary>
         /// Invoked any time a spline property is modified.

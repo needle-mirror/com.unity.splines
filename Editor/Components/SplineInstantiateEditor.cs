@@ -200,7 +200,7 @@ class SplineInstantiateEditor : SplineComponentEditor
 
     bool Initialize()
     {
-        if (m_Components != null && m_Components.Length > 0)
+        if (m_SplineContainer != null && m_Components != null && m_Components.Length > 0)
             return true;
 
         m_SplineContainer = serializedObject.FindProperty("m_Container");
@@ -359,13 +359,17 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.Separator();
 
-        foreach (var splineInstantiate in m_Components)
+        // m_Components may have been made null as a result of the Bake operation (via OnDisable)
+        if (m_Components != null)
         {
-            if (dirtyInstances)
-                splineInstantiate.SetDirty();
+            foreach (var splineInstantiate in m_Components)
+            {
+                if (dirtyInstances)
+                    splineInstantiate.SetDirty();
 
-            if (updateInstances)
-                splineInstantiate.UpdateInstances();
+                if (updateInstances)
+                    splineInstantiate.UpdateInstances();
+            }
         }
 
         if (dirtyInstances || updateInstances)

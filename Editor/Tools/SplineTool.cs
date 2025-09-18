@@ -137,7 +137,7 @@ namespace UnityEditor.Splines
         public override void OnActivated()
         {
             SplineSelection.changed += OnSplineSelectionChanged;
-            Spline.afterSplineWasModified += AfterSplineWasModified;
+            Spline.afterSplineWasModifiedSceneLoop += AfterSplineWasModified;
             Undo.undoRedoPerformed += UndoRedoPerformed;
             Tools.pivotRotationChanged += OnPivotRotationChanged;
             Tools.pivotModeChanged += OnPivotModeChanged;
@@ -152,7 +152,7 @@ namespace UnityEditor.Splines
         public override void OnWillBeDeactivated()
         {
             SplineSelection.changed -= OnSplineSelectionChanged;
-            Spline.afterSplineWasModified -= AfterSplineWasModified;
+            Spline.afterSplineWasModifiedSceneLoop -= AfterSplineWasModified;
             Undo.undoRedoPerformed -= UndoRedoPerformed;
             Tools.pivotRotationChanged -= OnPivotRotationChanged;
             Tools.pivotModeChanged -= OnPivotModeChanged;

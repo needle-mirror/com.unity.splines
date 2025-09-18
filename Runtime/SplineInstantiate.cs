@@ -14,6 +14,10 @@ namespace UnityEngine.Splines
 {
     /// <summary>
     /// SplineInstantiate is used to automatically instantiate prefabs or objects along a spline.
+    ///
+    /// Instances are created as soon as the component is enabled. Changes made in the Editor
+    /// automatically update the instances. If you make changes to the instantiation
+    /// parameters during runtime, call `UpdateInstances` to apply the updates.
     /// </summary>
     [ExecuteInEditMode]
     [AddComponentMenu("Splines/Spline Instantiate")]
@@ -182,6 +186,7 @@ namespace UnityEngine.Splines
             get => m_ItemsToInstantiate.ToArray();
             set
             {
+                m_DeprecatedInstances.AddRange(m_Instances);
                 m_ItemsToInstantiate.Clear();
                 m_ItemsToInstantiate.AddRange(value);
             }
@@ -1049,7 +1054,30 @@ namespace UnityEngine.Splines
                 }
 
                 if (assetType != PrefabAssetType.NotAPrefab && !Application.isPlaying)
-                    m_Instances.Add(PrefabUtility.InstantiatePrefab(m_CurrentItem.Prefab, instancesRootTransform) as GameObject);
+                {
+                    if (PrefabUtility.IsPartOfPrefabInstance(m_CurrentItem.Prefab))
+                    {
+                        var newInstance = Instantiate(m_CurrentItem.Prefab, instancesRootTransform);
+                        var originalPrefab = PrefabUtility.GetCorrespondingObjectFromOriginalSource(m_CurrentItem.Prefab);
+                        if (originalPrefab != null)
+                        {
+                            var convertSettings = new ConvertToPrefabInstanceSettings
+                            {
+                                changeRootNameToAssetName = false,
+                                objectMatchMode = ObjectMatchMode.ByHierarchy,
+                                componentsNotMatchedBecomesOverride = true,
+                                gameObjectsNotMatchedBecomesOverride = true,
+                                recordPropertyOverridesOfMatches = true
+                            };
+                            PrefabUtility.ConvertToPrefabInstance(newInstance, originalPrefab, convertSettings,
+                                InteractionMode.AutomatedAction);
+                        }
+
+                        m_Instances.Add(newInstance);
+                    }
+                    else
+                        m_Instances.Add(PrefabUtility.InstantiatePrefab(m_CurrentItem.Prefab, instancesRootTransform) as GameObject);
+                }
                 else
 #endif
                     m_Instances.Add(Instantiate(m_CurrentItem.Prefab, instancesRootTransform));

@@ -5,19 +5,31 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.8.2] - 2025-09-18
+
+### Fixed
+
+- [DOCATT-4646], [DOCATT-5603], [DOCATT-7045], [DOCATT-5044], [DOCATT-6376], [DOCATT-6626] Clarified API documentation following user feedback.
+- [SPLB-360] Fixed a bug when selecting the clear component option, resulting in out of range exception
+- [SPLB-361] Fixed a bug where the spline would not animate with Scene/Domain reload disabled upon entering playmode
+- [SPLB-356] Fixed a bug where a null reference exception would occur after baking a SplineInstantiate component and then pressing Undo.
+
 ## [2.8.1] - 2025-03-28
 
-### Bug Fixes
+### Fixed
+
 - [SPLB-345] Fixed a bug which was causing null reference exceptions during shutdown in IL2CPP builds.
-- [SPLB-337] Fixed a bug where `JoinSplinesOnKnots` would throw a null reference exception when one of the splines was linked with another spline.
+- [SPLB-343] Fixed a bug where `JoinSplinesOnKnots` would throw a null reference exception when one of the splines was linked with another spline.
 - [SPLB-341] Fixed a bug where changing the tangent mode on a knot on a prefab would not persist when entering play mode.
 
 ### Changed
-- Internal code cleanup to align with release standards.
+
+- Cleaned up internal code to align with release standards.
 
 ## [2.8.0] - 2025-03-13
 
-### Bug Fixes
+### Fixed
+
 - [SPLB-322] Fixed a bug where `SplineExtrude` wouldn't update when multiple splines where modified.
 - [SPLB-323] Fixed a bug where splines displayed in the Scene view would not match serialization changes.
 - [SPLB-324] Re-added a dependency to the IMGUI module that was removed along with the UGUI package.
@@ -27,11 +39,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [SPLB-333] Fixed a bug where `Create Spline` tool would sometimes throw an exception when the Esc or Enter keys were pressed.
 
 ### Added
+
 - [SPLB-329] Added the ability to target a mesh in the library with a `SplineExtrude` component
 
 ## [2.7.2] - 2024-11-08
 
-### Bug Fixes
+### Fixed
+
 - [SPLB-315] Fixed a bug where the `DrawSplineTool` icon was missing in the Tools overlay.
 - [STO-3434] Fixed a bug where the `DrawSplineTool` prevented the use of the View tool.
 - [STO-3435] Fixed a bug where the `DrawSplineTool` did not display the Tool settings overlay.
@@ -53,7 +67,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New `SplineExtrude` and `SplineMesh` option enables new extrusion profiles, including `Circle`, `Square`, `Road`, and `Spline`.
 - Added a section in the documentation for the `Source Spline Container` in the `SplineExtrude` component.
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-292] Removed the dependency on the UGUI package.
 - Removed the toggle to override the target spline in the `SplineExtrude` inspector.
@@ -64,7 +78,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [2.6.1] - 2024-05-23
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-275] Fixed a bug where the `SplineContainer` component would throw warning when entering playmode.
 - [SPLB-266] Fixed a bug where instantiating a `SplineExtrude` component at runtime would throw errors.
@@ -86,7 +100,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Changed supported version in the documentation dropdown selector to 2022.3 and later.
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-246] Fixed performance and garbage collection (GC) memory allocation issues when evaluating splines using `SplineContainer` API.
 - [STO-3176] Fixed an issue where `FitSplineToPoints` utility would not fit splines correctly.
@@ -108,7 +122,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [SPLB-233] Removed transform handles while dragging a knot using direct manipulation.
 - [SPLB-234] Removed unnecessary spline metadata which was saved on disk.
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-230] Fixed a bug where modifying the tangent mode on the last knot would change the spline shape unpredictably.
 - [SPLB-225] Fixed a bug where closing a Spline with the `Draw Splines Tool` had inconsistent behaviour.
@@ -120,7 +134,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [2.5.1] - 2023-10-17
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-208] Fixed a bug where `SplineToolContext` would attempt to draw empty Splines and flood the console with errors.
 
@@ -130,7 +144,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Exposed public API for `SplineInstantiate.Seed`.
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-201] Fixed error messages showing in edit mode with spline components.
 - [SPLB-203] Fixed a bug where baking `SplineInstantiate` instances broke prefab connections.
@@ -160,7 +174,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [SPLB-167] Changed the evaluation of up vectors to use a cache instead of re-evaluate the values on every single request.
 - In Editor versions of 2023.2 or newer, moved the following actions from the Element Inspector to the Scene view context menu: Link, Unlink, Split, Join, and Reverse Spline Flow.
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-176] Fixed a regression where the up vector would not evaluate correctly for some curves.
 - Fixed the setter for SplineAnimate.Normalized time to handle ping-pong direction correctly when set.
@@ -174,7 +188,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Exposed public APIs for `SplineTool` and `SplineHandles`.
 - Added a method to *bake* SplineInstantiate objects in the scene so the users can modify the resulting GameObjects.
 
-### Bug Fixes
+### Fixed
 
 - [SPLB-165] Fixed a bug that prevented actions from being retained with prefab instances that contained splines when entering playmode.
 - [SPLB-162] Fixed a bug where the start offset in `SplineAnimate` did not work in Play mode.

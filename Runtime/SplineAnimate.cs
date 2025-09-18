@@ -128,6 +128,8 @@ namespace UnityEngine.Splines
         [NonSerialized]
         float m_StartOffsetT;
 
+        bool m_PlayOnAwakeHandledForSession = false;
+
         float m_SplineLength = -1;
         bool m_Playing;
         float m_NormalizedTime;
@@ -360,26 +362,47 @@ namespace UnityEngine.Splines
 
         void Awake()
         {
+            m_PlayOnAwakeHandledForSession = false;
             RecalculateAnimationParameters();
-#if UNITY_EDITOR
-            if(EditorApplication.isPlaying)
-#endif
-            Restart(m_PlayOnAwake);
-#if UNITY_EDITOR
-            else // Place the animated object back at the animation start position.
-                Restart(false);
-#endif
         }
 
         void OnEnable()
         {
             RecalculateAnimationParameters();
             Spline.Changed += OnSplineChange;
+
+#if UNITY_EDITOR
+            if (EditorApplication.isPlaying)
+            {
+                if (!m_PlayOnAwakeHandledForSession)
+                {
+                    Restart(m_PlayOnAwake);
+                    m_PlayOnAwakeHandledForSession = true;
+                }
+            }
+            else
+            {
+                Restart(false);
+                m_PlayOnAwakeHandledForSession = false;
+            }
+#else
+            if (!m_PlayOnAwakeHandledForSession)
+            {
+                Restart(m_PlayOnAwake);
+                m_PlayOnAwakeHandledForSession = true;
+            }
+#endif
         }
 
         void OnDisable()
         {
             Spline.Changed -= OnSplineChange;
+#if UNITY_EDITOR
+            if (EditorApplication.isPlayingOrWillChangePlaymode && !EditorApplication.isPlaying)
+            {
+                m_PlayOnAwakeHandledForSession = false;
+            }
+#endif
         }
 
         void OnValidate()

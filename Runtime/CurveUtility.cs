@@ -41,6 +41,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Given a Bezier curve, return an interpolated tangent at ratio t.
+        /// The tangent is the rate of change of the position of the curve at point `t`, with respect to `t`. It is the derivative of the position with respect to `t`.
         /// </summary>
         /// <param name="curve">A cubic Bezier curve.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
@@ -61,6 +62,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Given a Bezier curve, return an interpolated acceleration at ratio t.
+        /// The acceleration is the rate of change of the tangent of the curve at point `t`, with respect to `t`. It represents the derivative of the tangent, or the second derivative of the position, with respect to `t`.
         /// </summary>
         /// <param name="curve">A cubic Bezier curve.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>

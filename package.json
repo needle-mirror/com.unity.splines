@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -23,18 +23,18 @@
   ],
   "category": "Tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.8.1"
+    "com.unity.splines.tests": "2.8.2"
   },
   "_upm": {
-    "changelog": "### Bug Fixes\n- [SPLB-345] Fixed a bug which was causing null reference exceptions during shutdown in IL2CPP builds.\n- [SPLB-337] Fixed a bug where `JoinSplinesOnKnots` would throw a null reference exception when one of the splines was linked with another spline.\n- [SPLB-341] Fixed a bug where changing the tangent mode on a knot on a prefab would not persist when entering play mode.\n\n### Changed\n- Internal code cleanup to align with release standards."
+    "changelog": "### Fixed\n\n- [DOCATT-4646], [DOCATT-5603], [DOCATT-7045], [DOCATT-5044], [DOCATT-6376], [DOCATT-6626] Clarified API documentation following user feedback.\n- [SPLB-360] Fixed a bug when selecting the clear component option, resulting in out of range exception\n- [SPLB-361] Fixed a bug where the spline would not animate with Scene/Domain reload disabled upon entering playmode\n- [SPLB-356] Fixed a bug where a null reference exception would occur after baking a SplineInstantiate component and then pressing Undo."
   },
   "upmCi": {
-    "footprint": "aad672cfeeabdb074ba394ba7b81c5120ba03901"
+    "footprint": "61fde60aa0d8c93bf8dfa4cdd2017cbc76244a85"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.splines@2.8/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "ae2c33950924058f2912683d16e02268813ce44a"
+    "revision": "43fe6df748a4819ca8492b7d90662923a31d488f"
   }
 }

@@ -63,6 +63,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// The list of all splines attached to that container.
+        /// Note that all methods and properties accessed on the splines are in the local space of the container.
         /// </summary>
         public IReadOnlyList<Spline> Splines
         {
@@ -136,6 +137,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Gets or sets the <see cref="Spline"/> at <paramref name="index"/>.
+        /// Note that all methods and properties accessed on the spline are in the local space of the container.
         /// </summary>
         /// <param name="index">The zero-based index of the element to get or set.</param>
         public Spline this[int index] => m_Splines[index];
@@ -161,6 +163,17 @@ namespace UnityEngine.Splines
             if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode || state == UnityEditor.PlayModeStateChange.ExitingEditMode)
             {
                 DisposeNativeSplinesCache();
+            }
+        }
+
+        void Reset()
+        {
+            ClearCaches();
+            DisposeNativeSplinesCache();
+
+            foreach (var spline in m_Splines)
+            {
+                spline.Clear();
             }
         }
 #endif
@@ -258,7 +271,8 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// The main <see cref="Spline"/> attached to this component.
+        /// The main (first) <see cref="Spline"/> attached to this component.
+        /// Note that all methods and properties accessed on the spline are in the local space of the container.
         /// </summary>
         public Spline Spline
         {

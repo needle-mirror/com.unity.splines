@@ -116,7 +116,8 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Computes the interpolated position for NURBS defined by order, controlPoints, and knotVector at ratio t.
+        /// Computes the interpolated position for NURBS (Non-Uniform Rational Basis Spline) defined by order, controlPoints, and knotVector at ratio t.
+        /// This is simply a useful utility function. Unity splines are Bezier splines, and do not provide any other NURBS functionality.
         /// </summary>
         /// <param name="t">The value between knotVector[0] and knotVector[-1] that represents the ratio along the curve.</param>
         /// <param name="controlPoints">The control points for the NURBS.</param>
@@ -222,7 +223,8 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Return an interpolated direction at ratio t.
+        /// Return an interpolated direction (tangent) at ratio t.
+        /// The tangent is the rate of change of the position of the spline at point `t`, with respect to `t`. It is the derivative of the position with respect to `t`.
         /// </summary>
         /// <param name="spline">The spline to interpolate.</param>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
@@ -320,6 +322,7 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// Return an interpolated acceleration at ratio t.
+        /// The acceleration is the rate of change of the tangent of the curve at point `t`, with respect to `t`. It represents the derivative of the tangent, or the second derivative of the position, with respect to `t`.
         /// </summary>
         /// <param name="spline">The spline to interpolate.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
