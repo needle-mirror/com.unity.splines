@@ -21,8 +21,11 @@ namespace UnityEngine.Splines
     /// </summary>
     [ExecuteInEditMode]
     [AddComponentMenu("Splines/Spline Instantiate")]
+    [HelpURL(k_HelpUrl)]
     public class SplineInstantiate : SplineComponent
     {
+        const string k_HelpUrl = "https://docs.unity3d.com/Packages/com.unity.splines@latest/index.html?subfolder=/manual/instantiate-component.html";
+
         /// <summary>
         /// The space in which to interpret the offset, this can be different from the orientation space used to instantiate objects.
         /// </summary>
@@ -492,7 +495,12 @@ namespace UnityEngine.Splines
             {
                 if (m_InstancesRoot == null)
                 {
-                    m_InstancesRoot = new GameObject(k_InstancesRootName+GetInstanceID());
+#if UNITY_6000_4_OR_NEWER
+                    string name = k_InstancesRootName + GetEntityId();
+#else
+                    string name = k_InstancesRootName + GetInstanceID();
+#endif
+                    m_InstancesRoot = new GameObject(name);
                     m_InstancesRoot.hideFlags |= HideFlags.HideAndDontSave;
                     m_InstancesRoot.transform.parent = transform;
                     m_InstancesRoot.transform.localPosition = Vector3.zero;
@@ -548,7 +556,7 @@ namespace UnityEngine.Splines
         void OnEnable()
         {
             if (m_Seed == 0)
-                m_Seed = GetInstanceID();
+                AssigneNewSeed();
 
 #if UNITY_EDITOR
             Undo.undoRedoPerformed += UndoRedoPerformed;
@@ -630,7 +638,11 @@ namespace UnityEngine.Splines
             // All the children have to be checked in case multiple SplineInstantiate components are used on the same GameObject.
             // We want to be able to have multiple components as it allows for example to instantiate grass and
             // trees with different parameters on the same object.
+#if UNITY_6000_4_OR_NEWER
+            var ids = GetComponents<SplineInstantiate>().Select(sInstantiate => sInstantiate.GetEntityId()).ToList();
+#else
             var ids = GetComponents<SplineInstantiate>().Select(sInstantiate => sInstantiate.GetInstanceID()).ToList();
+#endif
             var childCount = transform.childCount;
             for (int i = childCount - 1; i >= 0; --i)
             {
@@ -767,8 +779,13 @@ namespace UnityEngine.Splines
         /// </summary>
         public void Randomize()
         {
-            Seed = Random.Range(int.MinValue, int.MaxValue);
+            AssigneNewSeed();
             m_SplineDirty = true;
+        }
+
+        void AssigneNewSeed()
+        {
+            Seed = Random.Range(int.MinValue, int.MaxValue);
         }
 
         void Update()
@@ -1055,11 +1072,15 @@ namespace UnityEngine.Splines
 
                 if (assetType != PrefabAssetType.NotAPrefab && !Application.isPlaying)
                 {
-                    if (PrefabUtility.IsPartOfPrefabInstance(m_CurrentItem.Prefab))
+                    if (PrefabUtility.IsPartOfPrefabInstance(m_CurrentItem.Prefab) && !PrefabUtility.IsPartOfPrefabAsset(m_CurrentItem.Prefab))
                     {
                         var newInstance = Instantiate(m_CurrentItem.Prefab, instancesRootTransform);
                         var originalPrefab = PrefabUtility.GetCorrespondingObjectFromOriginalSource(m_CurrentItem.Prefab);
-                        if (originalPrefab != null)
+                        // if the Prefab to instantiate is root of the original prefab, then we bind it to the original prefab
+                        // so that prefab changes take effect.
+                        // if it is a child, then we unbind it from the original prefab so that we don't incorrectly
+                        // instantiate the root via convert to instance
+                        if (originalPrefab != null && PrefabUtility.IsAnyPrefabInstanceRoot(m_CurrentItem.Prefab))
                         {
                             var convertSettings = new ConvertToPrefabInstanceSettings
                             {
@@ -1069,6 +1090,7 @@ namespace UnityEngine.Splines
                                 gameObjectsNotMatchedBecomesOverride = true,
                                 recordPropertyOverridesOfMatches = true
                             };
+
                             PrefabUtility.ConvertToPrefabInstance(newInstance, originalPrefab, convertSettings,
                                 InteractionMode.AutomatedAction);
                         }

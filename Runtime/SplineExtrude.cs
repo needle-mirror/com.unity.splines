@@ -11,9 +11,12 @@ namespace UnityEngine.Splines
     /// </summary>
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     [AddComponentMenu("Splines/Spline Extrude")]
+    [HelpURL(k_HelpUrl)]
     [ExecuteAlways]
     public class SplineExtrude : MonoBehaviour
     {
+        const string k_HelpUrl = "https://docs.unity3d.com/Packages/com.unity.splines@latest/index.html?subfolder=/manual/extrude-component.html";
+
         [SerializeField, Tooltip("The Spline to extrude.")]
         SplineContainer m_Container;
 

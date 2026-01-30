@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.8.2",
+  "version": "2.8.3",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -23,18 +23,18 @@
   ],
   "category": "Tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.8.2"
+    "com.unity.splines.tests": "2.8.3"
   },
   "_upm": {
-    "changelog": "### Fixed\n\n- [DOCATT-4646], [DOCATT-5603], [DOCATT-7045], [DOCATT-5044], [DOCATT-6376], [DOCATT-6626] Clarified API documentation following user feedback.\n- [SPLB-360] Fixed a bug when selecting the clear component option, resulting in out of range exception\n- [SPLB-361] Fixed a bug where the spline would not animate with Scene/Domain reload disabled upon entering playmode\n- [SPLB-356] Fixed a bug where a null reference exception would occur after baking a SplineInstantiate component and then pressing Undo."
+    "changelog": "### Fixed\n- [SPLB-374] Fixed a bug where spline tool shortcuts would be active in the Scene view even when outside the context of the spline tools.\n- [SPLB-370] Fixed incorrect tangent values when using `SplineUtility.FitSplineToPoints`.\n- [SPLB-365] `EditorSplineUtility.SetKnotPlacementTool` correctly assigns the create spline tool.\n- [SPLB-364] Fixed null reference & lockup when instantiating children of SplineInstantiate component, when components gameobject is a prefab instance.\n- [UUM-131876] Fixed a memory leak introduced in 2.8.2 that occurred when a Spline became dirty.\n- [UUM-132208] Fixed a crash that occurred when a Prefab Variant asset was used with a SplineInstantiate component.\n- [UUM-133630] Fixed the help icon for splines components (SplineAnimate, SplineContainer, SplineExtrude, SplineInstantiate) pointing to the wrong documentation link. It now points to https://docs.unity3d.com/Packages/com.unity.splines@latest.\n\n### Changed\n- [UUM-132118] Replaced internal use of InstanceIDs with the new EntityId (Unity 6.4+)."
   },
   "upmCi": {
-    "footprint": "61fde60aa0d8c93bf8dfa4cdd2017cbc76244a85"
+    "footprint": "895cbd2b0d0a6b3de5e165bb31ffad78e00f2010"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.splines@2.8/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "43fe6df748a4819ca8492b7d90662923a31d488f"
+    "revision": "b4abf42c18a2b555ebf4e93b2069832e75dff984"
   }
 }

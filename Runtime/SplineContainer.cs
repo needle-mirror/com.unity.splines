@@ -13,10 +13,12 @@ namespace UnityEngine.Splines
     [Icon(k_IconPath)]
 #endif
     [AddComponentMenu("Splines/Spline Container")]
+    [HelpURL(k_HelpUrl)]
     [ExecuteAlways]
     public sealed class SplineContainer : MonoBehaviour, ISplineContainer, ISerializationCallbackReceiver
     {
         const string k_IconPath = "Packages/com.unity.splines/Editor/Editor Resources/Icons/SplineComponent.png";
+        const string k_HelpUrl = "https://docs.unity3d.com/Packages/com.unity.splines@latest/index.html?subfolder=/manual/spline-component.html";
 
         // Keeping a main spline to be backwards compatible with older versions of the spline package
         [SerializeField, Obsolete, HideInInspector]
@@ -60,6 +62,13 @@ namespace UnityEngine.Splines
         ReadOnlyCollection<Spline> m_ReadOnlySplines;
         Dictionary<ISpline, NativeSpline> m_NativeSplinesCache = new();
         float4x4 m_NativeSplinesCacheTransform = float4x4.identity;
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Invoked after the user has hit the Reset option in the component context menu in the editor.
+        /// </summary>
+        internal static event Action componentIsReset;
+#endif
 
         /// <summary>
         /// The list of all splines attached to that container.
@@ -175,6 +184,8 @@ namespace UnityEngine.Splines
             {
                 spline.Clear();
             }
+
+            componentIsReset?.Invoke();
         }
 #endif
 

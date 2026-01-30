@@ -30,7 +30,11 @@ namespace UnityEditor.Splines
 
             unchecked
             {
+#if UNITY_6000_4_OR_NEWER
+                int hash = prop.serializedObject.targetObject.GetEntityId().GetHashCode();
+#else
                 int hash = prop.serializedObject.targetObject.GetInstanceID();
+#endif
                 hash = hash * 31 * prop.propertyPath.GetHashCode();
                 return hash;
             }

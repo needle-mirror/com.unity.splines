@@ -36,7 +36,12 @@ namespace UnityEditor.Splines
 
         public static ReorderableList GetDataPointsReorderableList(SerializedProperty splineDataProperty, SerializedProperty dataPointProperty, PathIndexUnit unit)
         {
+#if UNITY_6000_4_OR_NEWER
+            var key = dataPointProperty.propertyPath + splineDataProperty.serializedObject.targetObject.GetEntityId();
+#else
             var key = dataPointProperty.propertyPath + splineDataProperty.serializedObject.targetObject.GetInstanceID();
+#endif
+
             s_PathIndexUnit = unit;
 
             if(s_ReorderableLists.TryGetValue(key, out var list))

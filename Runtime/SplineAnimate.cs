@@ -10,9 +10,12 @@ namespace UnityEngine.Splines
     /// A component to animate an object along a spline.
     /// </summary>
     [AddComponentMenu("Splines/Spline Animate")]
+    [HelpURL(k_HelpUrl)]
     [ExecuteInEditMode]
     public class SplineAnimate : SplineComponent
     {
+        const string k_HelpUrl = "https://docs.unity3d.com/Packages/com.unity.splines@latest/index.html?subfolder=/manual/animate-component.html";
+
         /// <summary>
         /// Describes the different methods that can be used to animated an object along a spline.
         /// </summary>

@@ -3,7 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using UnityEngine;
 using UnityEngine.Splines;
+
+#if UNITY_6000_4_OR_NEWER
+using UObjectID = UnityEngine.EntityId;
+#else
+using UObjectID = System.Int32;
+#endif
 
 namespace UnityEditor.Splines
 {
@@ -14,8 +21,9 @@ namespace UnityEditor.Splines
     public static class SerializedPropertyUtility
     {
         const string k_ArrayIndicator = ".Array.data[";
-        static Dictionary<int, SerializedObject> s_SerializedObjectCache = new();
+        static Dictionary<UObjectID, SerializedObject> s_SerializedObjectCache = new();
         static Dictionary<int, SerializedProperty> s_SerializedPropertyCache = new();
+
         static readonly Regex k_ExtractArrayPath = new Regex("(?!\\[)[0-9]+(?=\\])", RegexOptions.RightToLeft | RegexOptions.Compiled);
 
         static SerializedPropertyUtility()
@@ -98,7 +106,11 @@ namespace UnityEditor.Splines
         /// </returns>
         public static SerializedObject GetSerializedObject(SplineContainer container)
         {
-            var hash = container.GetInstanceID();
+#if UNITY_6000_4_OR_NEWER
+            UObjectID hash = container.GetEntityId();
+#else
+            UObjectID hash = container.GetInstanceID();
+#endif
             if (!s_SerializedObjectCache.TryGetValue(hash, out var so))
                 s_SerializedObjectCache.Add(hash, so = new SerializedObject(container));
             return so;
@@ -116,7 +128,13 @@ namespace UnityEditor.Splines
             if (splineContainer == null || splineContainer.targetObject == null)
                 return null;
 
-            var hash = HashCode.Combine(splineContainer.targetObject.GetInstanceID(), splineIndex);
+#if UNITY_6000_4_OR_NEWER
+            UObjectID targetObjectId = splineContainer.targetObject.GetEntityId();
+#else
+            UObjectID targetObjectId = splineContainer.targetObject.GetInstanceID();
+#endif
+
+            int hash = HashCode.Combine(targetObjectId, splineIndex);
 
             if (!s_SerializedPropertyCache.TryGetValue(hash, out var splineProperty))
             {
@@ -177,7 +195,13 @@ namespace UnityEditor.Splines
             EmbeddedSplineDataType type,
             string key)
         {
-            var hash = HashCode.Combine(splineProperty.serializedObject.targetObject.GetInstanceID(),
+#if UNITY_6000_4_OR_NEWER
+            var targetObjectId = splineProperty.serializedObject.targetObject.GetEntityId();
+#else
+            var targetObjectId = splineProperty.serializedObject.targetObject.GetInstanceID();
+#endif
+
+            var hash = HashCode.Combine(targetObjectId,
                 splineProperty.propertyPath.GetHashCode(),
                 type.GetHashCode(),
                 key.GetHashCode());

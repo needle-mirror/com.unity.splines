@@ -1470,15 +1470,16 @@ namespace UnityEngine.Splines
             var x_c1_determinant = x1 * c[1, 1] - x2 * c[0, 1];
 
             //now we compute the coefficients for our tangents
-            var alpha1 = c0_c1_determinant == 0 ? 0 : x_c1_determinant / c0_c1_determinant;
-            var alpha2 = c0_c1_determinant == 0 ? 0 : c0_x_determinant / c0_c1_determinant;
-
+            const float epsilon = 1.0e-6f;
+            var alpha1 = math.abs(c0_c1_determinant) < epsilon ? 0 : x_c1_determinant / c0_c1_determinant;
+            var alpha2 = math.abs(c0_c1_determinant) < epsilon ? 0 : c0_x_determinant / c0_c1_determinant;
+            
             // alpha1 and alpha2 can be zero and in that case the original algorithm just falls back to the value
             // of 1/3 distance between the range's first and last points. Omitting this can introduce
             // zero tangent curves that break the resulting spline's continuity around certain knots.
             var segLength = math.length(allPoints[rangeEnd] - allPoints[rangeStart]);
-            var epsilon = 1.0e-6f * segLength;
-            if (alpha1 < epsilon || alpha2 < epsilon)
+            var segLengthEpsilon = epsilon * segLength;
+            if (alpha1 < segLengthEpsilon || alpha2 < segLengthEpsilon)
                 alpha1 = alpha2 = segLength / 3f;
 
             var first = new BezierKnot(allPoints[rangeStart], leftTangent * -alpha1, leftTangent * alpha1, quaternion.identity);

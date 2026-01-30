@@ -5,6 +5,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.8.3] - 2026-01-30
+
+### Fixed
+- [SPLB-374] Fixed a bug where spline tool shortcuts would be active in the Scene view even when outside the context of the spline tools.
+- [SPLB-370] Fixed incorrect tangent values when using `SplineUtility.FitSplineToPoints`.
+- [SPLB-365] `EditorSplineUtility.SetKnotPlacementTool` correctly assigns the create spline tool.
+- [SPLB-364] Fixed null reference & lockup when instantiating children of SplineInstantiate component, when components gameobject is a prefab instance.
+- [UUM-131876] Fixed a memory leak introduced in 2.8.2 that occurred when a Spline became dirty.
+- [UUM-132208] Fixed a crash that occurred when a Prefab Variant asset was used with a SplineInstantiate component.
+- [UUM-133630] Fixed the help icon for splines components (SplineAnimate, SplineContainer, SplineExtrude, SplineInstantiate) pointing to the wrong documentation link. It now points to https://docs.unity3d.com/Packages/com.unity.splines@latest.
+
+### Changed
+- [UUM-132118] Replaced internal use of InstanceIDs with the new EntityId (Unity 6.4+).
+
 ## [2.8.2] - 2025-09-18
 
 ### Fixed

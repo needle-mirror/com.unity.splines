@@ -52,4 +52,4 @@ public class ExtrudeExample : MonoBehaviour
 
 * [Create a 3D mesh along a spline](extrude-mesh.md)
 * [Spline Extrude component reference](extrude-component.md)
-* [Scriptin in Unity](https://docs.unity3d.com/Manual/scripting.html)
+* [Scripting in Unity](https://docs.unity3d.com/Manual/scripting.html)

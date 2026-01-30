@@ -66,9 +66,15 @@ namespace UnityEditor.Splines
             return buffer.Splines?.Length > 0;
         }
 
+
         static int CompareKnot(SelectableKnot a, SelectableKnot b)
         {
+#if UNITY_6000_4_OR_NEWER
+            var compareTarget = (int)math.sign(a.SplineInfo.Object.GetEntityId().GetRawData().CompareTo(b.SplineInfo.Object.GetEntityId().GetRawData()));
+
+#else
             var compareTarget = (int)math.sign(a.SplineInfo.Object.GetInstanceID() - b.SplineInfo.Object.GetInstanceID());
+#endif
             if (compareTarget != 0)
                 return compareTarget;
 

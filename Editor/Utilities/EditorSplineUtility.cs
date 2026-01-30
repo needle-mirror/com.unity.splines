@@ -169,18 +169,17 @@ namespace UnityEditor.Splines
 
         /// <summary>
         /// Sets the current active context to the <see cref="SplineToolContext"/> and the current active tool to the
-        /// Draw Splines Tool (<see cref="KnotPlacementTool"/>)
+        /// Draw Splines Tool (<see cref="CreateSplineTool"/>)
         /// </summary>
         public static void SetKnotPlacementTool()
         {
             if(ToolManager.activeContextType != typeof(SplineToolContext))
             {
                 ToolManager.SetActiveContext<SplineToolContext>();
-                ToolManager.SetActiveTool<KnotPlacementTool>();
             }
-            else if(ToolManager.activeToolType != typeof(KnotPlacementTool))
+            if(ToolManager.activeToolType != typeof(CreateSplineTool))
             {
-                ToolManager.SetActiveTool<KnotPlacementTool>();
+                ToolManager.SetActiveTool<CreateSplineTool>();
             }
         }
 

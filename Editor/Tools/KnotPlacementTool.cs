@@ -783,7 +783,11 @@ namespace UnityEditor.Splines
             return targets;
         }
 
+#if UNITY_6000_0_OR_NEWER
+        [Shortcut("Splines/Cycle Active Spline Container (Draw Spline Tool)", typeof(SplineToolShortcutContext), KeyCode.S, ShortcutModifiers.Shift)]
+#else
         [Shortcut("Splines/Cycle Active Spline Container (Draw Spline Tool)", typeof(SceneView), KeyCode.S, ShortcutModifiers.Shift)]
+#endif
         static void ShortcutCycleActiveSplineContainer(ShortcutArguments args)
         {
             if (activeTool is KnotPlacementTool tool)

@@ -70,6 +70,25 @@ namespace UnityEditor.Splines
     /// </summary>
     public abstract class SplineTool : EditorTool
     {
+#if UNITY_6000_0_OR_NEWER
+        /// <summary>
+        /// The shortcut context used when a spline tool is activated and disabled when inactive.
+        /// Ensures that spline related shortcuts are only handled when a spline tool is active.
+        /// </summary>
+        protected class SplineToolShortcutContext : IShortcutContext
+        {
+            /// <summary>
+            /// The property that determines whether the shortcut context is active or not. In this case, it
+            /// will only be active when in the Scene view, the spline tool is the current active context, and
+            /// there is a valid spline tool selected.
+            /// </summary>
+            public bool active => EditorWindow.focusedWindow is SceneView && ToolManager.activeContextType == typeof(SplineToolContext) && activeTool != null;
+        }
+        
+        /// <summary>The shortcut context that is active when this spline tool is activated.</summary>
+        static SplineToolShortcutContext m_ShortcutContext;
+#endif
+        
         /// <summary>The current orientation of the handles for the tool in use.</summary>
         static UserSetting<HandleOrientation> m_HandleOrientation = new UserSetting<HandleOrientation>(PathSettings.instance, "SplineTool.HandleOrientation", HandleOrientation.Global, SettingsScope.User);
 
@@ -137,13 +156,18 @@ namespace UnityEditor.Splines
         public override void OnActivated()
         {
             SplineSelection.changed += OnSplineSelectionChanged;
-            Spline.afterSplineWasModifiedSceneLoop += AfterSplineWasModified;
+            Spline.afterSplineWasModified += AfterSplineWasModified;
             Undo.undoRedoPerformed += UndoRedoPerformed;
             Tools.pivotRotationChanged += OnPivotRotationChanged;
             Tools.pivotModeChanged += OnPivotModeChanged;
             TransformOperation.UpdateSelection(targets);
+            SplineContainer.componentIsReset += UpdateSelection;
             handleOrientationChanged += OnHandleOrientationChanged;
             activeTool = this;
+#if UNITY_6000_0_OR_NEWER
+            m_ShortcutContext ??= new SplineToolShortcutContext();
+            ShortcutManager.RegisterContext(m_ShortcutContext);
+#endif
         }
 
         /// <summary>
@@ -152,12 +176,16 @@ namespace UnityEditor.Splines
         public override void OnWillBeDeactivated()
         {
             SplineSelection.changed -= OnSplineSelectionChanged;
-            Spline.afterSplineWasModifiedSceneLoop -= AfterSplineWasModified;
+            Spline.afterSplineWasModified -= AfterSplineWasModified;
             Undo.undoRedoPerformed -= UndoRedoPerformed;
             Tools.pivotRotationChanged -= OnPivotRotationChanged;
             Tools.pivotModeChanged -= OnPivotModeChanged;
+            SplineContainer.componentIsReset -= UpdateSelection;
             handleOrientationChanged -= OnHandleOrientationChanged;
-
+#if UNITY_6000_0_OR_NEWER
+            if (m_ShortcutContext != null)
+                ShortcutManager.UnregisterContext(m_ShortcutContext);
+#endif
             SplineToolContext.useCustomSplineHandles = false;
             activeTool = null;
         }
@@ -172,7 +200,8 @@ namespace UnityEditor.Splines
 
         static void OnPivotRotationChanged()
         {
-            handleOrientation = (HandleOrientation)Tools.pivotRotation;
+            if (ToolManager.activeContextType == typeof(SplineToolContext))
+                handleOrientation = (HandleOrientation)Tools.pivotRotation;
         }
 
         /// <summary>
@@ -240,15 +269,22 @@ namespace UnityEditor.Splines
             }
         }
 
-        [Shortcut("Splines/Cycle Tangent Mode", typeof(SceneView), KeyCode.C)]
+#if UNITY_6000_0_OR_NEWER
+        [Shortcut("Splines/Cycle Tangent Mode", typeof(SplineToolShortcutContext), KeyCode.C)]
         static void ShortcutCycleTangentMode(ShortcutArguments args)
         {
+            CycleTangentMode();
+        }
+#else
+        [Shortcut("Splines/Cycle Tangent Mode", typeof(SceneView), KeyCode.C)]
+        static void ShortcutCycleTangentMode(ShortcutArguments args)
+        { 
             if (activeTool != null)
                 CycleTangentMode();
         }
-
-        [Shortcut("Splines/Toggle Manipulation Space", typeof(SceneView), KeyCode.X)]
-        static void ShortcutCycleHandleOrientation(ShortcutArguments args)
+#endif
+        
+        static void CycleHandleOrientation()
         {
             /* We're doing a switch here (instead of handleOrientation+1 and wrapping) because HandleOrientation.Global/Local values map
                to PivotRotation.Global/Local (as they should), but PivotRotation.Global = 1 when it's actually the first option and PivotRotation.Local = 0 when it's the second option. */
@@ -275,5 +311,35 @@ namespace UnityEditor.Splines
                     break;
             }
         }
+
+#if UNITY_6000_0_OR_NEWER
+        [Shortcut("Splines/Toggle Manipulation Space", typeof(SplineToolShortcutContext), KeyCode.X)]
+        static void ShortcutCycleHandleOrientation(ShortcutArguments args)
+        {
+            CycleHandleOrientation();
+        }
+#else
+        [Shortcut("Splines/Toggle Manipulation Space", typeof(SceneView), KeyCode.X)]
+        static void ShortcutCycleHandleOrientation(ShortcutArguments args)
+        {
+            if (ToolManager.activeContextType == typeof(SplineToolContext) && activeTool != null)
+            {
+                CycleHandleOrientation();
+            }
+            else
+            {
+                switch (Tools.pivotRotation)
+                {
+                    case PivotRotation.Global:
+                        Tools.pivotRotation = PivotRotation.Local;
+                        break;
+
+                    case PivotRotation.Local:
+                        Tools.pivotRotation = PivotRotation.Global;
+                        break;
+                }
+            }
+        }
+#endif
     }
 }
