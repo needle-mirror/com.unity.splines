@@ -36,10 +36,21 @@ namespace UnityEditor.Splines
                 if (type == ObjectChangeKind.ChangeGameObjectStructure)
                 {
                     stream.GetChangeGameObjectStructureEvent(i, out var changeGameObjectStructure);
-                    
-#pragma warning disable CS0618 // Type or member is obsolete
-                    if (EditorUtility.InstanceIDToObject(changeGameObjectStructure.instanceId) is GameObject go)
-#pragma warning restore CS0618 // Type or member is obsolete
+
+                    Object toObject = null;
+
+#if UNITY_6000_4_OR_NEWER
+                    var objectID = changeGameObjectStructure.entityId;
+#else
+                    var objectID = changeGameObjectStructure.instanceId;
+#endif
+
+#if UNITY_6000_3_OR_NEWER
+                    toObject = EditorUtility.EntityIdToObject(objectID);
+#else
+                    toObject = EditorUtility.InstanceIDToObject(objectID);
+#endif
+                    if (toObject is GameObject go)
                         CheckForSplineExtrudeAdded(go);
                 }
             }
