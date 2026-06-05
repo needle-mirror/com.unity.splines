@@ -21,6 +21,14 @@ namespace UnityEditor.Splines
         static event Action s_ForceUpdateRequested;
         static bool s_FirstUpdateSinceDomainReload = true;
         static IReadOnlyList<SplineInfo> m_SelectedSplines;
+
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_FirstUpdateSinceDomainReload = true;
+            m_SelectedSplines = null;
+        }
+
         internal static void SetSelectedSplines(IReadOnlyList<SplineInfo> splines)
         {
             m_SelectedSplines = splines;

@@ -26,6 +26,15 @@ namespace UnityEditor.Splines
         static Vector2 s_InitialMousePosition;
         static bool s_IsDragging;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStatics()
+        {
+            s_InitialPosition = default;
+            s_InitialRotation = default;
+            s_InitialMousePosition = default;
+            s_IsDragging = false;
+        }
+
 #if UNITY_2022_2_OR_NEWER
         static bool IncrementalSnapActive => EditorSnapSettings.incrementalSnapActive;
 #else
@@ -55,7 +64,7 @@ namespace UnityEditor.Splines
 
         public static void EndDrag()
         {
-            s_IsDragging = false;
+            ResetStatics();
         }
 
         public static void DrawHandles(int controlId, Vector3 position)

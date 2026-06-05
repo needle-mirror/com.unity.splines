@@ -8,6 +8,12 @@ namespace UnityEditor.Splines
     {
         public static bool showSelectedGizmo = false;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            showSelectedGizmo = false;
+        }
+
         [DrawGizmo(GizmoType.Active | GizmoType.NonSelected | GizmoType.Selected | GizmoType.Pickable)]
         // ReSharper disable once Unity.ParameterNotDerivedFromComponent
         static void DrawUnselectedSplineGizmos(ISplineContainer provider, GizmoType gizmoType)

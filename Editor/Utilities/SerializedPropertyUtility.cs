@@ -26,6 +26,13 @@ namespace UnityEditor.Splines
 
         static readonly Regex k_ExtractArrayPath = new Regex("(?!\\[)[0-9]+(?=\\])", RegexOptions.RightToLeft | RegexOptions.Compiled);
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_SerializedObjectCache.Clear();
+            s_SerializedPropertyCache.Clear();
+        }
+
         static SerializedPropertyUtility()
         {
             Selection.selectionChanged += ClearCaches;

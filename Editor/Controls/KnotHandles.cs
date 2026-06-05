@@ -18,6 +18,13 @@ namespace UnityEditor.Splines
 
         static List<(SelectableKnot knot, bool selected, bool hovered, Color knotColor, Color discColor, bool linkedKnot)> s_Knots = new ();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            k_KnotBuffer.Clear();
+            s_Knots.Clear();
+        }
+
         internal static void Do(int controlId, SelectableKnot knot, bool selected = false, bool hovered = false)
         {
             if (Event.current.GetTypeForControl(controlId) != EventType.Repaint)

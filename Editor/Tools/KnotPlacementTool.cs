@@ -270,6 +270,15 @@ namespace UnityEditor.Splines
         DrawingOperation m_CurrentDrawingOperation;
         static Component s_MainTarget;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_ClosestSpline = default;
+            s_KnotsBuffer.Clear();
+            s_MainTarget = null;
+            previewCurvesList.Clear();
+        }
+
         //Needed for Tests
         internal static Component MainTarget
         {

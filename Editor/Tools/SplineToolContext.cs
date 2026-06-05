@@ -47,6 +47,12 @@ namespace UnityEditor.Splines
 
         static bool s_UseCustomSplineHandles = false;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_UseCustomSplineHandles = false;
+        }
+
         readonly SplineElementRectSelector m_RectSelector = new SplineElementRectSelector();
         readonly List<SplineInfo> m_Splines = new List<SplineInfo>();
 

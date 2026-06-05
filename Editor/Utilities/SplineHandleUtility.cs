@@ -111,6 +111,16 @@ namespace UnityEditor.Splines
 
         internal static bool canDrawOnCurves = false;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            elementColor = s_DefaultElementColor;
+            elementPreselectionColor = s_DefaultElementPreselectionColor;
+            elementSelectionColor = s_DefaultElementSelectionColor;
+            canDrawOnCurves = false;
+            s_ElementIdRange = Vector2Int.zero;
+        }
+
         internal  static ISelectableElement lastHoveredElement { get; private set; }
         internal  static int lastHoveredElementId { get; private set; }
 

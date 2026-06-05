@@ -17,6 +17,12 @@ namespace UnityEditor.Splines
 
         static Dictionary<int, KnotReorderableList> s_Pool = new();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_Pool.Clear();
+        }
+
         static KnotReorderableList()
         {
             Selection.selectionChanged += ClearPool;

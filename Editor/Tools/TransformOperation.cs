@@ -98,6 +98,17 @@ namespace UnityEditor.Splines
         static readonly List<SelectableKnot> s_KnotBuffer = new List<SelectableKnot>();
         static RotationSyncData s_RotationSyncData = new RotationSyncData();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_ElementSelection.Clear();
+            s_ElementSelectionCount = 0;
+            s_RotatedKnotCache.Clear();
+            s_LinkedKnotCache.Clear();
+            s_KnotBuffer.Clear();
+            s_RotationSyncData = new RotationSyncData();
+        }
+
         internal static void UpdateSelection(IEnumerable<Object> selection)
         {
             SplineSelection.GetElements(EditorSplineUtility.GetSplinesFromTargetsInternal(selection), s_ElementSelection);

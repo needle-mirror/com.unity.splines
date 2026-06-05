@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.EditorTools;
@@ -84,11 +84,11 @@ namespace UnityEditor.Splines
             /// </summary>
             public bool active => EditorWindow.focusedWindow is SceneView && ToolManager.activeContextType == typeof(SplineToolContext) && activeTool != null;
         }
-        
+
         /// <summary>The shortcut context that is active when this spline tool is activated.</summary>
         static SplineToolShortcutContext m_ShortcutContext;
 #endif
-        
+
         /// <summary>The current orientation of the handles for the tool in use.</summary>
         static UserSetting<HandleOrientation> m_HandleOrientation = new UserSetting<HandleOrientation>(PathSettings.instance, "SplineTool.HandleOrientation", HandleOrientation.Global, SettingsScope.User);
 
@@ -278,12 +278,12 @@ namespace UnityEditor.Splines
 #else
         [Shortcut("Splines/Cycle Tangent Mode", typeof(SceneView), KeyCode.C)]
         static void ShortcutCycleTangentMode(ShortcutArguments args)
-        { 
+        {
             if (activeTool != null)
                 CycleTangentMode();
         }
 #endif
-        
+
         static void CycleHandleOrientation()
         {
             /* We're doing a switch here (instead of handleOrientation+1 and wrapping) because HandleOrientation.Global/Local values map

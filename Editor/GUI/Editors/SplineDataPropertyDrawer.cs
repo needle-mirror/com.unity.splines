@@ -33,20 +33,18 @@ namespace UnityEditor.Splines
             height += EditorGUIUtility.singleLineHeight;
             if (datapointsProperty.isExpanded)
             {
-                height += 2 * EditorGUIUtility.singleLineHeight;
-                var arraySize = datapointsProperty.arraySize;
-                if (arraySize == 0)
+                var defaultLineHeight = EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
+
+                //Default height is 25 for reorderable list elements, making it 32 to have proper margins
+                height += EditorGUIUtility.singleLineHeight +  6 * EditorGUIUtility.standardVerticalSpacing;
+                if (datapointsProperty.arraySize == 0)
                 {
-                    height += EditorGUIUtility.singleLineHeight;
+                    height += defaultLineHeight;
                 }
                 else
                 {
-                    for (int dataPointIndex = 0; dataPointIndex < arraySize; dataPointIndex++)
-                    {
-                        height += datapointsProperty.GetArrayElementAtIndex(dataPointIndex).isExpanded
-                            ? 3 * EditorGUIUtility.singleLineHeight + 2 * EditorGUIUtility.standardVerticalSpacing
-                            : EditorGUIUtility.singleLineHeight;
-                    }
+                    foreach (SerializedProperty dataPoint in datapointsProperty)
+                        height += dataPoint.isExpanded ? 3 * defaultLineHeight : defaultLineHeight;
                 }
             }
             return height;

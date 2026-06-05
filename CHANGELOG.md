@@ -1,10 +1,22 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-06-05
+
+### Changed
+
+- [UUM-131058] Updated Splines to support Fast Enter Play Mode.
+
+### Fixed
+
+- [UUM-134040] Fixed incorrect interpolation results in the different SmoothStepFloat interpolators.
+- [UUM-141436] Fixed a bug where invalid values could be used in the element inspector overlay.
+- [UUM-134469] Fixed a bug where the SplineData properties would overflow in the Inspector.
+- [UUM-140764] Fixed a bug where Spline Extrude would not produce correct mesh if its index count surpassed the maximum value of UInt16.
 
 ## [2.8.4] - 2026-03-10
 

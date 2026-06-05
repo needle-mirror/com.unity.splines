@@ -13,6 +13,14 @@ namespace UnityEditor.Splines
 
         static Dictionary<Spline, Vector3[]> s_SplineCacheTable = new Dictionary<Spline, Vector3[]>();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_SplineCacheTable.Clear();
+            s_CurvesBuffers = null;
+            s_TangentsCache = null;
+        }
+
         [InitializeOnLoadMethod]
         static void Initialize()
         {

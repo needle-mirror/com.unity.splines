@@ -71,6 +71,15 @@ namespace UnityEditor.Splines
         static readonly List<SelectableKnot> k_KnotBuffer = new ();
         static Dictionary<SelectableKnot, int> s_KnotsIDs = new ();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_ControlIDs.Clear();
+            s_CurveIDs.Clear();
+            k_KnotBuffer.Clear();
+            s_KnotsIDs.Clear();
+        }
+
         // todo Tools.viewToolActive should be handling the modifier check, but 2022.2 broke this
         internal static bool ViewToolActive()
         {

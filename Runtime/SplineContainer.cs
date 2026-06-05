@@ -555,7 +555,17 @@ namespace UnityEngine.Splines
             public ISpline spline;
             public NativeSpline nativeSpline;
         }
+
         static List<SplineToNative> s_AllocPreventionHelperBuffer = new (capacity:32);
+
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ResetStaticsOnLoad()
+        {
+            s_AllocPreventionHelperBuffer.Clear();
+        }
+#endif
+
         NativeSpline GetOrBakeNativeSpline<T>(T spline) where T : ISpline
         {
             // Build native spline if we don't have one cached for this spline

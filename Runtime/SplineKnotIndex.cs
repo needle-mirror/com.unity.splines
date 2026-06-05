@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace UnityEngine.Splines
 {
@@ -35,8 +35,16 @@ namespace UnityEngine.Splines
             Knot = knot;
         }
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ResetStaticsOnLoad()
+        {
+            Invalid = new SplineKnotIndex(-1, -1);
+        }
+#endif
+
         /// <summary>
-       /// Checks if two indices are equal.
+        /// Checks if two indices are equal.
         /// </summary>
         /// <param name="indexA">The first index.</param>
         /// <param name="indexB">The second index.</param>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections;
@@ -1473,7 +1473,7 @@ namespace UnityEngine.Splines
             const float epsilon = 1.0e-6f;
             var alpha1 = math.abs(c0_c1_determinant) < epsilon ? 0 : x_c1_determinant / c0_c1_determinant;
             var alpha2 = math.abs(c0_c1_determinant) < epsilon ? 0 : c0_x_determinant / c0_c1_determinant;
-            
+
             // alpha1 and alpha2 can be zero and in that case the original algorithm just falls back to the value
             // of 1/3 distance between the range's first and last points. Omitting this can introduce
             // zero tangent curves that break the resulting spline's continuity around certain knots.

@@ -68,6 +68,13 @@ namespace UnityEditor.Splines
 
             m_Magnitude.RegisterValueChangedCallback((evt) =>
             {
+                // Reject NaN and Infinity values
+                if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue))
+                {
+                    m_Magnitude.SetValueWithoutNotify(evt.previousValue);
+                    return;
+                }
+
                 var value = evt.newValue;
                 if (evt.newValue < 0f)
                 {

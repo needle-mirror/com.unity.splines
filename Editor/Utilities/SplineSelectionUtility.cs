@@ -9,6 +9,12 @@ namespace UnityEditor.Splines
     {
         static readonly List<SelectableKnot> s_KnotBuffer = new List<SelectableKnot>();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_KnotBuffer.Clear();
+        }
+
         internal static void ValidateTangentSelection(SelectableKnot knot)
         {
             if (!SplineUtility.AreTangentsModifiable(knot.Mode))

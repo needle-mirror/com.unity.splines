@@ -65,6 +65,13 @@ namespace UnityEditor.Splines
 
         void ApplyX(ChangeEvent<float> evt)
         {
+            // Reject NaN and Infinity values
+            if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue))
+            {
+                m_X.SetValueWithoutNotify(evt.previousValue);
+                return;
+            }
+
             EditorSplineUtility.RecordObjects(m_Elements, SplineInspectorOverlay.SplineChangeUndoMessage);
 
             ElementInspector.ignoreKnotCallbacks = true;
@@ -83,6 +90,13 @@ namespace UnityEditor.Splines
 
         void ApplyY(ChangeEvent<float> evt)
         {
+            // Reject NaN and Infinity values
+            if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue))
+            {
+                m_Y.SetValueWithoutNotify(evt.previousValue);
+                return;
+            }
+
             EditorSplineUtility.RecordObjects(m_Elements, SplineInspectorOverlay.SplineChangeUndoMessage);
 
             ElementInspector.ignoreKnotCallbacks = true;
@@ -100,6 +114,13 @@ namespace UnityEditor.Splines
 
         void ApplyZ(ChangeEvent<float> evt)
         {
+            // Reject NaN and Infinity values
+            if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue))
+            {
+                m_Z.SetValueWithoutNotify(evt.previousValue);
+                return;
+            }
+
             EditorSplineUtility.RecordObjects(m_Elements, SplineInspectorOverlay.SplineChangeUndoMessage);
 
             ElementInspector.ignoreKnotCallbacks = true;

@@ -21,6 +21,14 @@ namespace UnityEditor.Splines
         static int s_NewDataPointIndex = -1;
         static float s_AddingDataPoint = float.NaN;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_DataPointsIDs = null;
+            s_NewDataPointIndex = -1;
+            s_AddingDataPoint = float.NaN;
+        }
+
         /// <summary>
         /// Creates manipulation handles in the SceneView to add, move, and remove SplineData's DataPoints along a spline.
         /// DataPoints of the targeted SplineData along a Spline. Left click on an empty location

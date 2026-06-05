@@ -11,6 +11,12 @@ namespace UnityEditor.Splines
 
         static Dictionary<int, SplineReorderableList> s_Pool = new();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_Pool.Clear();
+        }
+
         static SplineReorderableList()
         {
             Selection.selectionChanged += ClearPool;

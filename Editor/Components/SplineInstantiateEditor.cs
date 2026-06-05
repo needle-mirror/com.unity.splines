@@ -71,6 +71,12 @@ class ItemAxisDrawer : PropertyDrawer
 {
     static int s_LastUpAxis;
 
+    [InitializeOnEnterPlayMode]
+    static void ResetStaticsOnLoad()
+    {
+        s_LastUpAxis = 0;
+    }
+
     public override void OnGUI(Rect rect, SerializedProperty property, GUIContent label)
     {
         var enumValue = property.intValue;

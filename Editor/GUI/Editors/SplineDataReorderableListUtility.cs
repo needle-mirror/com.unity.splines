@@ -17,6 +17,12 @@ namespace UnityEditor.Splines
         static PathIndexUnit s_PathIndexUnit;
         readonly static string[] k_DisplayName = new string[] {"Dist","Path %","Knot"};
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_ReorderableLists.Clear();
+        }
+
         static SplineDataReorderableListUtility()
         {
             Selection.selectionChanged += ClearReorderableLists;

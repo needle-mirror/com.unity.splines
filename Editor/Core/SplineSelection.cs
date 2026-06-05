@@ -36,6 +36,17 @@ namespace UnityEditor.Splines
 
         static int s_SelectionVersion;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_ObjectSet.Clear();
+            s_SelectedSplineInfo.Clear();
+            s_SelectedTargetsBuffer = new Object[0];
+            s_SelectedSplines.Clear();
+            s_AdjacentTangentCache.Clear();
+            s_SelectionVersion = 0;
+        }
+
         static SplineSelection()
         {
             context.version = 0;

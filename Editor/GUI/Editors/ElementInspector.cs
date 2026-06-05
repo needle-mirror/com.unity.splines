@@ -10,6 +10,12 @@ namespace UnityEditor.Splines
     {
         public static bool ignoreKnotCallbacks = false;
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            ignoreKnotCallbacks = false;
+        }
+
         static readonly string k_NoSelectionMessage = L10n.Tr("No element selected");
 
         readonly Label m_KnotIdentifierLabel;

@@ -42,6 +42,13 @@ namespace UnityEditor.Splines
 
         static readonly List<ISelectableElement> s_ElementBuffer = new List<ISelectableElement>();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_SplinePtrBuffer.Clear();
+            s_ElementBuffer.Clear();
+        }
+
         [UserSetting]
         internal static Pref<TangentMode> s_DefaultTangentMode = new("Splines.DefaultTangentMode", TangentMode.AutoSmooth);
 

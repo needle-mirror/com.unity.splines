@@ -213,6 +213,15 @@ namespace UnityEngine.Splines
             public Vector2 texture { get; set; }
         }
 
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void ResetStaticsOnLoad()
+        {
+            s_IsConvex = false;
+            s_IsConvexComputed = false;
+        }
+#endif
+
         static void ExtrudeRing<TSpline, TShape, TVertex>(
             TSpline spline,
             ExtrudeSettings<TShape> settings,
@@ -824,12 +833,12 @@ namespace UnityEngine.Splines
                     var index2 = vertexArrayOffset + ((i+1) % segments) * sides + n;
                     var index3 = vertexArrayOffset + ((i+1) % segments) * sides + ((n + 1) % sides);
 
-                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 0] = (UInt16) index0;
-                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 1] = (UInt16) index1;
-                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 2] = (UInt16) index2;
-                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 3] = (UInt16) index1;
-                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 4] = (UInt16) index3;
-                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 5] = (UInt16) index2;
+                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 0] = (UInt32) index0;
+                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 1] = (UInt32) index1;
+                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 2] = (UInt32) index2;
+                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 3] = (UInt32) index1;
+                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 4] = (UInt32) index3;
+                    indices[indexArrayOffset + i * sideFaceCount * 6 + n * 6 + 5] = (UInt32) index2;
                 }
             }
 
@@ -842,13 +851,13 @@ namespace UnityEngine.Splines
 
                 for(ushort i = 0; i < sides - 2; ++i)
                 {
-                    indices[capIndexStart + i * 3 + 0] = (UInt16)(capVertexStart);
-                    indices[capIndexStart + i * 3 + 1] = (UInt16)(capVertexStart + i + 2);
-                    indices[capIndexStart + i * 3 + 2] = (UInt16)(capVertexStart + i + 1);
+                    indices[capIndexStart + i * 3 + 0] = (UInt32)(capVertexStart);
+                    indices[capIndexStart + i * 3 + 1] = (UInt32)(capVertexStart + i + 2);
+                    indices[capIndexStart + i * 3 + 2] = (UInt32)(capVertexStart + i + 1);
 
-                    indices[endCapIndexStart + i * 3 + 0] = (UInt16) (endCapVertexStart);
-                    indices[endCapIndexStart + i * 3 + 1] = (UInt16) (endCapVertexStart + i + 1);
-                    indices[endCapIndexStart + i * 3 + 2] = (UInt16) (endCapVertexStart + i + 2);
+                    indices[endCapIndexStart + i * 3 + 0] = (UInt32) (endCapVertexStart);
+                    indices[endCapIndexStart + i * 3 + 1] = (UInt32) (endCapVertexStart + i + 1);
+                    indices[endCapIndexStart + i * 3 + 2] = (UInt32) (endCapVertexStart + i + 2);
                 }
             }
         }

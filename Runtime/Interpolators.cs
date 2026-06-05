@@ -166,7 +166,7 @@ namespace UnityEngine.Splines.Interpolators
         /// <returns> The interpolated result between the two values.</returns>
         public float Interpolate(float a, float b, float t)
         {
-            return math.smoothstep(a, b, t);
+            return math.lerp(a, b, math.smoothstep(0f, 1f, t));
         }
     }
 
@@ -187,7 +187,7 @@ namespace UnityEngine.Splines.Interpolators
         /// <returns> The interpolated result between the two values.</returns>
         public float2 Interpolate(float2 a, float2 b, float t)
         {
-            return math.smoothstep(a, b, t);
+            return math.lerp(a, b, math.smoothstep(0f, 1f, t));
         }
     }
 
@@ -208,7 +208,7 @@ namespace UnityEngine.Splines.Interpolators
         /// <returns> The interpolated result between the two values.</returns>
         public float3 Interpolate(float3 a, float3 b, float t)
         {
-            return math.smoothstep(a, b, t);
+            return math.lerp(a, b, math.smoothstep(0f, 1f, t));
         }
     }
 
@@ -229,7 +229,7 @@ namespace UnityEngine.Splines.Interpolators
         /// <returns> The interpolated result between the two values.</returns>
         public float4 Interpolate(float4 a, float4 b, float t)
         {
-            return math.smoothstep(a, b, t);
+            return math.lerp(a, b, math.smoothstep(0f, 1f, t));
         }
     }
 

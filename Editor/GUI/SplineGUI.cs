@@ -12,6 +12,13 @@ namespace UnityEditor.Splines
         static GUIContent s_TempContent = new GUIContent();
         static string[] s_SplineIndexPopupContents = new string[1] { "Spline 0" };
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_TempContent = new GUIContent();
+            s_SplineIndexPopupContents = new string[1] { "Spline 0" };
+        }
+
         internal static GUIContent TempContent(string label, string tooltip = null, Texture2D image = null)
         {
             s_TempContent.text = label;

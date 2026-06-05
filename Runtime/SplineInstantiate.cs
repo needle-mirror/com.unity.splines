@@ -118,14 +118,12 @@ namespace UnityEngine.Splines
             [Obsolete("Use Prefab instead.", false)]
             public GameObject prefab;
             /// <summary> The prefab to instantiate.</summary>
-            [FormerlySerializedAs("prefab")]
             public GameObject Prefab;
             /// <summary> Probability for this prefab. </summary>
             [HideInInspector]
             [Obsolete("Use Probability instead.", false)]
             public float probability;
             /// <summary> Probability for this prefab. </summary>
-            [FormerlySerializedAs("probability")]
             public float Probability;
         }
 

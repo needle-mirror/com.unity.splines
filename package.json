@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.8.4",
+  "version": "2.9.0",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -23,18 +23,18 @@
   ],
   "category": "Tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.8.4"
+    "com.unity.splines.tests": "2.9.0"
   },
   "_upm": {
-    "changelog": "### Fixed\n- Fixed a missing conversion from `InstanceID` to `EntityID` in the `SplineExtrudeUtility` class."
+    "changelog": "### Changed\n\n- [UUM-131058] Updated Splines to support Fast Enter Play Mode.\n\n### Fixed\n\n- [UUM-134040] Fixed incorrect interpolation results in the different SmoothStepFloat interpolators.\n- [UUM-141436] Fixed a bug where invalid values could be used in the element inspector overlay.\n- [UUM-134469] Fixed a bug where the SplineData properties would overflow in the Inspector.\n- [UUM-140764] Fixed a bug where Spline Extrude would not produce correct mesh if its index count surpassed the maximum value of UInt16."
   },
   "upmCi": {
-    "footprint": "1a4f4ab9ae93f0b73e42d0b887176f0bd53a9838"
+    "footprint": "8b8c0bbec5b68b6605fa2ea54ab5d495d450e371"
   },
-  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.splines@2.8/manual/index.html",
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.splines@2.9/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "94a86d19744f3a919beddc05652abfebaea9dde8"
+    "revision": "f59e7348d89b74c5ec5cdde5a338dadf0bb83e0d"
   }
 }

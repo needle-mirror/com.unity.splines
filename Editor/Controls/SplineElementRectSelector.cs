@@ -28,6 +28,14 @@ namespace UnityEditor.Splines
         static readonly List<ISelectableElement> s_SplineElementsBuffer = new List<ISelectableElement>();
         static readonly HashSet<ISelectableElement> s_PreRectSelectionElements = new HashSet<ISelectableElement>();
 
+        [InitializeOnEnterPlayMode]
+        static void ResetStaticsOnLoad()
+        {
+            s_SplineElementsCompareSet.Clear();
+            s_SplineElementsBuffer.Clear();
+            s_PreRectSelectionElements.Clear();
+        }
+
         public void OnGUI(IReadOnlyList<SplineInfo> splines)
         {
             int id = GUIUtility.GetControlID(FocusType.Passive);
