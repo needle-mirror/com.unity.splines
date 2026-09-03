@@ -640,9 +640,12 @@ namespace UnityEngine.Splines
 
                 if (dsqr < distance)
                 {
+                    var chordLength = math.distance(a, b);
+                    var normalizedLineParam = math.select(0f, lineParam / chordLength, chordLength > math.FLT_MIN_NORMAL);
+
                     segment.start = t0;
                     segment.length = t1 - t0;
-                    time = segment.start + segment.length * lineParam;
+                    time = segment.start + segment.length * normalizedLineParam;
                     distance = dsqr;
 
                     nearest = p;

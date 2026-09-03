@@ -202,6 +202,11 @@ class SplineInstantiateEditor : SplineComponentEditor
         EditorSplineUtility.AfterSplineWasModified += OnSplineModified;
         SplineContainer.SplineAdded += OnContainerSplineSetModified;
         SplineContainer.SplineRemoved += OnContainerSplineSetModified;
+
+        // target can transiently be null right after a domain reload, OnInspectorGUI calls
+        // Initialize() again once target is valid, so skipping here is safe.
+        if (target != null)
+            Initialize();
     }
 
     bool Initialize()
@@ -256,7 +261,10 @@ class SplineInstantiateEditor : SplineComponentEditor
         {
             if(instantiate == null)
                 continue;
-            if (instantiate.Container != null && instantiate.Container.Splines.Contains(spline))
+            if (instantiate.Container == null || !instantiate.Container.Splines.Contains(spline))
+                continue;
+
+            if (instantiate.IsCacheStateDirty())
                 instantiate.SetSplineDirty(spline);
         }
     }
@@ -288,13 +296,17 @@ class SplineInstantiateEditor : SplineComponentEditor
         var dirtyInstances = false;
         var updateInstances = false;
 
+        EditorGUI.BeginChangeCheck();
         EditorGUILayout.PropertyField(m_SplineContainer);
+        var containerChanged = EditorGUI.EndChangeCheck();
+        dirtyInstances |= containerChanged;
+        updateInstances |= containerChanged;
         if(m_SplineContainer.objectReferenceValue == null)
             EditorGUILayout.HelpBox(k_Helpbox, MessageType.Warning);
 
         EditorGUI.BeginChangeCheck();
         EditorGUILayout.PropertyField(m_ItemsToInstantiate);
-        dirtyInstances = EditorGUI.EndChangeCheck();
+        dirtyInstances |= EditorGUI.EndChangeCheck();
 
         DoSetupSection();
         dirtyInstances |= DoInstantiateSection();

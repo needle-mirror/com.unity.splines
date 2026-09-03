@@ -7,7 +7,7 @@ using Unity.Mathematics;
 namespace UnityEngine.Splines
 {
     /// <summary>
-    /// A component that holds a list of <see cref="Spline"/> objects.
+    /// A component that holds a list of [Spline](xref:UnityEngine.Splines.Spline) objects.
     /// </summary>
 #if UNITY_2021_2_OR_NEWER
     [Icon(k_IconPath)]
@@ -54,7 +54,7 @@ namespace UnityEngine.Splines
         /// Invoked any time a spline is reordered in the container.
         /// </summary>
         /// <remarks>
-        /// The first parameter corresponds to the previous spline index,
+        /// The first parameter corresponds to the previous spline index, and
         /// the second parameter corresponds to the new spline index.
         /// </remarks>
         public static event Action<SplineContainer, int, int> SplineReordered;
@@ -139,13 +139,16 @@ namespace UnityEngine.Splines
 
         /// <summary>
         /// A collection of all linked knots. Linked knots can be on different splines. However, knots can
-        /// only link to other knots within the same container. This collection is used to maintain
-        /// the validity of the links when operations such as knot insertions or removals are performed on the splines.
+        /// only link to other knots within the same container. 
         /// </summary>
+        /// <remarks>
+        /// This collection helps maintain the validity of the links when performing operations such as knot 
+        /// insertions or removals on the splines.
+        /// </remarks>
         public KnotLinkCollection KnotLinkCollection => m_Knots;
 
         /// <summary>
-        /// Gets or sets the <see cref="Spline"/> at <paramref name="index"/>.
+        /// Gets the [spline](xref:UnityEngine.Splines.Spline) at <paramref name="index"/>.
         /// Note that all methods and properties accessed on the spline are in the local space of the container.
         /// </summary>
         /// <param name="index">The zero-based index of the element to get or set.</param>
@@ -173,6 +176,11 @@ namespace UnityEngine.Splines
             {
                 DisposeNativeSplinesCache();
             }
+        }
+
+        internal void OnBeforeAssemblyReload()
+        {
+            DisposeNativeSplinesCache();
         }
 
         void Reset()
@@ -230,12 +238,41 @@ namespace UnityEngine.Splines
             m_ReadOnlySplines = null;
         }
 
+        internal int NativeSplineCacheCount => m_NativeSplinesCache.Count;
+
+        void CacheNativeSpline(ISpline spline, NativeSpline nativeSpline)
+        {
+            if (m_NativeSplinesCache.TryGetValue(spline, out var existingNativeSpline))
+                existingNativeSpline.Dispose();
+
+            m_NativeSplinesCache[spline] = nativeSpline;
+            UpdateAssemblyReloadRegistration();
+        }
+
+        void RemoveCachedNativeSpline(ISpline spline)
+        {
+            if (m_NativeSplinesCache.TryGetValue(spline, out var nativeSpline))
+                nativeSpline.Dispose();
+            m_NativeSplinesCache.Remove(spline);
+            UpdateAssemblyReloadRegistration();
+        }
+
         void DisposeNativeSplinesCache()
         {
             // Dispose cached native splines
             foreach (var splineToNativePair in m_NativeSplinesCache)
                 splineToNativePair.Value.Dispose();
             m_NativeSplinesCache.Clear();
+            UpdateAssemblyReloadRegistration();
+        }
+
+        void UpdateAssemblyReloadRegistration()
+        {
+#if UNITY_EDITOR
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+            if (m_NativeSplinesCache.Count > 0)
+                UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+#endif
         }
 
         void OnSplineChanged(Spline spline, int index, SplineModification modificationType)
@@ -260,9 +297,7 @@ namespace UnityEngine.Splines
                     break;
             }
 
-            if (m_NativeSplinesCache.TryGetValue(spline, out var nativeSpline))
-                nativeSpline.Dispose();
-            m_NativeSplinesCache.Remove(spline);
+            RemoveCachedNativeSpline(spline);
         }
 
         void OnKnotModified(Spline spline, int index)
@@ -282,7 +317,7 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// The main (first) <see cref="Spline"/> attached to this component.
+        /// The main (first) [Spline](xref:UnityEngine.Splines.Spline) attached to this component.
         /// Note that all methods and properties accessed on the spline are in the local space of the container.
         /// </summary>
         public Spline Spline
@@ -296,44 +331,53 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Computes interpolated position, direction and upDirection at ratio t. Calling this method to get the
-        /// 3 vectors is faster than calling independently EvaluateSplinePosition, EvaluateSplineTangent and EvaluateSplineUpVector
-        /// for the same time t as it reduces some redundant computation.
+        /// Computes interpolated position, direction, and up direction at ratio `t`. 
         /// </summary>
+        /// <remarks>
+        /// Calling this method to get the 3 vectors is faster than independently calling 
+        /// EvaluateSplinePosition, EvaluateSplineTangent, and EvaluateSplineUpVector for 
+        /// the same time `t` because it reduces some redundant computation.
+        /// </remarks>
         /// <param name="t">A value between 0 and 1 representing the ratio along the curve.</param>
         /// <param name="position">The output variable for the float3 position at t.</param>
         /// <param name="tangent">The output variable for the float3 tangent at t.</param>
         /// <param name="upVector">The output variable for the float3 up direction at t.</param>
-        /// <returns>Boolean value, true if a valid set of output variables as been computed.</returns>
+        /// <returns>True if the method computed a valid set of output variables; false otherwise.</returns>
         public bool Evaluate(float t, out float3 position, out float3 tangent, out float3 upVector)
             => Evaluate(0, t, out position, out tangent, out upVector);
 
         /// <summary>
-        /// Computes the interpolated position, direction and upDirection at ratio t for the spline at index `splineIndex`. Calling this method to get the
-        /// 3 vectors is faster than calling independently EvaluateSplinePosition, EvaluateSplineTangent and EvaluateSplineUpVector
-        /// for the same time t as it reduces some redundant computation.
+        /// Computes the interpolated position, direction, and up direction at ratio `t` for the spline at index `splineIndex`. 
         /// </summary>
+        /// <remarks>
+        /// Calling this method to get the 3 vectors is faster than independently calling 
+        /// EvaluateSplinePosition, EvaluateSplineTangent, and EvaluateSplineUpVector for 
+        /// the same time `t` because it reduces some redundant computation.
+        /// </remarks>
         /// <param name="splineIndex">The index of the spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 that represents the ratio along the curve.</param>
         /// <param name="position">The output variable for the float3 position at t.</param>
         /// <param name="tangent">The output variable for the float3 tangent at t.</param>
         /// <param name="upVector">The output variable for the float3 up direction at t.</param>
-        /// <returns>True if a valid set of output variables is computed and false otherwise.</returns>
+        /// <returns>True if the method computed a valid set of output variables; false otherwise.</returns>
         public bool Evaluate(int splineIndex, float t, out float3 position,  out float3 tangent,  out float3 upVector)
             => Evaluate(m_Splines[splineIndex], t, out position, out tangent, out upVector);
 
         /// <summary>
-        /// Gets the interpolated position, direction, and upDirection at ratio t for a spline.  This method gets the three
-        /// vectors faster than EvaluateSplinePosition, EvaluateSplineTangent and EvaluateSplineUpVector for the same
-        /// time t, because it reduces some redundant computation.
+        /// Gets the interpolated position, direction, and up direction at ratio `t` for a spline.
         /// </summary>
+        /// <remarks>
+        /// Calling this method to get the 3 vectors is faster than independently calling 
+        /// EvaluateSplinePosition, EvaluateSplineTangent, and EvaluateSplineUpVector for 
+        /// the same time `t` because it reduces some redundant computation.
+        /// </remarks>
         /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 that represents the ratio along the curve.</param>
         /// <param name="position">The output variable for the float3 position at t.</param>
         /// <param name="tangent">The output variable for the float3 tangent at t.</param>
         /// <param name="upVector">The output variable for the float3 up direction at t.</param>
-        /// <returns>True if a valid set of output variables is computed and false otherwise.</returns>
+        /// <returns>True if the method computed a valid set of output variables; false otherwise.</returns>
         public bool Evaluate<T>(T spline, float t, out float3 position, out float3 tangent, out float3 upVector) where T : ISpline
         {
             if (spline == null)
@@ -359,14 +403,14 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Evaluates the position of a point, t, on a spline in world space.
+        /// Evaluates the position of a point, `t`, on a spline in world space.
         /// </summary>
         /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
         /// <returns>A tangent vector.</returns>
         public float3 EvaluatePosition(float t) => EvaluatePosition(0, t);
 
         /// <summary>
-        /// Evaluates the position of a point, t, on a spline at an index, `splineIndex`, in world space.
+        /// Evaluates the position of a point, `t`, on a spline at `splineIndex` in world space.
         /// </summary>
         /// <param name="splineIndex">The index of the spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of the curve.</param>
@@ -374,7 +418,7 @@ namespace UnityEngine.Splines
         public float3 EvaluatePosition(int splineIndex, float t) => EvaluatePosition(m_Splines[splineIndex], t);
 
         /// <summary>
-        /// Evaluates the position of a point, t, on a given spline, in world space.
+        /// Evaluates the position of a point, `t`, on a given spline in world space.
         /// </summary>
         /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The spline to evaluate.</param>
@@ -392,14 +436,14 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Evaluates the tangent vector of a point, t, on a spline in world space.
+        /// Evaluates the tangent vector of a point, `t`, on a spline in world space.
         /// </summary>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed tangent vector.</returns>
         public float3 EvaluateTangent(float t) => EvaluateTangent(0, t);
 
         /// <summary>
-        /// Evaluates the tangent vector of a point, t, on a spline at an index, `splineIndex`, in world space.
+        /// Evaluates the tangent vector of a point, `t`, on a spline at `splineIndex` in world space.
         /// </summary>
         /// <param name="splineIndex">The index of the spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
@@ -407,7 +451,7 @@ namespace UnityEngine.Splines
         public float3 EvaluateTangent(int splineIndex, float t) => EvaluateTangent(m_Splines[splineIndex], t);
 
         /// <summary>
-        /// Evaluates the tangent vector of a point, t, on a given spline, in world space.
+        /// Evaluates the tangent vector of a point, `t`, on a given spline in world space.
         /// </summary>
         /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The spline to evaluate.</param>
@@ -425,14 +469,14 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Evaluates the up vector of a point, t, on a spline in world space.
+        /// Evaluates the up vector of a point, `t`, on a spline in world space.
         /// </summary>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
         /// <returns>The computed up direction.</returns>
         public float3 EvaluateUpVector(float t) => EvaluateUpVector(0, t);
 
         /// <summary>
-        /// Evaluates the up vector of a point, t, on a spline at an index, `splineIndex`, in world space.
+        /// Evaluates the up vector of a point, `t`, on a spline at `splineIndex` in world space.
         /// </summary>
         /// <param name="splineIndex">The index of the Spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
@@ -440,7 +484,7 @@ namespace UnityEngine.Splines
         public float3 EvaluateUpVector(int splineIndex, float t) => EvaluateUpVector(m_Splines[splineIndex], t);
 
         /// <summary>
-        /// Evaluates the up vector of a point, t, on a given spline, in world space.
+        /// Evaluates the up vector of a point, `t`, on a given spline in world space.
         /// </summary>
         /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The Spline to evaluate.</param>
@@ -460,14 +504,14 @@ namespace UnityEngine.Splines
 
 
         /// <summary>
-        /// Evaluates the acceleration vector of a point, t, on a spline in world space.
+        /// Evaluates the acceleration vector of a point, `t`, on a spline in world space.
         /// </summary>
-        /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
+        /// <param name="t">A value between 0 and 1 representing a percentage of the entire spline.</param>
         /// <returns>The computed acceleration vector.</returns>
         public float3 EvaluateAcceleration(float t) => EvaluateAcceleration(0, t);
 
         /// <summary>
-        /// Evaluates the acceleration vector of a point, t, on a spline at an index, `splineIndex,  in world space.
+        /// Evaluates the acceleration vector of a point, `t`, on a spline at `splineIndex` in world space.
         /// </summary>
         /// <param name="splineIndex">The index of the spline to evaluate.</param>
         /// <param name="t">A value between 0 and 1 representing a percentage of entire spline.</param>
@@ -475,7 +519,7 @@ namespace UnityEngine.Splines
         public float3 EvaluateAcceleration(int splineIndex, float t) => EvaluateAcceleration(m_Splines[splineIndex], t);
 
         /// <summary>
-        /// Evaluates the acceleration vector of a point, t, on a given Spline,  in world space.
+        /// Evaluates the acceleration vector of a point, `t`, on a given `spline` in world space.
         /// </summary>
         /// <typeparam name="T">The spline type.</typeparam>
         /// <param name="spline">The Spline to evaluate.</param>
@@ -493,9 +537,9 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// Calculate the length of <see cref="Spline"/> in world space.
+        /// Calculates the length of the [Spline](xref:UnityEngine.Splines.Spline) in world space.
         /// </summary>
-        /// <returns>The length of <see cref="Spline"/> in world space</returns>
+        /// <returns>The length of the [Spline](xref:UnityEngine.Splines.Spline) in world space</returns>
         public float CalculateLength() => CalculateLength(0);
 
         /// <summary>
@@ -509,14 +553,14 @@ namespace UnityEngine.Splines
         }
 
         /// <summary>
-        /// See ISerializationCallbackReceiver.
+        /// Refer to <see cref="ISerializationCallbackReceiver" />.
         /// </summary>
         public void OnBeforeSerialize()
         {
         }
 
         /// <summary>
-        /// See ISerializationCallbackReceiver.
+        /// Refer to <see cref="ISerializationCallbackReceiver" />.
         /// </summary>
         public void OnAfterDeserialize()
         {
@@ -573,7 +617,7 @@ namespace UnityEngine.Splines
             {
                 m_NativeSplinesCacheTransform = transform.localToWorldMatrix;
                 cachedNativeSpline = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
-                m_NativeSplinesCache.Add(spline, cachedNativeSpline);
+                CacheNativeSpline(spline, cachedNativeSpline);
             }
             // or if the cached spline was baked using different transform
             else if (!MathUtility.All(m_NativeSplinesCacheTransform, transform.localToWorldMatrix))
@@ -584,13 +628,11 @@ namespace UnityEngine.Splines
                 s_AllocPreventionHelperBuffer.Clear();
                 foreach (ISpline iSpline in m_NativeSplinesCache.Keys)
                 {
-                    var oldCache = m_NativeSplinesCache[iSpline];
                     var newCache = new NativeSpline(spline, m_NativeSplinesCacheTransform, true, Allocator.Persistent);
 
                     if (iSpline == (ISpline)spline)
                         cachedNativeSpline = newCache;
 
-                    oldCache.Dispose();
                     // Doing this dance as dictionaries can't be modified mid-iteration
                     s_AllocPreventionHelperBuffer.Add(new SplineToNative() { spline = iSpline, nativeSpline = newCache });
                 }
@@ -598,7 +640,7 @@ namespace UnityEngine.Splines
                 for (int i = 0; i < s_AllocPreventionHelperBuffer.Count; ++i)
                 {
                     var dataToSet = s_AllocPreventionHelperBuffer[i];
-                    m_NativeSplinesCache[dataToSet.spline] = dataToSet.nativeSpline;
+                    CacheNativeSpline(dataToSet.spline, dataToSet.nativeSpline);
                 }
             }
 

@@ -58,9 +58,6 @@ namespace UnityEngine.Splines
 
         float m_NextScheduledRebuild;
 
-        // This is the angle that gives the best results.
-        float m_AutosmoothAngle = 180f;
-
         bool m_RebuildRequested;
 
         bool m_CanCapEnds;
@@ -379,11 +376,9 @@ namespace UnityEngine.Splines
                 FlipNormals = m_FlipNormals
             };
 
-            SplineMesh.Extrude(m_Container.Splines, m_Mesh, settings, SegmentsPerUnit);
+            SplineMesh.Extrude(m_Container.Splines, m_Mesh, settings, SegmentsPerUnit, autosmoothNormals: true);
 
             m_CanCapEnds = SplineMesh.s_IsConvex && !Spline.Closed;
-
-            AutosmoothNormals();
 
             m_NextScheduledRebuild = Time.time + 1f / m_RebuildFrequency;
 
@@ -414,84 +409,6 @@ namespace UnityEngine.Splines
 #endif
 
             m_RebuildRequested = false;
-        }
-
-        void AutosmoothNormals()
-        {
-            var vertices = m_Mesh.vertices;
-            var triangles = m_Mesh.triangles;
-            var normals = new Vector3[vertices.Length];
-
-            // Dictionary to hold face normals and the vertices that make up each face.
-            var faceNormals = new Dictionary<int, Vector3>();
-            var vertexFaces = new Dictionary<int, List<int>>();
-
-            // Calculate the face normals.
-            for (int i = 0; i < triangles.Length; i += 3)
-            {
-                var v1 = vertices[triangles[i]];
-                var v2 = vertices[triangles[i + 1]];
-                var v3 = vertices[triangles[i + 2]];
-                var faceNormal = Vector3.Cross(v2 - v1, v3 - v1).normalized;
-
-                var faceIndex = i / 3;
-                faceNormals[faceIndex] = faceNormal;
-
-                for (int j = 0; j < 3; j++)
-                {
-                    var vertexIndex = triangles[i + j];
-
-                    if (!vertexFaces.ContainsKey(vertexIndex))
-                        vertexFaces[vertexIndex] = new List<int>();
-
-                    vertexFaces[vertexIndex].Add(faceIndex);
-                }
-            }
-
-            // Calculate the vertex normals.
-            foreach (var pair in vertexFaces)
-            {
-                var vertexIndex = pair.Key;
-                var connectedFaces = pair.Value;
-                var averageNormal = Vector3.zero;
-
-                foreach (var faceIndex in connectedFaces)
-                {
-                    var currentFaceNormal = faceNormals[faceIndex];
-                    var sharedNormal = true;
-
-                    foreach (var otherFaceIndex in connectedFaces)
-                    {
-                        if (faceIndex == otherFaceIndex)
-                            continue;
-
-                        var otherFaceNormal = faceNormals[otherFaceIndex];
-                        var angle = Vector3.Angle(currentFaceNormal, otherFaceNormal);
-
-                        if (angle > m_AutosmoothAngle)
-                        {
-                            sharedNormal = false;
-                            break;
-                        }
-                    }
-
-                    if (sharedNormal) // Not a sharp normal.
-                    {
-                        averageNormal += currentFaceNormal;
-                    }
-                    else // Sharp normal.
-                    {
-                        normals[vertexIndex] = currentFaceNormal;
-                        break;
-                    }
-                }
-
-                if (normals[vertexIndex] == Vector3.zero) // If not set to a sharp normal.
-                    normals[vertexIndex] = averageNormal.normalized;
-            }
-
-            // Apply the normals to the mesh.
-            m_Mesh.normals = normals;
         }
 
 #if UNITY_EDITOR

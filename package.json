@@ -1,7 +1,7 @@
 {
   "name": "com.unity.splines",
   "displayName": "Splines",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "unity": "2022.3",
   "description": "Work with curves and paths. Use the Splines package to generate objects and behaviors along paths, create trajectories, and draw shapes.",
   "dependencies": {
@@ -23,18 +23,18 @@
   ],
   "category": "Tool",
   "relatedPackages": {
-    "com.unity.splines.tests": "2.9.0"
+    "com.unity.splines.tests": "2.9.1"
   },
   "_upm": {
-    "changelog": "### Changed\n\n- [UUM-131058] Updated Splines to support Fast Enter Play Mode.\n\n### Fixed\n\n- [UUM-134040] Fixed incorrect interpolation results in the different SmoothStepFloat interpolators.\n- [UUM-141436] Fixed a bug where invalid values could be used in the element inspector overlay.\n- [UUM-134469] Fixed a bug where the SplineData properties would overflow in the Inspector.\n- [UUM-140764] Fixed a bug where Spline Extrude would not produce correct mesh if its index count surpassed the maximum value of UInt16."
+    "changelog": "### Fixed\n\n- [UUM-147158] Fixed `SplineInstantiate` causing performance issue on undo/redo operations in the Editor.\n- [UUM-146978] Fixed a memory leak being reported after a domain reload when a scaled `SplineContainer` was evaluated before it.\n- [UUM-150038] Fixed `SplineExtrude` auto-smooth normals not working correctly at the seam of a closed spline.\n- [UUM-147996] Fixed `SplineUtility.GetNearestPoint` and `CurveUtility.GetNearestPoint` returning an incorrect interpolation, and `SplineMath.PointLineNearestPoint` and `SplineMath.RayLineNearestPoint` returning an incorrect line parameter."
   },
   "upmCi": {
-    "footprint": "8b8c0bbec5b68b6605fa2ea54ab5d495d450e371"
+    "footprint": "24b6ad993346ceeee1488eb2679d3b12f4502642"
   },
   "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.splines@2.9/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/com.unity.splines.git",
     "type": "git",
-    "revision": "f59e7348d89b74c5ec5cdde5a338dadf0bb83e0d"
+    "revision": "fa60dba3530ebbe9d40a5901252b4e98f22ac963"
   }
 }

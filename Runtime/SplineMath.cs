@@ -76,8 +76,8 @@ namespace UnityEngine.Splines
             out float lineParam)
         {
             var lineDir = b - a;
-            lineParam = RayLineParameter(ro, rd, a, lineDir);
-            var linePoint = a + lineDir * math.saturate(lineParam);
+            lineParam = math.saturate(RayLineParameter(ro, rd, a, lineDir));
+            var linePoint = a + lineDir * lineParam;
             rayParam = math.dot(rd, linePoint - ro);
             var rayPoint = ro + rd * rayParam;
             return (rayPoint, linePoint);
@@ -96,8 +96,8 @@ namespace UnityEngine.Splines
             var dir = b - a;
             var len = math.length(dir);
             var nrm = math.select(0f, dir * (1f / len), len > math.FLT_MIN_NORMAL);
-            lineParam = math.dot(nrm, p - a);
-            return a + nrm * math.clamp(lineParam, 0f, len);
+            lineParam = math.clamp(math.dot(nrm, p - a), 0f, len);
+            return a + nrm * lineParam;
         }
 
         /// <summary>

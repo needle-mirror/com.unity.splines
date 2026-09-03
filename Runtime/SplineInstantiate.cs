@@ -519,6 +519,10 @@ namespace UnityEngine.Splines
         bool m_SplineDirty = false;
         float m_MaxProbability = 1f;
 
+#if UNITY_EDITOR
+        int m_LastCacheStateHash;
+#endif
+
         float maxProbability
         {
             get => m_MaxProbability;
@@ -572,7 +576,7 @@ namespace UnityEngine.Splines
 #endif
 
             //Bugfix for SPLB-107: Duplicating a SplineInstantiate is making children visible
-            //This ensure to delete the invalid children.
+            //This ensures to delete the invalid children.
             CheckChildrenValidity();
 
             Spline.Changed += OnSplineChanged;
@@ -588,11 +592,64 @@ namespace UnityEngine.Splines
             Clear();
         }
 
+#if UNITY_EDITOR
         void UndoRedoPerformed()
         {
+            // Undo.undoRedoPerformed fires for every undo/redo in the Editor, regardless of whether it
+            // touched this component. It's needed as a fallback because undo restores serialized data
+            // directly, bypassing both this component's property setters (e.g. Seed) and the
+            // Spline.Changed event (e.g. knot edits on the container). Comparing against a hash of the
+            // cache-relevant state lets it skip the (expensive) regeneration for unrelated undos.
+            if (ComputeCacheStateHash() == m_LastCacheStateHash)
+                return;
+
             m_InstancesCacheDirty = true;
             m_SplineDirty = true;
         }
+
+        int ComputeCacheStateHash()
+        {
+            var hash = new HashCode();
+            hash.Add(m_Seed);
+
+            for (int i = 0; i < m_ItemsToInstantiate.Count; i++)
+            {
+                var item = m_ItemsToInstantiate[i];
+#if UNITY_6000_4_OR_NEWER
+                hash.Add(item.Prefab != null ? (int)EntityId.ToULong(item.Prefab.GetEntityId()) : 0);
+#else
+                hash.Add(item.Prefab != null ? item.Prefab.GetInstanceID() : 0);
+#endif
+                hash.Add(item.Probability);
+            }
+
+            if (m_Container != null)
+            {
+                var splines = m_Container.Splines;
+                hash.Add(splines.Count);
+                for (int i = 0; i < splines.Count; i++)
+                {
+                    var spline = splines[i];
+                    hash.Add(spline.Count);
+                    hash.Add(spline.Closed);
+                    for (int k = 0; k < spline.Count; k++)
+                        hash.Add(spline[k]);
+                }
+            }
+
+            return hash.ToHashCode();
+        }
+
+        // Used by SplineInstantiateEditor.OnSplineModified to tell a genuine spline edit apart from
+        // a spurious AfterSplineWasModified notification (e.g. from SplineContainerEditor's own Undo
+        // fallback marking every spline in a container dirty on any undo/redo), the same way
+        // UndoRedoPerformed above tells a genuine undo/redo apart from one that doesn't concern
+        // this component.
+        internal bool IsCacheStateDirty()
+        {
+            return m_Container != null && ComputeCacheStateHash() != m_LastCacheStateHash;
+        }
+#endif
 
         void OnValidate()
         {
@@ -802,6 +859,10 @@ namespace UnityEngine.Splines
 
             if (m_Container == null)
                 InitContainer();
+
+#if UNITY_EDITOR
+            m_LastCacheStateHash = ComputeCacheStateHash();
+#endif
 
             if (m_Container == null
                 || m_Container.Splines.Count ==0

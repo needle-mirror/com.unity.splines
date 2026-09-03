@@ -183,6 +183,13 @@ namespace UnityEngine.Splines
         internal static bool s_IsConvex;
         static bool s_IsConvexComputed;
 
+        // This is the angle that gives the best results.
+        const float k_AutosmoothAngle = 180f;
+
+        // Helper buffer that tracks the vertex indices of the first and last rings of the most recently extruded
+        // closed splines, stored as first/last pairs.
+        static readonly List<int> s_SeamVertexBuffer = new List<int>();
+
         /// <summary>
         /// Interface for Spline mesh vertex data. Implement this interface if you are extruding custom mesh data and
         /// do not want to use the vertex layout provided by <see cref="SplineMesh"/>."/>.
@@ -557,11 +564,16 @@ namespace UnityEngine.Splines
 
         // this is not public for good reason. it mutates the settings object by necessity, to preserve the behaviour
         // of `segmentsPerUnit` rather than use the `Settings.SegmentCount` property.
-        internal static void Extrude<T, K>(IReadOnlyList<T> splines, Mesh mesh, ExtrudeSettings<K> settings, float segmentsPerUnit)
+        internal static void Extrude<T, K>(IReadOnlyList<T> splines, Mesh mesh, ExtrudeSettings<K> settings, float segmentsPerUnit,
+            bool autosmoothNormals = false)
             where T : ISpline
             where K : IExtrudeShape
         {
             mesh.Clear();
+
+            var seamVertices = autosmoothNormals ? s_SeamVertexBuffer : null;
+            seamVertices?.Clear();
+
             if (splines == null)
             {
                 if(Application.isPlaying)
@@ -609,7 +621,7 @@ namespace UnityEngine.Splines
                     if (splines[i].Count < 2)
                         continue;
                     settings.SegmentCount = GetSegmentCount(splines[i]);
-                    Extrude(splines[i], vertices, indices, settings, splineMeshOffsets[i].vertexStart, splineMeshOffsets[i].indexStart);
+                    Extrude(splines[i], vertices, indices, settings, splineMeshOffsets[i].vertexStart, splineMeshOffsets[i].indexStart, seamVertices);
                 }
             }
             else
@@ -620,13 +632,109 @@ namespace UnityEngine.Splines
                     if (splines[i].Count < 2)
                         continue;
                     settings.SegmentCount = GetSegmentCount(splines[i]);
-                    Extrude(splines[i], vertices, indices, settings, splineMeshOffsets[i].vertexStart, splineMeshOffsets[i].indexStart);
+                    Extrude(splines[i], vertices, indices, settings, splineMeshOffsets[i].vertexStart, splineMeshOffsets[i].indexStart, seamVertices);
                 }
             }
 
             data.SetSubMesh(0, new SubMeshDescriptor(0, totalIndexCount));
             Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
             mesh.RecalculateBounds();
+
+            if (autosmoothNormals)
+                AutosmoothNormals(mesh, seamVertices);
+        }
+
+        static void AutosmoothNormals(Mesh mesh, List<int> seamVertices)
+        {
+            var vertices = mesh.vertices;
+            var triangles = mesh.triangles;
+            var normals = new Vector3[vertices.Length];
+
+            // Dictionary to hold face normals and the vertices that make up each face.
+            var faceNormals = new Dictionary<int, Vector3>();
+            var vertexFaces = new Dictionary<int, List<int>>();
+
+            // Calculate the face normals.
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                var v1 = vertices[triangles[i]];
+                var v2 = vertices[triangles[i + 1]];
+                var v3 = vertices[triangles[i + 2]];
+                var faceNormal = Vector3.Cross(v2 - v1, v3 - v1).normalized;
+
+                var faceIndex = i / 3;
+                faceNormals[faceIndex] = faceNormal;
+
+                for (int j = 0; j < 3; j++)
+                {
+                    var vertexIndex = triangles[i + j];
+
+                    if (!vertexFaces.ContainsKey(vertexIndex))
+                        vertexFaces[vertexIndex] = new List<int>();
+
+                    vertexFaces[vertexIndex].Add(faceIndex);
+                }
+            }
+
+            // Calculate the vertex normals.
+            foreach (var pair in vertexFaces)
+            {
+                var vertexIndex = pair.Key;
+                var connectedFaces = pair.Value;
+                var averageNormal = Vector3.zero;
+
+                foreach (var faceIndex in connectedFaces)
+                {
+                    var currentFaceNormal = faceNormals[faceIndex];
+                    var sharedNormal = true;
+
+                    foreach (var otherFaceIndex in connectedFaces)
+                    {
+                        if (faceIndex == otherFaceIndex)
+                            continue;
+
+                        var otherFaceNormal = faceNormals[otherFaceIndex];
+                        var angle = Vector3.Angle(currentFaceNormal, otherFaceNormal);
+
+                        if (angle > k_AutosmoothAngle)
+                        {
+                            sharedNormal = false;
+                            break;
+                        }
+                    }
+
+                    if (sharedNormal) // Not a sharp normal.
+                    {
+                        averageNormal += currentFaceNormal;
+                    }
+                    else // Sharp normal.
+                    {
+                        normals[vertexIndex] = currentFaceNormal;
+                        break;
+                    }
+                }
+
+                if (normals[vertexIndex] == Vector3.zero) // If not set to a sharp normal.
+                    normals[vertexIndex] = averageNormal.normalized;
+            }
+
+            SmoothSeamNormals(normals, seamVertices);
+
+            // Apply the normals to the mesh.
+            mesh.normals = normals;
+        }
+
+        static void SmoothSeamNormals(Vector3[] normals, List<int> seamVertices)
+        {
+            for (int i = 0; i < seamVertices.Count; i += 2)
+            {
+                var first = seamVertices[i];
+                var last = seamVertices[i + 1];
+                var seamNormal = (normals[first] + normals[last]).normalized;
+
+                normals[first] = seamNormal;
+                normals[last] = seamNormal;
+            }
         }
 
         /// <summary>
@@ -677,7 +785,8 @@ namespace UnityEngine.Splines
                 NativeArray<TIndexType> indices,
                 ExtrudeSettings<TShapeType> settings,
                 int vertexArrayOffset = 0,
-                int indicesArrayOffset = 0)
+                int indicesArrayOffset = 0,
+                List<int> seamVertices = null)
                 where TSplineType : ISpline
                 where TVertexType : struct, ISplineVertexData
                 where TIndexType : struct
@@ -729,6 +838,17 @@ namespace UnityEngine.Splines
 
             for (int i = 0; i < segments; ++i)
                 ExtrudeRing(spline, settings, i, vertices, vertexArrayOffset + i * sides);
+
+            if (seamVertices != null && settings.DoCloseSpline(spline))
+            {
+                var lastRing = vertexArrayOffset + (segments - 1) * sides;
+
+                for (int i = 0; i < sides; ++i)
+                {
+                    seamVertices.Add(vertexArrayOffset + i);
+                    seamVertices.Add(lastRing + i);
+                }
+            }
 
             if (capped)
             {

@@ -5,6 +5,15 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.9.1] - 2026-09-03
+
+### Fixed
+
+- [UUM-147158] Fixed `SplineInstantiate` causing performance issue on undo/redo operations in the Editor.
+- [UUM-146978] Fixed a memory leak being reported after a domain reload when a scaled `SplineContainer` was evaluated before it.
+- [UUM-150038] Fixed `SplineExtrude` auto-smooth normals not working correctly at the seam of a closed spline.
+- [UUM-147996] Fixed `SplineUtility.GetNearestPoint` and `CurveUtility.GetNearestPoint` returning an incorrect interpolation, and `SplineMath.PointLineNearestPoint` and `SplineMath.RayLineNearestPoint` returning an incorrect line parameter.
+
 ## [2.9.0] - 2026-06-05
 
 ### Changed
